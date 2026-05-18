@@ -812,14 +812,14 @@
 async function conectarWhatsAppReal() {
     const baseURL = "https://crazy-licorice-that.ngrok-free.dev";
     const apiKey = "Wesley123!";
-    const instancia = "wesley_final_ok"; // Nome novo para garantir
+    const instancia = "wesley_final_pro"; // Nome novo para garantir
 
     const statusLabel = document.getElementById('wa-status');
     const qrImage = document.getElementById('wa-qr-code');
-    statusLabel.innerText = "CRIANDO CONEXÃO...";
+    statusLabel.innerText = "GERANDO QR CODE...";
 
     try {
-        // PASSO 1: CRIAR A INSTÂNCIA (Onde o QR nasce)
+        // PASSO 1: CRIAR E JÁ PEGAR O QR NO RETORNO
         const res = await fetch(`${baseURL}/instance/create`, {
             method: 'POST',
             headers: { 
@@ -836,13 +836,16 @@ async function conectarWhatsAppReal() {
 
         const data = await res.json();
 
-        // PASSO 2: CHECAR SE O QR VEIO NA RESPOSTA
+        // Na v1.8.2, o QR vem em data.qrcode.base64 logo após o create
         if (data.qrcode && data.qrcode.base64) {
             qrImage.src = data.qrcode.base64;
             statusLabel.innerText = "QR CODE PRONTO!";
-        } else if (data.status === 403 || (data.response && data.response.message)) {
-            // Se já existir, vamos apenas buscar o QR
-            statusLabel.innerText = "BUSCANDO QR CODE...";
+            return;
+        } 
+        
+        // Se a instância já existir, vamos apenas conectar
+        if (res.status === 403 || res.status === 400) {
+            statusLabel.innerText = "BUSCANDO QR...";
             const resConn = await fetch(`${baseURL}/instance/connect/${instancia}`, {
                 headers: { 'apikey': apiKey, 'ngrok-skip-browser-warning': 'true' }
             });
@@ -853,7 +856,7 @@ async function conectarWhatsAppReal() {
             }
         }
     } catch (error) {
-        console.error(error);
+        console.error("Erro:", error);
         statusLabel.innerText = "TENTANDO NOVAMENTE...";
         setTimeout(conectarWhatsAppReal, 5000);
     }
