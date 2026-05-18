@@ -1,0 +1,123 @@
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f0f1e;
+            color: #e2e8f0;
+        }
+
+        .sidebar {
+            background-color: #16162d;
+            transition: all 0.3s;
+        }
+
+        .card {
+            background-color: #1a1a36;
+            border: 1px solid rgba(121, 34, 255, 0.05);
+        }
+
+        .bg-purple-gestor {
+            background-color: #7922ff;
+        }
+
+        .btn-primary-gestor {
+            background: linear-gradient(13deg, #7922ff 0%, #6422ff 100%);
+            transition: transform 0.2s;
+        }
+
+        .btn-primary-gestor:hover {
+            transform: scale(1.02);
+            opacity: 0.9;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #7922ff;
+            border-radius: 10px;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: rgba(121, 34, 255, 0.1);
+            border-left: 3px solid #7922ff;
+        }
+
+        /* Destaques de Status */
+        .row-overdue {
+            background-color: rgba(239, 68, 68, 0.1) !important;
+            border-left: 4px solid #ef4444 !important;
+        }
+
+        .row-warning {
+            background-color: rgba(245, 158, 11, 0.15) !important;
+            border-left: 4px solid #f59e0b !important;
+        }
+
+        .row-inadimplente {
+            opacity: 0.25;
+            filter: grayscale(1);
+            background-color: rgba(0, 0, 0, 0.4) !important;
+        }
+
+        .row-inadimplente:hover {
+            opacity: 0.8;
+            filter: grayscale(0.2);
+        }
+
+        input,
+        select,
+        textarea {
+            background-color: #16162d !important;
+            border: 1px solid #374151 !important;
+            color: white !important;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: #7922ff !important;
+            outline: none;
+        }
+
+        .btn-plus-days {
+            position: relative;
+        }
+
+        .btn-plus-days::after {
+            content: "+3";
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #7922ff;
+            color: #fff;
+            font-size: 8px;
+            font-weight: 900;
+            padding: 1px 3px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .minimal-filter input,
+        .minimal-filter select {
+            height: 30px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background-color: #1a1a36 !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            color: #9ca3af !important;
+        }
+
+        .minimal-filter input:focus,
+        .minimal-filter select:focus {
+            border-color: #7922ff33 !important;
+            color: white !important;
+        }
+
+        #auth-screen {
+            background: radial-gradient(circle at top right, #1a1a36, #0f0f1e);
+        }

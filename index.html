@@ -1,319 +1,215 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <title>Gestor Lite Pro :: Local</title>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0f0f1e;
-            color: #e2e8f0;
-        }
-
-        .sidebar {
-            background-color: #16162d;
-            transition: all 0.3s;
-        }
-
-        .card {
-            background-color: #1a1a36;
-            border: 1px solid rgba(121, 34, 255, 0.05);
-        }
-
-        .bg-purple-gestor {
-            background-color: #7922ff;
-        }
-
-        .btn-primary-gestor {
-            background: linear-gradient(13deg, #7922ff 0%, #6422ff 100%);
-            transition: transform 0.2s;
-        }
-
-        .btn-primary-gestor:hover {
-            transform: scale(1.02);
-            opacity: 0.9;
-        }
-
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #7922ff;
-            border-radius: 10px;
-        }
-
-        .nav-link:hover,
-        .nav-link.active {
-            background: rgba(121, 34, 255, 0.1);
-            border-left: 3px solid #7922ff;
-        }
-
-        /* Destaques de Status */
-        .row-overdue {
-            background-color: rgba(239, 68, 68, 0.1) !important;
-            border-left: 4px solid #ef4444 !important;
-        }
-
-        .row-warning {
-            background-color: rgba(245, 158, 11, 0.15) !important;
-            border-left: 4px solid #f59e0b !important;
-        }
-
-        .row-inadimplente {
-            opacity: 0.25;
-            filter: grayscale(1);
-            background-color: rgba(0, 0, 0, 0.4) !important;
-        }
-
-        .row-inadimplente:hover {
-            opacity: 0.8;
-            filter: grayscale(0.2);
-        }
-
-        input,
-        select,
-        textarea {
-            background-color: #16162d !important;
-            border: 1px solid #374151 !important;
-            color: white !important;
-            font-size: 12px;
-            transition: all 0.2s;
-        }
-
-        input:focus,
-        select:focus {
-            border-color: #7922ff !important;
-            outline: none;
-        }
-
-        .btn-plus-days {
-            position: relative;
-        }
-
-        .btn-plus-days::after {
-            content: "+3";
-            position: absolute;
-            top: -6px;
-            right: -6px;
-            background: #7922ff;
-            color: #fff;
-            font-size: 8px;
-            font-weight: 900;
-            padding: 1px 3px;
-            border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .minimal-filter input,
-        .minimal-filter select {
-            height: 30px;
-            padding: 2px 8px;
-            border-radius: 4px;
-            background-color: #1a1a36 !important;
-            border: 1px solid rgba(255, 255, 255, 0.05) !important;
-            color: #9ca3af !important;
-        }
-
-        .minimal-filter input:focus,
-        .minimal-filter select:focus {
-            border-color: #7922ff33 !important;
-            color: white !important;
-        }
-
-        #auth-screen {
-            background: radial-gradient(circle at top right, #1a1a36, #0f0f1e);
-        }
-    </style>
+    <link rel="stylesheet" href="./style.css">
 </head>
+<body class="overflow-x-hidden bg-[#0f0f1e]">
 
-<body class="overflow-x-hidden">
+  <div id="auth-container" class="fixed inset-0 z-[100] flex bg-[#0f0f1e] overflow-y-auto">
+        
+        <div class="flex flex-col lg:flex-row w-full min-h-screen">
+            
+            <div class="w-full lg:w-1/2 p-8 lg:p-16 flex flex-col justify-center bg-[#0f0f1e] relative">
+                
+                <div class="w-full max-w-md mx-auto">
+                    
+<div class="mb-10 flex justify-center lg:justify-start items-center cursor-pointer select-none">
+    <span class="text-white font-black text-3xl tracking-tighter">w3</span>
+    <span class="text-white font-light text-3xl tracking-tight">Gestor</span>
+    <span class="text-purple-500 font-black text-3xl ml-1">.</span>
+</div>
 
-    <!-- Tela de Autenticação -->
-    <div id="auth-container" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#0f0f1e]">
-        <div class="card w-full max-w-md rounded-3xl p-8 shadow-2xl border border-white/5">
-            <div class="text-center mb-8">
-                <img src="https://gestorlite.com/img/brands/logo-white.png" alt="Logo" class="h-10 mx-auto mb-4">
-                <h2 id="auth-title" class="text-2xl font-bold text-white uppercase tracking-tighter">Aceder ao Painel
-                </h2>
-                <p id="auth-subtitle" class="text-gray-500 text-sm">Introduza os seus dados locais</p>
+                    <div>
+                        <h2 class="text-2xl font-black text-white uppercase tracking-tighter mb-1">Aceder ao Painel</h2>
+                        <p class="text-xs text-gray-500 mb-6">Insira as suas credenciais para gerir os clientes</p>
+                        <form id="formLogin" class="space-y-4">
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <input type="email" id="login_email" placeholder="E-mail" required class="w-full rounded-xl p-3.5 outline-none bg-black/40 text-white border border-white/5 text-xs focus:border-purple-500/50 transition">
+                                <input type="password" id="login_pass" placeholder="Palavra-passe" required class="w-full rounded-xl p-3.5 outline-none bg-black/40 text-white border border-white/5 text-xs focus:border-purple-500/50 transition">
+                            </div>
+                            <button type="submit" class="w-full bg-purple-600 p-4 rounded-xl font-bold text-white uppercase tracking-widest text-[11px] hover:bg-purple-700 transition shadow-lg shadow-purple-500/20 flex justify-center items-center mt-2">
+                                <i class="fas fa-sign-in-alt mr-2"></i> Entrar no Sistema
+                            </button>
+                        </form>
+                    </div>
+
+                    <div class="flex items-center my-10">
+                        <div class="flex-grow border-t border-white/5"></div>
+                        <span class="mx-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Ainda não tem conta?</span>
+                        <div class="flex-grow border-t border-white/5"></div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center gap-3 mb-1">
+                            <h2 class="text-2xl font-black text-white uppercase tracking-tighter">Criar Conta</h2>
+                            <span class="bg-purple-500/20 text-purple-400 text-[9px] font-black uppercase px-2.5 py-1 rounded-full border border-purple-500/30">7 Dias Grátis</span>
+                        </div>
+                        <p class="text-xs text-gray-500 mb-6">Inicie o seu teste VIP agora mesmo</p>
+                        <form id="formRegister" class="space-y-4">
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <input type="email" id="register_email" placeholder="Novo E-mail" required class="w-full rounded-xl p-3.5 outline-none bg-black/40 text-white border border-white/5 text-xs focus:border-purple-500/50 transition">
+                                <input type="password" id="register_pass" placeholder="Criar Palavra-passe" required class="w-full rounded-xl p-3.5 outline-none bg-black/40 text-white border border-white/5 text-xs focus:border-purple-500/50 transition">
+                            </div>
+                            <button type="submit" class="w-full bg-transparent border border-white/10 p-4 rounded-xl font-bold text-gray-300 uppercase tracking-widest text-[11px] hover:bg-white/5 transition flex justify-center items-center mt-2">
+                                <i class="fas fa-user-plus mr-2"></i> Registar e Testar
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
             </div>
 
-            <form id="formAuth" class="space-y-4">
-                <div>
-                    <label class="text-[10px] text-gray-500 uppercase font-bold ml-1">E-mail</label>
-                    <input type="email" id="auth_email" required class="w-full rounded-xl p-3 outline-none mt-1">
-                </div>
-                <div>
-                    <label class="text-[10px] text-gray-500 uppercase font-bold ml-1">Palavra-passe</label>
-                    <input type="password" id="auth_pass" required class="w-full rounded-xl p-3 outline-none mt-1">
-                </div>
+            <div class="w-full lg:w-1/2 p-8 lg:p-16 relative flex flex-col justify-center bg-gradient-to-br from-[#1e1e38] via-[#16162d] to-black overflow-hidden border-l border-white/5 shadow-2xl">
+                
+                <div class="absolute top-0 right-0 w-96 h-96 bg-yellow-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+                <div class="absolute bottom-0 left-0 w-96 h-96 bg-purple-600/10 rounded-full blur-[100px] pointer-events-none"></div>
+                
+                <div class="w-full max-w-lg mx-auto relative z-10">
+                    
+                    <div class="inline-flex items-center justify-center p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20 mb-6 shadow-inner">
+                        <i class="fas fa-crown text-yellow-500 text-3xl"></i>
+                    </div>
+                    
+                    <h2 class="text-4xl lg:text-5xl font-black text-white uppercase tracking-tighter mb-4">Gestor VIP Pro</h2>
+                    <p class="text-sm lg:text-base text-gray-400 mb-10 leading-relaxed">Liberte o verdadeiro potencial do seu negócio. Faça a gestão de clientes sem limites e com automação completa através do WhatsApp.</p>
+                    
+                    <ul class="space-y-5 mb-12">
+                        <li class="flex items-center text-sm lg:text-base text-gray-300">
+                            <div class="h-8 w-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mr-4 text-sm shadow-inner"><i class="fas fa-check"></i></div>
+                            <span class="font-bold text-white mr-1">Clientes Ilimitados</span> (Fim do bloqueio de 3)
+                        </li>
+                        <li class="flex items-center text-sm lg:text-base text-gray-300">
+                            <div class="h-8 w-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mr-4 text-sm shadow-inner"><i class="fas fa-check"></i></div>
+                            <span class="font-bold text-white mr-1">Mensagens Automáticas</span> Editáveis
+                        </li>
+                        <li class="flex items-center text-sm lg:text-base text-gray-300">
+                            <div class="h-8 w-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mr-4 text-sm shadow-inner"><i class="fas fa-check"></i></div>
+                            <span class="font-bold text-white mr-1">Gráficos Avançados</span> de Evolução
+                        </li>
+                        <li class="flex items-center text-sm lg:text-base text-gray-300">
+                            <div class="h-8 w-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mr-4 text-sm shadow-inner"><i class="fas fa-check"></i></div>
+                            <span class="font-bold text-white mr-1">Painel Administrativo</span> Liberado
+                        </li>
+                    </ul>
 
-                <button type="submit" id="btn-auth-action"
-                    class="w-full btn-primary-gestor p-3 rounded-xl font-bold uppercase tracking-widest text-sm shadow-lg shadow-purple-500/20">Entrar</button>
-            </form>
+                    <div class="relative z-10 bg-black/40 backdrop-blur-md border border-white/5 rounded-3xl p-8 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6">
+                        <div>
+                            <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Licença Mensal</p>
+                            <h3 class="text-4xl font-black text-yellow-400">R$ 25<span class="text-xl text-gray-500 font-medium">,00</span></h3>
+                        </div>
+                        <a href="https://wa.me/5511999999999?text=Quero%20fazer%20o%20upgrade%20para%20o%20Gestor%20VIP" target="_blank" class="w-full sm:w-auto px-8 py-4 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-yellow-500/20 transition flex items-center justify-center whitespace-nowrap">
+                            <i class="fab fa-whatsapp mr-2 text-lg"></i> Assinar Agora
+                        </a>
+                    </div>
 
-            <div class="mt-6 text-center">
-                <button onclick="toggleAuthMode()" id="btn-toggle-auth"
-                    class="text-xs text-purple-400 hover:text-white transition">Não tem conta? Registe-se
-                    localmente</button>
+                </div>
             </div>
+
         </div>
     </div>
 
-    <!-- Aplicação Principal -->
-    <div id="app-container" class="hidden flex min-h-screen">
-        <!-- Sidebar -->
-        <aside id="sidebar"
-            class="w-64 sidebar fixed inset-y-0 left-0 z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 border-r border-gray-800">
-            <div class="p-6 flex flex-col h-full">
-                <div class="flex items-center justify-center mb-10">
-                    <img src="https://gestorlite.com/img/brands/logo-white.png" alt="Logo" class="h-8">
-                </div>
+    <div id="expired-container" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-[#0f0f1e]">
+        <div class="card w-full max-w-md rounded-3xl p-8 shadow-2xl border border-red-500/30 bg-[#16162d] text-center">
+            <div class="h-16 w-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl"><i class="fas fa-lock"></i></div>
+            <h2 class="text-2xl font-bold text-white uppercase tracking-tighter mb-2">Tempo Expirado</h2>
+            <p class="text-gray-400 text-sm mb-6">Seus 7 dias de teste acabaram. Assine o plano VIP por apenas R$ 25,00/mês para continuar gerenciando seus clientes.</p>
+            <a href="https://wa.me/5511999999999?text=Quero%20assinar%20o%20Gestor%20VIP" target="_blank" class="w-full bg-green-600 p-4 rounded-xl font-bold text-white uppercase tracking-widest text-sm inline-block shadow-lg hover:bg-green-700 transition">Falar com Suporte</a>
+            <button onclick="logout()" class="mt-4 text-xs text-gray-500 hover:text-white w-full">Sair da conta</button>
+        </div>
+    </div>
 
+    <div id="app-container" class="hidden flex min-h-screen">
+        <aside id="sidebar" class="w-64 sidebar fixed inset-y-0 left-0 z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 border-r border-gray-800 bg-[#16162d]">
+            <div class="p-6 flex flex-col h-full">
+<div class="flex items-center justify-center mb-10 select-none">
+    <span class="text-white font-black text-2xl tracking-tighter">w3</span>
+    <span class="text-white font-light text-2xl tracking-tight">Gestor</span>
+    <span class="text-purple-500 font-black text-2xl ml-1">.</span>
+</div>
                 <nav class="flex-1 space-y-1">
-                    <a href="#" onclick="switchTab('dashboard')"
-                        class="nav-link active flex items-center p-3 text-sm font-medium rounded-lg" title="Resumo">
-                        <i class="fas fa-th mr-3 text-lg opacity-70"></i> DASHBOARD
-                    </a>
-                    <a href="#" onclick="switchTab('clientes')"
-                        class="nav-link flex items-center p-3 text-sm font-medium rounded-lg" title="Clientes">
-                        <i class="fas fa-users mr-3 text-lg opacity-70"></i> CLIENTES
-                    </a>
-                    <a href="#" onclick="switchTab('faturas')"
-                        class="nav-link flex items-center p-3 text-sm font-medium rounded-lg" title="Financeiro">
-                        <i class="fas fa-file-invoice-dollar mr-3 text-lg opacity-70"></i> FATURAS
-                    </a>
-                    <a href="#" onclick="switchTab('planos')"
-                        class="nav-link flex items-center p-3 text-sm font-medium rounded-lg" title="Planos">
-                        <i class="fas fa-box mr-3 text-lg opacity-70"></i> PLANOS
-                    </a>
-                    <a href="#" onclick="switchTab('apps')"
-                        class="nav-link flex items-center p-3 text-sm font-medium rounded-lg" title="Apps">
-                        <i class="fas fa-mobile-alt mr-3 text-lg opacity-70"></i> APPS
-                    </a>
-                    <a href="#" onclick="switchTab('configuracoes')"
-                        class="nav-link flex items-center p-3 text-sm font-medium rounded-lg" title="Configurações">
-                        <i class="fas fa-cog mr-3 text-lg opacity-70"></i> CONFIGS
-                    </a>
+                    <a href="#" onclick="switchTab('dashboard')" class="nav-link active flex items-center p-3 text-sm font-medium rounded-lg text-gray-300"><i class="fas fa-th mr-3 text-lg opacity-70"></i> DASHBOARD</a>
+                    <a href="#" onclick="switchTab('clientes')" class="nav-link flex items-center p-3 text-sm font-medium rounded-lg text-gray-300"><i class="fas fa-users mr-3 text-lg opacity-70"></i> CLIENTES</a>
+                    <a href="#" onclick="switchTab('faturas')" class="nav-link flex items-center p-3 text-sm font-medium rounded-lg text-gray-300"><i class="fas fa-file-invoice-dollar mr-3 text-lg opacity-70"></i> FATURAS</a>
+                    <a href="#" onclick="switchTab('planos')" class="nav-link flex items-center p-3 text-sm font-medium rounded-lg text-gray-300"><i class="fas fa-box mr-3 text-lg opacity-70"></i> PLANOS</a>
+                    <a href="#" onclick="switchTab('apps')" class="nav-link flex items-center p-3 text-sm font-medium rounded-lg text-gray-300"><i class="fas fa-mobile-alt mr-3 text-lg opacity-70"></i> APPS</a>
+                    <a href="#" onclick="switchTab('configuracoes')" class="nav-link flex items-center p-3 text-sm font-medium rounded-lg text-gray-300"><i class="fas fa-cog mr-3 text-lg opacity-70"></i> CONFIGS</a>
+                    
                     <hr class="border-gray-800 my-4">
-                    <a href="#" onclick="logout()"
-                        class="flex items-center p-3 text-sm font-medium text-red-500 hover:bg-red-500/10 rounded-lg">
-                        <i class="fas fa-sign-out-alt mr-3 text-lg"></i> SAIR
-                    </a>
+                    <a href="#" onclick="switchTab('admin')" id="nav-admin" class="nav-link hidden flex items-center p-3 text-sm font-bold text-yellow-500 rounded-lg hover:bg-yellow-500/10 transition"><i class="fas fa-crown mr-3 text-lg"></i> GESTÃO VIP</a>
+                    
+                    <a href="#" onclick="logout()" class="flex items-center p-3 text-sm font-medium text-red-500 hover:bg-red-500/10 rounded-lg mt-2"><i class="fas fa-sign-out-alt mr-3 text-lg"></i> SAIR</a>
                 </nav>
             </div>
         </aside>
 
-        <!-- Main Content -->
         <main class="flex-1 lg:ml-64">
-            <header
-                class="bg-[#16162d]/80 backdrop-blur-md sticky top-0 z-40 border-b border-gray-800 p-4 flex items-center justify-between">
-                <button onclick="toggleSidebar()" class="lg:hidden text-white"><i
-                        class="fas fa-bars text-xl"></i></button>
-                <div
-                    class="flex items-center space-x-2 text-[#00d998] text-sm font-bold bg-[#00d998]/5 px-3 py-1 rounded-full border border-[#00d998]/10">
+            <header class="bg-[#16162d]/90 backdrop-blur-md sticky top-0 z-40 border-b border-gray-800 p-4 flex items-center justify-between">
+                <button onclick="toggleSidebar()" class="lg:hidden text-white"><i class="fas fa-bars text-xl"></i></button>
+                <div class="flex items-center space-x-2 text-[#00d998] text-sm font-bold bg-[#00d998]/5 px-3 py-1 rounded-full border border-[#00d998]/10">
                     <i class="fab fa-whatsapp"></i><span id="user-display">Utilizador Ativo</span>
-                </div>
-                <div class="h-10 w-10 btn-primary-gestor rounded-full flex items-center justify-center font-bold border-2 border-white/10 shadow-lg"
-                    id="user-initials">WH</div>
-            </header>
+                </div>            </header>
 
-            <!-- DASHBOARD -->
+            <div id="free-plan-banner" class="hidden bg-yellow-500 text-black text-center py-2 text-xs font-bold uppercase tracking-widest shadow-md">
+                Você está usando o Plano Free (Limite de 3 clientes). <a href="https://wa.me/5511999999999" target="_blank" class="underline ml-2 hover:text-purple-900">Fazer Upgrade VIP</a>
+            </div>
+
             <div id="tab-dashboard" class="p-6 space-y-6">
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="card p-4 rounded-2xl text-center">
-                        <p class="text-gray-500 text-[10px] uppercase mb-1">Clientes</p>
-                        <h3 id="stat-total" class="text-2xl font-bold">0</h3>
-                    </div>
-                    <div class="card p-4 rounded-2xl text-center border-b-2 border-green-500/50">
-                        <p class="text-gray-500 text-[10px] uppercase mb-1">Receita</p>
-                        <h3 id="stat-bruto" class="text-2xl font-bold text-green-400">R$ 0,00</h3>
-                    </div>
-                    <div class="card p-4 rounded-2xl text-center border-b-2 border-purple-500/50">
-                        <p class="text-gray-500 text-[10px] uppercase mb-1">Lucro</p>
-                        <h3 id="stat-lucro" class="text-2xl font-bold text-purple-400">R$ 0,00</h3>
-                    </div>
-                    <div class="card p-4 rounded-2xl text-center border-b-2 border-red-500/50">
-                        <p class="text-gray-500 text-[10px] uppercase mb-1">Vencendo</p>
-                        <h3 id="stat-atrasados" class="text-2xl font-bold text-red-500">0</h3>
-                    </div>
+                    <div class="card p-4 rounded-2xl text-center bg-[#16162d]"><p class="text-gray-500 text-[10px] uppercase mb-1">Clientes</p><h3 id="stat-total" class="text-2xl font-bold text-white">0</h3></div>
+                    <div class="card p-4 rounded-2xl text-center border-b-2 border-green-500/50 bg-[#16162d]"><p class="text-gray-500 text-[10px] uppercase mb-1">Receita</p><h3 id="stat-bruto" class="text-2xl font-bold text-green-400">R$ 0,00</h3></div>
+                    <div class="card p-4 rounded-2xl text-center border-b-2 border-purple-500/50 bg-[#16162d]"><p class="text-gray-500 text-[10px] uppercase mb-1">Lucro</p><h3 id="stat-lucro" class="text-2xl font-bold text-purple-400">R$ 0,00</h3></div>
+                    <div class="card p-4 rounded-2xl text-center border-b-2 border-red-500/50 bg-[#16162d]"><p class="text-gray-500 text-[10px] uppercase mb-1">Vencendo</p><h3 id="stat-atrasados" class="text-2xl font-bold text-red-500">0</h3></div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="card p-6 rounded-2xl">
-                        <h4 class="font-bold mb-4 text-purple-400 text-xs uppercase tracking-widest"><i
-                                class="fas fa-chart-line mr-2"></i> Evolução</h4>
+                    <div class="card p-6 rounded-2xl bg-[#16162d]">
+                        <h4 class="font-bold mb-4 text-purple-400 text-xs uppercase tracking-widest"><i class="fas fa-chart-line mr-2"></i> Evolução</h4>
                         <div id="chart-financeiro"></div>
                     </div>
-                    <div class="card p-6 rounded-2xl">
-                        <h4 class="font-bold mb-4 text-red-400 text-xs uppercase tracking-widest"><i
-                                class="fas fa-clock mr-2"></i> Próximos Vencimentos</h4>
+                    <div class="card p-6 rounded-2xl bg-[#16162d]">
+                        <h4 class="font-bold mb-4 text-red-400 text-xs uppercase tracking-widest"><i class="fas fa-clock mr-2"></i> Próximos Vencimentos</h4>
                         <div id="alerts-list" class="space-y-2 max-h-[350px] overflow-y-auto pr-2"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- CLIENTES -->
             <div id="tab-clientes" class="p-6 hidden">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-bold text-white uppercase tracking-tighter">Gestão de Clientes</h2>
-                    <button onclick="openModalAdd()"
-                        class="btn-primary-gestor px-4 py-1.5 rounded-lg font-bold uppercase text-[9px] tracking-widest shadow-xl">Novo
-                        Cliente</button>
+                    <button onclick="openModalAdd()" class="bg-purple-600 px-4 py-1.5 rounded-lg font-bold uppercase text-[9px] tracking-widest shadow-xl text-white hover:bg-purple-700">Novo Cliente</button>
                 </div>
-
-                <!-- Filtros Minimalistas -->
                 <div class="flex flex-wrap items-center gap-2 mb-4 minimal-filter">
                     <div class="relative flex-1 min-w-[140px]">
-                        <i class="fas fa-search absolute left-2.5 top-2.5 text-gray-700 text-[10px]"></i>
-                        <input type="text" id="filter-name" placeholder="Pesquisar..." class="w-full pl-8"
-                            onkeyup="renderClientes()">
+                        <i class="fas fa-search absolute left-2.5 top-2.5 text-gray-400 text-[10px]"></i>
+                        <input type="text" id="filter-name" placeholder="Pesquisar..." class="w-full pl-8 bg-black/20 text-white rounded outline-none border border-white/5 py-1.5 text-xs" onkeyup="renderClientes()">
                     </div>
-                    <select id="filter-app" onchange="renderClientes()">
-                        <option value="">Apps</option>
-                    </select>
-                    <select id="filter-plano" onchange="renderClientes()">
-                        <option value="">Planos</option>
-                    </select>
-                    <select id="filter-status" onchange="renderClientes()">
+                    <select id="filter-app" onchange="renderClientes()" class="bg-black/20 text-white rounded outline-none border border-white/5 py-1.5 text-xs"><option value="">Apps</option></select>
+                    <select id="filter-plano" onchange="renderClientes()" class="bg-black/20 text-white rounded outline-none border border-white/5 py-1.5 text-xs"><option value="">Planos</option></select>
+                    <select id="filter-status" onchange="renderClientes()" class="bg-black/20 text-white rounded outline-none border border-white/5 py-1.5 text-xs">
                         <option value="">Status</option>
                         <option value="warning">Vencendo (3 dias)</option>
                         <option value="overdue">Atrasados</option>
                         <option value="inadimplente">Inadimplentes (+20d)</option>
                     </select>
                     <div class="flex items-center gap-2 px-3 py-1.5 bg-black/20 rounded border border-white/5">
-                        <span class="text-[8px] text-gray-600 font-bold uppercase">Inadimplentes</span>
-                        <input type="checkbox" id="filter-inadimplentes" onchange="renderClientes()" checked
-                            class="w-3 h-3 accent-purple-500 cursor-pointer">
+                        <span class="text-[8px] text-gray-400 font-bold uppercase">Inadimplentes</span>
+                        <input type="checkbox" id="filter-inadimplentes" onchange="renderClientes()" checked class="w-3 h-3 accent-purple-500 cursor-pointer">
                     </div>
                 </div>
-
-                <div class="card rounded-2xl overflow-hidden overflow-x-auto shadow-2xl">
+                <div class="card rounded-2xl overflow-hidden overflow-x-auto shadow-2xl bg-[#16162d]">
                     <table class="w-full text-left text-sm border-separate border-spacing-y-0.5 px-1">
                         <thead class="bg-black/40 text-gray-500 uppercase text-[8px] tracking-widest font-black">
-                            <tr>
-                                <th class="p-3">Cliente</th>
-                                <th class="p-3">Serviço</th>
-                                <th class="p-3 text-center">Vencimento</th>
-                                <th class="p-3 text-center">Mensagens</th>
-                                <th class="p-3 text-right">Gerenciar</th>
-                            </tr>
+                            <tr><th class="p-3">Cliente</th><th class="p-3">Serviço</th><th class="p-3 text-center">Vencimento</th><th class="p-3 text-center">Mensagens</th><th class="p-3 text-right">Gerenciar</th></tr>
                         </thead>
                         <tbody id="table-clientes-body"></tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- FATURAS -->
             <div id="tab-faturas" class="p-6 hidden">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-bold text-white uppercase tracking-tighter">Financeiro</h2>
@@ -322,529 +218,271 @@
                         <h3 id="fatura-total-lucro" class="text-2xl font-bold text-purple-400">R$ 0,00</h3>
                     </div>
                 </div>
-                <div class="card rounded-2xl overflow-hidden shadow-xl">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-black/40 text-gray-500 uppercase text-[10px] tracking-widest">
-                            <tr>
-                                <th class="p-4">Data</th>
-                                <th class="p-4">Cliente</th>
-                                <th class="p-4">Valor Pago</th>
-                                <th class="p-4 text-purple-400 font-black">Lucro Real</th>
-                                <th class="p-4 text-right">Estornar</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-faturas-body"></tbody>
-                    </table>
+                <div class="mb-10">
+                    <h4 class="text-xs font-bold text-yellow-500 uppercase mb-4"><i class="fas fa-exclamation-circle mr-2"></i> Cobranças em Aberto</h4>
+                    <div class="card rounded-2xl overflow-hidden shadow-xl border border-yellow-500/10 bg-[#16162d]">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-yellow-500/5 text-gray-500 uppercase text-[10px] tracking-widest">
+                                <tr><th class="p-4">Vencimento</th><th class="p-4">Cliente</th><th class="p-4">Plano</th><th class="p-4">Valor</th><th class="p-4 text-right">Ação</th></tr>
+                            </thead>
+                            <tbody id="table-faturas-pendentes-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold text-green-500 uppercase mb-4"><i class="fas fa-history mr-2"></i> Histórico de Recebimentos</h4>
+                    <div class="card rounded-2xl overflow-hidden shadow-xl bg-[#16162d]">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-black/40 text-gray-500 uppercase text-[10px] tracking-widest">
+                                <tr><th class="p-4">Data Pgto</th><th class="p-4">Cliente</th><th class="p-4">Valor Pago</th><th class="p-4 text-purple-400 font-black">Lucro Real</th><th class="p-4 text-right">Estornar</th></tr>
+                            </thead>
+                            <tbody id="table-faturas-body"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <!-- PLANOS -->
             <div id="tab-planos" class="p-6 hidden">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold text-white uppercase">Planos</h2><button onclick="openModalPlanoAdd()"
-                        class="btn-primary-gestor px-4 py-2 rounded-lg font-bold uppercase text-[10px]">Novo
-                        Plano</button>
+                    <h2 class="text-xl font-bold text-white uppercase tracking-tighter">Planos</h2>
+                    <button onclick="openModalPlanoAdd()" class="bg-purple-600 text-white px-4 py-2 rounded-lg font-bold uppercase text-[10px] hover:bg-purple-700">Novo Plano</button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="planos-list"></div>
             </div>
 
-            <!-- APPS -->
             <div id="tab-apps" class="p-6 hidden">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold text-white uppercase">Aplicações</h2><button
-                        onclick="openModalAppAdd()"
-                        class="btn-primary-gestor px-4 py-2 rounded-lg font-bold uppercase text-[10px]">Novo
-                        App</button>
+                    <h2 class="text-xl font-bold text-white uppercase tracking-tighter">Aplicações</h2>
+                    <button onclick="openModalAppAdd()" class="bg-purple-600 text-white px-4 py-2 rounded-lg font-bold uppercase text-[10px] hover:bg-purple-700">Novo App</button>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="apps-list"></div>
             </div>
 
-            <!-- CONFIGS -->
             <div id="tab-configuracoes" class="p-6 hidden">
-                <h2 class="text-xl font-bold text-white mb-6 uppercase">Configurações</h2>
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="card p-6 rounded-2xl space-y-4 shadow-xl">
-                        <h4 class="font-bold flex items-center text-purple-400 uppercase text-xs tracking-widest"><i
-                                class="fas fa-bell mr-2"></i> Dashboard</h4>
-                        <label class="text-xs text-gray-500">Exibir alerta quantos dias antes?</label>
-                        <input type="number" id="cfg_aviso_dias" class="w-full rounded-xl p-3 outline-none">
-                        <button onclick="updateConfig()"
-                            class="w-full btn-primary-gestor p-2 rounded-lg font-bold text-[10px] uppercase shadow-lg">Salvar
-                            Configurações</button>
-
-                                                <div class="card p-6 rounded-2xl space-y-4 shadow-xl mt-6">
-                        <h4 class="font-bold flex items-center text-green-400 uppercase text-xs tracking-widest">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-white uppercase tracking-tighter">Configurações</h2>
+                    <button onclick="openModal('modalChangePassword')" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-bold text-[10px] uppercase shadow-lg border border-white/10 transition">
+                        <i class="fas fa-lock mr-1"></i> Alterar Senha
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                    <div class="card p-6 rounded-2xl shadow-xl flex flex-col h-full border border-white/5 bg-[#16162d]">
+                        <h4 class="font-bold flex items-center text-green-400 uppercase text-xs tracking-widest mb-4">
                             <i class="fab fa-whatsapp mr-2"></i> Integração WhatsApp
                         </h4>
-<div class="flex flex-col items-center py-4">
-    <div class="bg-white p-2 rounded-xl mb-4">
-        <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=GestorLite_Conectar" id="wa-qr-code" class="w-[180px]">
-    </div>
-    <div id="wa-status" class="text-[10px] font-bold text-red-500 uppercase animate-pulse">
-        Desconectado
-    </div>
-</div>
-<button onclick="conectarWhatsAppReal()" class="w-full bg-green-600/20 text-green-500 border border-green-500/30 p-2 rounded-lg font-bold text-[10px] uppercase">
-    Atualizar Conexão
-</button>
-                    </div>
+                        <div class="flex flex-col items-center justify-center flex-grow py-4">
+                            <div class="bg-white p-2 rounded-xl mb-4">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=GestorLite_Conectar" id="wa-qr-code" class="w-[150px]">
+                            </div>
+                            <div id="wa-status" class="text-[10px] font-bold text-red-500 uppercase animate-pulse">Desconectado</div>
+                        </div>
+                        <button onclick="conectarWhatsAppReal()" class="w-full bg-green-600/20 text-green-500 border border-green-500/30 p-3 rounded-xl font-bold text-[10px] uppercase mt-auto hover:bg-green-600/30 transition">
+                            Atualizar Conexão
+                        </button>
                     </div>
 
-                    <div class="card p-6 rounded-2xl space-y-4 shadow-xl">
-                        <h4 class="font-bold text-green-400 uppercase text-xs tracking-widest"><i
-                                class="fas fa-comment-alt mr-2"></i> Mensagens</h4>
-                        <div class="space-y-3">
-                            <div><label class="text-[9px] text-gray-500 uppercase font-bold">Confirmação de
-                                    Pagamento</label>
-                                <textarea id="cfg_msg_sucesso" rows="3"
-                                    class="w-full rounded-xl p-2 text-xs outline-none"></textarea>
+                    <div class="flex flex-col gap-6 h-full">
+                        <div class="card p-6 rounded-2xl shadow-xl border border-white/5 bg-[#16162d]">
+                            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-bold flex items-center text-purple-400 uppercase text-xs tracking-widest whitespace-nowrap"><i class="fas fa-bell mr-2"></i> Avisos</h4>
+                                    <div class="flex items-center gap-2 ml-4">
+                                        <label class="text-[10px] text-gray-500 uppercase font-bold">Avisar</label>
+                                        <input type="number" id="cfg_aviso_dias" class="w-16 bg-black/20 border border-white/10 rounded-lg p-1 text-center text-white outline-none text-xs" value="3">
+                                        <label class="text-[10px] text-gray-500 uppercase font-bold whitespace-nowrap">dias antes</label>
+                                    </div>
+                                </div>
+                                <button onclick="updateConfig()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-bold text-[10px] uppercase shadow-lg whitespace-nowrap">Salvar Tudo</button>
                             </div>
-                            <div><label class="text-[9px] text-gray-500 uppercase font-bold">Cobrança / Aviso</label>
-                                <textarea id="cfg_msg_renovacao" rows="3"
-                                    class="w-full rounded-xl p-2 text-xs outline-none"></textarea>
-                            </div>
-                            <div><label class="text-[9px] text-gray-500 uppercase font-bold">Boas-vindas</label>
-                                <textarea id="cfg_msg_boas_vindas" rows="3"
-                                    class="w-full rounded-xl p-2 text-xs outline-none"></textarea>
-                            </div>
-                            <div><label class="text-[9px] text-gray-500 uppercase font-bold">Suspensão</label>
-                                <textarea id="cfg_msg_suspensa" rows="3"
-                                    class="w-full rounded-xl p-2 text-xs outline-none"></textarea>
+                        </div>
+
+                        <div class="card p-6 rounded-2xl shadow-xl flex-grow border border-white/5 bg-[#16162d]">
+                            <h4 class="font-bold text-green-400 uppercase text-xs tracking-widest mb-4"><i class="fas fa-comment-alt mr-2"></i> Mensagens Padrão</h4>
+                            <div class="space-y-4">
+                                <div><label class="text-[9px] text-gray-500 uppercase font-bold mb-1 block">Boas-vindas</label><textarea id="cfg_msg_boas_vindas" rows="2" class="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500/50 transition"></textarea></div>
+                                <div><label class="text-[9px] text-gray-500 uppercase font-bold mb-1 block">Cobrança / Renovação</label><textarea id="cfg_msg_renovacao" rows="2" class="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500/50 transition"></textarea></div>
+                                <div><label class="text-[9px] text-gray-500 uppercase font-bold mb-1 block">Confirmação de Pagamento</label><textarea id="cfg_msg_sucesso" rows="2" class="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500/50 transition"></textarea></div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <div id="tab-admin" class="p-6 hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-white uppercase tracking-tighter">Gestão VIP</h2>
+                    <button onclick="openModal('modalCriarUsuario')" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-bold text-[10px] uppercase shadow-lg transition">
+                        <i class="fas fa-user-plus mr-2"></i> Criar Conta de Cliente
+                    </button>
+                </div>
+                <div class="card rounded-2xl overflow-hidden shadow-2xl border border-white/5 bg-[#16162d]">
+                    <table class="w-full text-left text-sm border-separate border-spacing-y-0.5 px-1">
+                        <thead class="bg-black/40 text-gray-500 uppercase text-[8px] tracking-widest font-black">
+                            <tr><th class="p-4">E-mail do Cliente</th><th class="p-4 text-center">Status</th><th class="p-4 text-center">Vencimento</th><th class="p-4 text-center">Editar</th><th class="p-4 text-right">Ação</th></tr>
+                        </thead>
+                        <tbody id="table-admin-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
         </main>
     </div>
 
-    <!-- Modais -->
-    <div id="modalRenovar" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeModal('modalRenovar')"></div>
-        <div class="card w-full max-w-sm rounded-2xl p-6 relative z-10 text-center shadow-2xl">
-            <div
-                class="h-14 w-14 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 text-xl border border-green-500/30">
-                <i class="fas fa-dollar-sign"></i></div>
+    <div id="modalRenovar" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="card w-full max-w-sm rounded-2xl p-6 relative z-10 text-center shadow-2xl bg-[#16162d] border border-white/5">
+            <div class="h-14 w-14 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 text-xl border border-green-500/30"><i class="fas fa-dollar-sign"></i></div>
             <h3 class="text-lg font-bold text-white mb-2 uppercase">Confirmar Pagamento</h3>
             <p id="renovar-info" class="text-gray-400 text-xs mb-6"></p>
             <input type="hidden" id="renovar-cli-id">
             <div class="flex space-x-3">
-                <button type="button" onclick="closeModal('modalRenovar')"
-                    class="flex-1 bg-gray-800 p-2 rounded-lg font-bold uppercase text-[10px]">Cancelar</button>
-                <button type="button" onclick="confirmarRenovacao()"
-                    class="flex-1 bg-green-600 p-2 rounded-lg font-bold text-white uppercase text-[10px] shadow-lg">Confirmar
-                    e Renovar</button>
+                <button type="button" onclick="closeModal('modalRenovar')" class="flex-1 bg-gray-800 p-2 rounded-lg font-bold text-white uppercase text-[10px] hover:bg-gray-700">Cancelar</button>
+                <button type="button" onclick="confirmarRenovacao()" class="flex-1 bg-green-600 p-2 rounded-lg font-bold text-white uppercase text-[10px] shadow-lg hover:bg-green-700">Confirmar</button>
             </div>
         </div>
     </div>
 
-    <div id="modalCliente" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeModal('modalCliente')"></div>
-        <div class="card w-full max-w-xl rounded-2xl p-6 relative z-10 shadow-2xl">
-            <h3 id="modalClienteTitle" class="text-xl font-bold mb-4 text-purple-400 uppercase tracking-widest">Cadastro
-            </h3>
+    <div id="modalCliente" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="card w-full max-w-xl rounded-2xl p-6 relative z-10 shadow-2xl bg-[#16162d] border border-white/5">
+            <h3 id="modalClienteTitle" class="text-xl font-bold mb-4 text-purple-400 uppercase tracking-widest">Cadastro</h3>
             <form id="formCliente" class="space-y-4">
                 <input type="hidden" id="cli_edit_id" value="">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input type="text" id="cli_nome" placeholder="Nome Completo" required
-                        class="w-full rounded-xl p-3 outline-none">
-                    <input type="text" id="cli_whatsapp" placeholder="WhatsApp (Números)" required
-                        class="w-full rounded-xl p-3 outline-none">
+                    <input type="text" id="cli_nome" placeholder="Nome Completo" required class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10">
+                    <input type="text" id="cli_whatsapp" placeholder="WhatsApp (Números)" required class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10">
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <select id="cli_plano_id" required class="w-full rounded-xl p-3 outline-none"></select>
-                    <select id="cli_app_id" required class="w-full rounded-xl p-3 outline-none"></select>
-                    <input type="date" id="cli_vencimento" required class="w-full rounded-xl p-3 outline-none">
+                    <select id="cli_plano_id" required class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10"></select>
+                    <select id="cli_app_id" required class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10"></select>
+                    <input type="date" id="cli_vencimento" required class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10">
                 </div>
-                <textarea id="cli_credenciais" rows="6" placeholder="Cole os dados do painel..."
-                    class="w-full rounded-xl p-3 text-[10px] outline-none"></textarea>
-                <button type="submit"
-                    class="w-full btn-primary-gestor p-4 rounded-xl font-bold uppercase tracking-widest shadow-lg">Salvar
-                    Dados</button>
+                <textarea id="cli_credenciais" rows="6" placeholder="Cole os dados do painel..." class="w-full rounded-xl p-3 text-[10px] outline-none bg-black/20 text-white border border-white/10"></textarea>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeModal('modalCliente')" class="flex-1 bg-gray-800 p-4 rounded-xl font-bold uppercase tracking-widest text-white hover:bg-gray-700">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-purple-600 p-4 rounded-xl font-bold uppercase tracking-widest shadow-lg text-white hover:bg-purple-700">Salvar Dados</button>
+                </div>
             </form>
         </div>
     </div>
 
-    <div id="modalPlano" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeModal('modalPlano')"></div>
-        <div class="card w-full max-w-md rounded-2xl p-6 relative z-10 shadow-2xl">
-            <h3 id="modalPlanoTitle"
-                class="text-xl font-bold mb-4 text-purple-400 uppercase text-center tracking-widest">Plano</h3>
+    <div id="modalPlano" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="card w-full max-w-md rounded-2xl p-6 relative z-10 shadow-2xl bg-[#16162d] border border-white/5">
+            <h3 id="modalPlanoTitle" class="text-xl font-bold mb-4 text-purple-400 uppercase text-center tracking-widest">Plano</h3>
             <form id="formPlano" class="space-y-4">
                 <input type="hidden" id="plan_edit_id" value="">
-                <input type="text" id="plan_nome" placeholder="Nome do Plano" required
-                    class="w-full rounded-xl p-3 outline-none">
+                <input type="text" id="plan_nome" placeholder="Nome do Plano" required class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10">
                 <div class="grid grid-cols-2 gap-4">
-                    <input type="number" step="0.01" id="plan_valor" placeholder="Preço" required
-                        class="w-full rounded-xl p-3 outline-none">
-                    <input type="number" step="0.01" id="plan_custo" placeholder="Custo" required
-                        class="w-full rounded-xl p-3 outline-none">
+                    <input type="number" step="0.01" id="plan_valor" placeholder="Preço" required class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10">
+                    <input type="number" step="0.01" id="plan_custo" placeholder="Custo" required class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10">
                 </div>
                 <div class="flex gap-2">
-                    <select id="plan_dias_select" class="flex-1 rounded-xl p-3 outline-none"
-                        onchange="checkCustomDays(this.value)">
-                        <option value="30">30 Dias</option>
-                        <option value="60">60 Dias</option>
-                        <option value="90">90 Dias</option>
-                        <option value="custom">Manual...</option>
+                    <select id="plan_dias_select" class="flex-1 rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10" onchange="checkCustomDays(this.value)">
+                        <option value="30">30 Dias</option><option value="60">60 Dias</option><option value="90">90 Dias</option><option value="custom">Manual...</option>
                     </select>
-                    <input type="number" id="plan_dias_custom" placeholder="Dias"
-                        class="hidden flex-1 rounded-xl p-3 outline-none">
+                    <input type="number" id="plan_dias_custom" placeholder="Dias" class="hidden flex-1 rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10">
                 </div>
-                <button type="submit"
-                    class="w-full btn-primary-gestor p-4 rounded-xl font-bold uppercase tracking-widest">Salvar
-                    Plano</button>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeModal('modalPlano')" class="flex-1 bg-gray-800 p-4 rounded-xl font-bold uppercase tracking-widest text-white hover:bg-gray-700">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-purple-600 p-4 rounded-xl font-bold uppercase tracking-widest text-white hover:bg-purple-700">Salvar</button>
+                </div>
             </form>
         </div>
     </div>
 
-    <div id="modalApp" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="closeModal('modalApp')"></div>
-        <div class="card w-full max-w-lg rounded-2xl p-6 relative z-10 shadow-2xl">
-            <h3 id="modalAppTitle" class="text-xl font-bold mb-4 text-purple-400 uppercase text-center tracking-widest">
-                App</h3>
+    <div id="modalApp" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="card w-full max-w-lg rounded-2xl p-6 relative z-10 shadow-2xl bg-[#16162d] border border-white/5">
+            <h3 id="modalAppTitle" class="text-xl font-bold mb-4 text-purple-400 uppercase text-center tracking-widest">App</h3>
             <form id="formApp" class="space-y-4">
                 <input type="hidden" id="app_edit_id" value="">
-                <input type="text" id="app_nome" placeholder="Nome" required class="w-full rounded-xl p-3 outline-none">
+                <input type="text" id="app_nome" placeholder="Nome" required class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input type="text" id="app_url" placeholder="URL / DNS" class="w-full rounded-xl p-3 outline-none">
-                    <input type="text" id="app_host" placeholder="Host / Código"
-                        class="w-full rounded-xl p-3 outline-none">
+                    <input type="text" id="app_url" placeholder="URL / DNS" class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10">
+                    <input type="text" id="app_host" placeholder="Host / Código" class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10">
                 </div>
-                <input type="text" id="app_pin" placeholder="Senha PIN" class="w-full rounded-xl p-3 outline-none">
-                <textarea id="app_links" rows="3" placeholder="Instruções Download"
-                    class="w-full rounded-xl p-3 text-[10px] outline-none"></textarea>
-                <button type="submit"
-                    class="w-full btn-primary-gestor p-4 rounded-xl font-bold uppercase tracking-widest text-xs">Guardar
-                    Aplicação</button>
+                <input type="text" id="app_pin" placeholder="Senha PIN" class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10">
+                <textarea id="app_links" rows="3" placeholder="Instruções Download" class="w-full rounded-xl p-3 text-[10px] outline-none bg-black/20 text-white border border-white/10"></textarea>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeModal('modalApp')" class="flex-1 bg-gray-800 p-4 rounded-xl font-bold uppercase tracking-widest text-white hover:bg-gray-700">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-purple-600 p-4 rounded-xl font-bold uppercase tracking-widest text-xs text-white hover:bg-purple-700">Guardar</button>
+                </div>
             </form>
         </div>
     </div>
 
-    <script>
-        // --- DB LOCAL V18 ---
-        let db = JSON.parse(localStorage.getItem('gestorlite_v18')) || {
-            users: [],
-            clientes: [],
-            planos: [{ id: 1, nome: 'Mensal Gold', valor: 30.00, custo: 7.00, dias: 30 }],
-            faturas: [],
-            apps: [{ id: 101, nome: "XCIPTV", url: "http://adonay.top", pin: "0000" }],
-            config: {
-                aviso_dias: 3,
-                msg_boas_vindas: "Bem vindo {nome}!\n✅ Usuário: {usuario}\n✅ Senha: {senha}\n\n{credenciais}\n\n🗓️ Vencimento: {data}",
-                msg_renovacao: "Olá {nome}, a sua assinatura de serviço vence a {data}. Renove para não ficar sem sinal!",
-                msg_sucesso: "Pagamento confirmado, {nome}! ✅ Plano renovado até {data}. Obrigado!",
-                msg_suspensa: "Sinal suspenso, {nome}! ❌ Realize o pagamento para reativar seu acesso."
-            }
-        };
+    <div id="modalCriarUsuario" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="card w-full max-w-sm rounded-2xl p-6 relative z-10 shadow-2xl bg-[#16162d] border border-white/5">
+            <h3 class="text-xl font-bold mb-4 text-yellow-500 uppercase tracking-widest text-center">Criar Cliente VIP</h3>
+            <form onsubmit="criarUsuarioAdmin(event)" class="space-y-4">
+                <input type="email" id="admin_new_email" placeholder="E-mail do cliente" required class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10">
+                <select id="admin_new_dias" class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10">
+                    <option value="7">7 Dias (Free Teste)</option>
+                    <option value="30">30 Dias (VIP)</option>
+                </select>
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeModal('modalCriarUsuario')" class="flex-1 bg-gray-800 p-4 rounded-xl font-bold uppercase tracking-widest text-white hover:bg-gray-700">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-yellow-600 p-4 rounded-xl font-bold uppercase text-white hover:bg-yellow-700">Gerar Conta</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-        let isRegisterMode = false;
+    <div id="modalUsuarioCriado" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="card w-full max-w-md rounded-2xl p-6 relative z-10 shadow-2xl bg-[#16162d] border border-green-500/30 text-center">
+            <div class="h-14 w-14 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"><i class="fas fa-check-circle"></i></div>
+            <h3 class="text-xl font-bold mb-2 text-white uppercase tracking-widest">Conta Criada!</h3>
+            <p class="text-xs text-gray-400 mb-4">Os dados de acesso foram copiados automaticamente para a área de transferência.</p>
+            <div class="bg-black/40 border border-white/5 rounded-xl p-4 text-left space-y-2 mb-6 font-mono text-xs text-gray-300">
+                <p><span class="text-green-400 font-bold">👤 Usuário:</span> <span id="display_new_email" class="text-white"></span></p>
+                <p><span class="text-green-400 font-bold">🔑 Senha:</span> <span id="display_new_pass" class="text-white"></span></p>
+                <p><span class="text-gray-500 font-bold">🌐 Link:</span> <span class="text-gray-400 text-[11px] break-all">https://w3sleygessner.github.io/w3-gestor/</span></p>
+            </div>
+            <div class="flex space-x-3">
+                <button onclick="closeModal('modalUsuarioCriado')" class="flex-1 bg-gray-800 hover:bg-gray-700 p-3 rounded-xl font-bold uppercase text-[10px] transition text-gray-400">Fechar Janela</button>
+                <button onclick="navigator.clipboard.writeText(document.getElementById('display_hidden_text').value); showNotify('Copiado!', 'Dados copiados novamente.');" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-xl font-bold uppercase text-[10px] shadow-lg"><i class="fas fa-copy mr-1"></i> Copiar Novamente</button>
+            </div>
+            <textarea id="display_hidden_text" class="hidden"></textarea>
+        </div>
+    </div>
 
-        function save() { localStorage.setItem('gestorlite_v18', JSON.stringify(db)); updateDashboard(); }
+    <div id="modalLimiteClientes" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="card w-full max-w-sm rounded-2xl p-6 relative z-10 text-center shadow-2xl bg-[#16162d] border border-yellow-500/30">
+            <div class="h-14 w-14 bg-yellow-500/20 text-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl animate-pulse"><i class="fas fa-exclamation-triangle"></i></div>
+            <h3 class="text-lg font-bold text-white mb-2 uppercase tracking-widest">Limite do Plano Free</h3>
+            <p class="text-gray-400 text-xs mb-6 leading-relaxed">Você atingiu o limite máximo de <strong class="text-yellow-500">3 clientes cadastrados</strong> no plano de testes.<br><br>Faça o upgrade para o plano <strong class="text-purple-400">VIP Pro</strong> e tenha gerenciamento ilimitado por apenas R$ 25,00/mês.</p>
+            <div class="flex flex-col gap-2">
+                <a href="https://wa.me/5511999999999?text=Quero%20fazer%20o%20upgrade%20para%20o%20Gestor%20VIP" target="_blank" class="w-full bg-green-600 hover:bg-green-700 text-white p-3 rounded-xl font-bold uppercase tracking-widest text-[10px] text-center shadow-lg block"><i class="fab fa-whatsapp mr-1"></i> Liberar Acesso VIP</a>
+                <button onclick="closeModal('modalLimiteClientes')" class="w-full bg-gray-800 hover:bg-gray-700 p-2.5 rounded-xl font-bold uppercase text-[10px] text-gray-300 transition">Voltar ao Painel</button>
+            </div>
+        </div>
+    </div>
 
-        // --- AUTH ---
-        function toggleAuthMode() { isRegisterMode = !isRegisterMode; document.getElementById('auth-title').innerText = isRegisterMode ? "Criar Conta Local" : "Aceder ao Painel"; document.getElementById('btn-auth-action').innerText = isRegisterMode ? "Registar" : "Entrar"; }
-        document.getElementById('formAuth').onsubmit = function (e) {
-            e.preventDefault();
-            const email = document.getElementById('auth_email').value;
-            const pass = document.getElementById('auth_pass').value;
-            if (isRegisterMode) {
-                if (db.users.find(u => u.email === email)) return alert("Email já existe!");
-                db.users.push({ email, pass }); save(); alert("Sucesso!"); toggleAuthMode();
-            } else {
-                const u = db.users.find(u => u.email === email && u.pass === pass);
-                if (u) { sessionStorage.setItem('loggedUser', email); checkSession(); } else alert("Erro!");
-            }
-        };
-        function checkSession() {
-            const u = sessionStorage.getItem('loggedUser');
-            if (u) { document.getElementById('auth-container').classList.add('hidden'); document.getElementById('app-container').classList.remove('hidden'); document.getElementById('user-display').innerText = u; initApp(); }
-        }
-        function logout() { sessionStorage.removeItem('loggedUser'); location.reload(); }
+    <div id="modalChangePassword" class="fixed inset-0 z-[70] hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="card w-full max-w-sm rounded-2xl p-6 relative z-10 shadow-2xl text-center bg-[#16162d] border border-white/5">
+            <h3 class="text-lg font-bold mb-4 text-white uppercase">Alterar Senha</h3>
+            <form onsubmit="alterarSenha(event)" class="space-y-4">
+                <input type="password" id="change_password_input" placeholder="Digite a nova senha" required minlength="6" class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10 text-center">
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeModal('modalChangePassword')" class="flex-1 bg-gray-800 p-3 rounded-xl font-bold text-white uppercase hover:bg-gray-700 text-xs">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-blue-600 p-3 rounded-xl font-bold text-white uppercase hover:bg-blue-700 text-xs">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-        // --- NAVIGATION ---
-        function switchTab(tab) {
-            document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
-            if (document.getElementById('tab-' + tab)) document.getElementById('tab-' + tab).classList.remove('hidden');
-            document.querySelectorAll('.sidebar .nav-link').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.sidebar .nav-link').forEach(l => { if (l.getAttribute('onclick').includes(tab)) l.classList.add('active'); });
-            if (tab === 'clientes') renderClientes();
-            if (tab === 'faturas') renderFaturas();
-            if (tab === 'planos') renderPlanos();
-            if (tab === 'apps') renderApps();
-            if (tab === 'configuracoes') renderConfig();
-        }
-        function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); }
+    <div id="modalForcePassword" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-[#0f0f1e]/95 backdrop-blur-md">
+        <div class="card w-full max-w-sm rounded-2xl p-6 relative z-10 shadow-2xl text-center bg-[#16162d] border border-purple-500/30">
+            <div class="h-16 w-16 bg-purple-500/20 text-purple-400 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl"><i class="fas fa-shield-alt"></i></div>
+            <h3 class="text-lg font-bold mb-2 text-white uppercase">Bem-vindo!</h3>
+            <p class="text-xs text-gray-400 mb-6">Por segurança, altere a senha temporária gerada pelo administrador antes de continuar.</p>
+            <form onsubmit="alterarSenhaForcada(event)" class="space-y-4">
+                <input type="password" id="force_password_input" placeholder="Sua senha definitiva" required minlength="6" class="w-full rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10 text-center">
+                <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 p-3 rounded-xl font-bold text-white uppercase">Entrar no Sistema</button>
+            </form>
+        </div>
+    </div>
 
-        // --- APPS ---
-        function openModalAppAdd() { document.getElementById('formApp').reset(); document.getElementById('app_edit_id').value = ""; document.getElementById('modalAppTitle').innerText = "Novo App"; openModal('modalApp'); }
-        function openModalAppEdit(id) {
-            const a = db.apps.find(x => x.id == id);
-            document.getElementById('app_edit_id').value = a.id;
-            document.getElementById('app_nome').value = a.nome;
-            document.getElementById('app_url').value = a.url || "";
-            document.getElementById('app_host').value = a.host || "";
-            document.getElementById('app_pin').value = a.pin || "";
-            document.getElementById('app_links').value = a.links || "";
-            document.getElementById('modalAppTitle').innerText = "Editar App";
-            openModal('modalApp');
-        }
-        document.getElementById('formApp').onsubmit = function (e) {
-            e.preventDefault();
-            const id = document.getElementById('app_edit_id').value;
-            const data = { nome: document.getElementById('app_nome').value, url: document.getElementById('app_url').value, host: document.getElementById('app_host').value, pin: document.getElementById('app_pin').value, links: document.getElementById('app_links').value };
-            if (id) { const idx = db.apps.findIndex(x => x.id == id); db.apps[idx] = { ...db.apps[idx], ...data }; }
-            else { db.apps.push({ id: Date.now(), ...data }); }
-            save(); closeModal('modalApp'); renderApps();
-        };
-        function renderApps() {
-            const list = document.getElementById('apps-list'); if (!list) return;
-            list.innerHTML = db.apps.map(a => `<div class="card p-3 flex justify-between items-center shadow border border-white/5 rounded-xl"><div><p class="font-bold text-xs uppercase text-purple-400">${a.nome}</p></div><button onclick="openModalAppEdit(${a.id})" class="text-gray-500 hover:text-white"><i class="fas fa-edit"></i></button></div>`).join('');
-            if (document.getElementById('cli_app_id')) document.getElementById('cli_app_id').innerHTML = db.apps.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
-            if (document.getElementById('filter-app')) document.getElementById('filter-app').innerHTML = '<option value="">Apps</option>' + db.apps.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
-        }
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script type="module" src="./js/main.js"></script>
 
-        // --- FINANCE & ROLLBACK ---
-        function openModalRenovar(id) {
-            const cli = db.clientes.find(c => c.id == id);
-            const p = db.planos.find(pl => pl.id == cli.plano_id) || { valor: 0 };
-            document.getElementById('renovar-cli-id').value = id;
-            document.getElementById('renovar-info').innerText = `Marcar R$ ${p.valor.toFixed(2)} pagos por ${cli.nome}?`;
-            openModal('modalRenovar');
-        }
-        function confirmarRenovacao() {
-            const id = document.getElementById('renovar-cli-id').value;
-            const cliIdx = db.clientes.findIndex(c => c.id == id);
-            const cli = db.clientes[cliIdx];
-            const p = db.planos.find(pl => pl.id == cli.plano_id);
-            let base = new Date();
-            const vAtual = new Date(cli.vencimento);
-            if (vAtual > base) base = vAtual;
-            base.setDate(base.getDate() + parseInt(p.dias));
-            db.clientes[cliIdx].vencimento = base.toISOString().split('T')[0];
-            db.faturas.unshift({ id: Date.now(), cliId: cli.id, data_pgto: new Date().toLocaleDateString(), cliente: cli.nome, valor: p.valor, lucro: p.valor - p.custo, dias_somados: p.dias });
-            save(); closeModal('modalRenovar'); renderClientes(); showNotify('Pago!', 'Vencimento atualizado.'); setTimeout(() => sendManualWA(id, 'success'), 500);
-        }
-        function deleteFatura(fid) {
-            if (!confirm("Estornar pagamento? O vencimento voltará ao anterior.")) return;
-            const f = db.faturas.find(x => x.id == fid);
-            const cIdx = db.clientes.findIndex(c => c.id == f.cliId);
-            if (cIdx !== -1) {
-                let d = new Date(db.clientes[cIdx].vencimento);
-                d.setDate(d.getDate() - parseInt(f.dias_somados));
-                db.clientes[cIdx].vencimento = d.toISOString().split('T')[0];
-            }
-            db.faturas = db.faturas.filter(x => x.id != fid); save(); renderFaturas(); showNotify('Estornado', 'Vencimento corrigido.');
-        }
-
-        // --- CLIENTS ---
-        function processCredentials(text) {
-            if (!text) return { clean: "", user: "", pass: "" };
-            const uM = text.match(/(?:Usuário|Usuario|User):\s*([^\n\r\s]+)/i);
-            const sM = text.match(/(?:Senha|Pass):\s*([^\n\r\s]+)/i);
-            let lines = text.split('\n').filter(l => !l.includes('superc.space') && !l.includes('Assinar') && !l.includes('Vencimento:') && !l.includes('🗓️'));
-            return { clean: lines.join('\n').trim(), user: uM ? uM[1] : "", pass: sM ? sM[1] : "" };
-        }
-        function openModalAdd() { document.getElementById('formCliente').reset(); document.getElementById('cli_edit_id').value = ""; document.getElementById('modalClienteTitle').innerText = "Novo Cliente"; renderPlanos(); renderApps(); openModal('modalCliente'); }
-        function openModalEdit(id) {
-            const cli = db.clientes.find(c => c.id == id);
-            document.getElementById('cli_edit_id').value = cli.id;
-            document.getElementById('cli_nome').value = cli.nome;
-            document.getElementById('cli_whatsapp').value = cli.whatsapp;
-            document.getElementById('cli_plano_id').value = cli.plano_id;
-            document.getElementById('cli_app_id').value = cli.app_id;
-            document.getElementById('cli_vencimento').value = cli.vencimento;
-            document.getElementById('cli_credenciais').value = cli.credenciais || "";
-            document.getElementById('modalClienteTitle').innerText = "Editar Cliente";
-            openModal('modalCliente');
-        }
-        document.getElementById('formCliente').onsubmit = function (e) {
-            e.preventDefault();
-            const editId = document.getElementById('cli_edit_id').value;
-            const proc = processCredentials(document.getElementById('cli_credenciais').value);
-            const data = { nome: document.getElementById('cli_nome').value, whatsapp: document.getElementById('cli_whatsapp').value, plano_id: document.getElementById('cli_plano_id').value, app_id: document.getElementById('cli_app_id').value, vencimento: document.getElementById('cli_vencimento').value, credenciais: proc.clean, usuario: proc.user, senha: proc.pass };
-            if (editId) { const idx = db.clientes.findIndex(c => c.id == editId); db.clientes[idx] = { ...db.clientes[idx], ...data }; }
-            else { const id = Date.now(); db.clientes.push({ id, ...data }); setTimeout(() => sendManualWA(id, 'welcome'), 800); }
-            save(); closeModal('modalCliente'); renderClientes();
-        };
-        function renderClientes() {
-            const body = document.getElementById('table-clientes-body'); if (!body) return; body.innerHTML = '';
-            const nF = document.getElementById('filter-name').value.toLowerCase();
-            const aF = document.getElementById('filter-app').value;
-            const pF = document.getElementById('filter-plano').value;
-            const sF = document.getElementById('filter-status').value;
-            const iF = document.getElementById('filter-inadimplentes').checked;
-            const hoje = new Date(); const hojeS = hoje.toISOString().split('T')[0];
-
-            db.clientes.sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento)).forEach(cli => {
-                const p = db.planos.find(x => x.id == cli.plano_id) || { nome: 'N/A' };
-                const app = db.apps.find(x => x.id == cli.app_id) || { nome: 'N/A' };
-                const diff = Math.ceil((new Date(cli.vencimento) - hoje) / (1000 * 60 * 60 * 24));
-                const isOverdue = cli.vencimento < hojeS;
-                const isInadimplente = diff < -20;
-                const isWarning = diff >= 0 && diff <= 3;
-
-                if (nF && !cli.nome.toLowerCase().includes(nF)) return;
-                if (aF && cli.app_id != aF) return;
-                if (pF && cli.plano_id != pF) return;
-                if (!iF && isInadimplente) return;
-                if (sF === 'warning' && !isWarning) return;
-                if (sF === 'overdue' && !isOverdue) return;
-                if (sF === 'inadimplente' && !isInadimplente) return;
-
-                let rCls = '';
-                if (isInadimplente) rCls = 'row-inadimplente';
-                else if (isOverdue) rCls = 'row-overdue';
-                else if (isWarning) rCls = 'row-warning';
-
-                body.innerHTML += `<tr class="border-t border-gray-800/50 transition hover:bg-white/5 ${rCls}">
-                    <td class="p-3"><p class="font-bold text-white text-xs uppercase tracking-tight">${cli.nome}</p></td>
-                    <td class="p-3 text-[9px] uppercase"><span class="text-gray-400">${p.nome}</span><br><span class="text-purple-400 font-bold">${app.nome}</span></td>
-                    <td class="p-3 text-center text-[10px] font-bold ${isOverdue ? 'text-red-500' : (isWarning ? 'text-yellow-500' : 'text-green-500')}">${cli.vencimento.split('-').reverse().join('/')}</td>
-                    <td class="p-3 text-center">
-                        <div class="flex flex-col items-center gap-1">
-                            <span class="text-[9px] text-gray-500 font-mono tracking-tighter">${cli.whatsapp}</span>
-                            <div class="flex gap-2">
-                                <button onclick="sendManualWA(${cli.id}, 'renew')" title="Aviso" class="text-purple-400 text-xs"><i class="fas fa-redo"></i></button>
-                                <button onclick="sendManualWA(${cli.id}, 'welcome')" title="Boas-vindas" class="text-green-500 text-xs"><i class="fas fa-star"></i></button>
-                                <button onclick="sendManualWA(${cli.id}, 'suspended')" title="Suspender" class="text-red-500 text-xs"><i class="fas fa-ban"></i></button>
-                            </div>
-                        </div>
-                    </td>
-                    <td class="p-3 text-right space-x-1">
-                        <button onclick="copyFullAccess(${cli.id})" title="Copiar Dados" class="p-2 text-purple-400 hover:scale-110"><i class="fas fa-copy"></i></button>
-                        <button onclick="openModalRenovar(${cli.id})" class="px-3 py-1 bg-green-600 text-white rounded text-[8px] font-black hover:bg-green-700 shadow shadow-green-500/20">PAGO</button>
-                        <button onclick="addThreeDays(${cli.id})" class="p-2 bg-purple-600/20 text-purple-400 rounded btn-plus-days"><i class="fas fa-plus"></i></button>
-                        <button onclick="openModalEdit(${cli.id})" class="p-2 text-gray-500 hover:text-white"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteCliente(${cli.id})" class="p-2 text-gray-700 hover:text-red-500"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>`;
-            });
-        }
-
-        // --- RENDER EXTRAS ---
-        function renderPlanos() {
-            const list = document.getElementById('planos-list'); if (!list) return;
-            list.innerHTML = db.planos.map(p => `<div class="card p-4 rounded-xl relative shadow-xl border border-white/5"><button onclick="openModalPlanoEdit(${p.id})" class="absolute top-2 right-2 text-gray-500 hover:text-white"><i class="fas fa-edit"></i></button><h4 class="font-bold text-white text-sm uppercase">${p.nome}</h4><p class="text-[9px] text-gray-500 font-black">${p.dias} DIAS</p><div class="mt-2 text-[10px] flex justify-between border-t border-gray-800 pt-2"><span>Preço: R$ ${p.valor.toFixed(2)}</span><span class="text-purple-400 font-bold">Lucro: R$ ${(p.valor - p.custo).toFixed(2)}</span></div></div>`).join('');
-            if (document.getElementById('cli_plano_id')) document.getElementById('cli_plano_id').innerHTML = db.planos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
-            if (document.getElementById('filter-plano')) document.getElementById('filter-plano').innerHTML = '<option value="">Planos</option>' + db.planos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
-        }
-        function renderFaturas() {
-            const body = document.getElementById('table-faturas-body'); if (!body) return;
-            let total = 0; body.innerHTML = db.faturas.map(f => { total += f.lucro; return `<tr class="border-t border-gray-800 text-[10px]"><td class="p-4 text-gray-500">${f.data_pgto}</td><td class="p-4 font-bold text-white uppercase">${f.cliente}</td><td class="p-4 text-green-500 font-bold">R$ ${f.valor.toFixed(2)}</td><td class="p-4 text-purple-400 font-bold">R$ ${f.lucro.toFixed(2)}</td><td class="p-4 text-right"><button onclick="deleteFatura(${f.id})" class="text-red-500 hover:text-red-400 transition"><i class="fas fa-undo"></i></button></td></tr>`; }).join('');
-            if (document.getElementById('fatura-total-lucro')) document.getElementById('fatura-total-lucro').innerText = `R$ ${total.toFixed(2)}`;
-        }
-        function updateDashboard() {
-            const b = db.faturas.reduce((acc, f) => acc + f.valor, 0); const l = db.faturas.reduce((acc, f) => acc + f.lucro, 0);
-            const hj = new Date().toISOString().split('T')[0]; const otr = db.clientes.filter(c => c.vencimento <= hj).length;
-            if (document.getElementById('stat-total')) document.getElementById('stat-total').innerText = db.clientes.length;
-            if (document.getElementById('stat-bruto')) document.getElementById('stat-bruto').innerText = `R$ ${b.toFixed(2)}`;
-            if (document.getElementById('stat-lucro')) document.getElementById('stat-lucro').innerText = `R$ ${l.toFixed(2)}`;
-            if (document.getElementById('stat-atrasados')) document.getElementById('stat-atrasados').innerText = otr;
-            const list = document.getElementById('alerts-list'); if (list) {
-                list.innerHTML = '';
-                db.clientes.forEach(cli => {
-                    const diff = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
-                    if (diff <= db.config.aviso_dias) {
-                        list.innerHTML += `<div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5"><p class="text-xs text-white font-bold tracking-tight">${cli.nome} <br><span class="${diff <= 0 ? 'text-red-500' : 'text-yellow-500'} text-[9px] uppercase font-black">${diff <= 0 ? 'Atrasado' : 'Em ' + diff + ' d'}</span></p><div class="flex gap-2"><button onclick="openModalRenovar(${cli.id})" class="text-green-500"><i class="fas fa-check-circle"></i></button><button onclick="sendManualWA(${cli.id}, 'renew')" class="text-purple-400"><i class="fab fa-whatsapp"></i></button></div></div>`;
-                    }
-                });
-            }
-        }
-
-        // --- HELPERS ---
-        function renderConfig() {
-            const el = document.getElementById('cfg_aviso_dias'); if (!el) return;
-            el.value = db.config.aviso_dias || 3;
-            if (document.getElementById('cfg_msg_boas_vindas')) document.getElementById('cfg_msg_boas_vindas').value = db.config.msg_boas_vindas;
-            if (document.getElementById('cfg_msg_renovacao')) document.getElementById('cfg_msg_renovacao').value = db.config.msg_renovacao;
-            if (document.getElementById('cfg_msg_sucesso')) document.getElementById('cfg_msg_sucesso').value = db.config.msg_sucesso;
-            if (document.getElementById('cfg_msg_suspensa')) document.getElementById('cfg_msg_suspensa').value = db.config.msg_suspensa;
-        }
-        function updateConfig() {
-            db.config = { aviso_dias: parseInt(document.getElementById('cfg_aviso_dias').value), msg_boas_vindas: document.getElementById('cfg_msg_boas_vindas').value, msg_renovacao: document.getElementById('cfg_msg_renovacao').value, msg_sucesso: document.getElementById('cfg_msg_sucesso').value, msg_suspensa: document.getElementById('cfg_msg_suspensa').value };
-            save(); showNotify('Sucesso', 'Configurações guardadas.');
-        }
-        function checkCustomDays(v) { const el = document.getElementById('plan_dias_custom'); if (el) el.classList.toggle('hidden', v !== 'custom'); }
-        function openModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
-        function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
-        function showNotify(t, m) { const n = document.createElement('div'); n.className = "fixed bottom-5 right-5 bg-purple-600 text-white p-4 rounded-xl shadow-2xl z-[200]"; n.innerHTML = `<h5 class="font-bold text-sm uppercase">${t}</h5><p class="text-xs opacity-90">${m}</p>`; document.body.appendChild(n); setTimeout(() => n.remove(), 3000); }
-        function deleteCliente(id) { if (confirm("Excluir?")) { db.clientes = db.clientes.filter(c => c.id != id); save(); renderClientes(); } }
-
-        function copyFullAccess(id) {
-            const cli = db.clientes.find(c => c.id == id); const app = db.apps.find(a => a.id == cli.app_id) || { nome: 'N/A' };
-            const txt = `✅ Usuário: ${cli.usuario || 'N/A'}\n✅ Senha: ${cli.senha || 'N/A'}\n📱 App: ${app.nome}\n${app.url ? '🔗 DNS: ' + app.url + '\n' : ''}${app.host ? '🆔 Host: ' + app.host + '\n' : ''}${app.pin ? '🔞 PIN: ' + app.pin + '\n' : ''}\nLinks:\n${app.links || ''}`;
-            const el = document.createElement('textarea'); el.value = txt; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
-            showNotify('Copiado!', 'Acesso completo na área de transferência.');
-        }
-        function sendManualWA(cliId, type) {
-            const cli = db.clientes.find(c => c.id == cliId); const app = db.apps.find(a => a.id == cli.app_id) || {};
-            let template = db.config.msg_renovacao;
-            if (type === 'welcome') template = db.config.msg_boas_vindas;
-            if (type === 'success') template = db.config.msg_sucesso;
-            if (type === 'suspended') template = db.config.msg_suspensa;
-            const msg = template.replace(/{nome}/g, cli.nome).replace(/{usuario}/g, cli.usuario || "N/A").replace(/{senha}/g, cli.senha || "N/A").replace(/{data}/g, cli.vencimento.split('-').reverse().join('/')).replace(/{app_nome}/g, app.nome || "N/A").replace(/{credenciais}/g, cli.credenciais || "");
-            window.open(`https://wa.me/${cli.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
-
-        // --- PLANOS ---
-        function openModalPlanoAdd() { document.getElementById('formPlano').reset(); document.getElementById('plan_edit_id').value = ""; document.getElementById('modalPlanoTitle').innerText = "Novo Plano"; openModal('modalPlano'); }
-        function openModalPlanoEdit(id) {
-            const p = db.planos.find(pl => pl.id == id);
-            document.getElementById('plan_edit_id').value = p.id; document.getElementById('plan_nome').value = p.nome; document.getElementById('plan_valor').value = p.valor; document.getElementById('plan_custo').value = p.custo;
-            document.getElementById('plan_dias_select').value = [30, 60, 90].includes(p.dias) ? p.dias : 'custom';
-            if (p.dias != 30 && p.dias != 60 && p.dias != 90) document.getElementById('plan_dias_custom').value = p.dias;
-            checkCustomDays(document.getElementById('plan_dias_select').value); document.getElementById('modalPlanoTitle').innerText = "Editar Plano"; openModal('modalPlano');
-        }
-        document.getElementById('formPlano').onsubmit = function (e) {
-            e.preventDefault();
-            const id = document.getElementById('plan_edit_id').value; const dS = document.getElementById('plan_dias_select').value;
-            const dF = dS === 'custom' ? parseInt(document.getElementById('plan_dias_custom').value) : parseInt(dS);
-            const data = { nome: document.getElementById('plan_nome').value, valor: parseFloat(document.getElementById('plan_valor').value), custo: parseFloat(document.getElementById('plan_custo').value), dias: dF };
-            if (id) { const idx = db.planos.findIndex(p => p.id == id); db.planos[idx] = { ...db.planos[idx], ...data }; }
-            else { db.planos.push({ id: Date.now(), ...data }); }
-            save(); closeModal('modalPlano'); renderPlanos();
-        };
-
-        function initApp() { renderPlanos(); renderApps(); updateDashboard(); renderConfig(); renderClientes(); }
-        window.onload = () => { checkSession(); };
-
-async function conectarWhatsAppReal() {
-    const baseURL = "https://crazy-licorice-that.ngrok-free.dev";
-    const apiKey = "Wesley123!"; // Verifique se é EXATAMENTE essa que está no seu env.config.ts
-    const instancia = "wesley_final_ok"; 
-
-    try {
-        await fetch(`${baseURL}/instance/create`, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'apikey': apiKey,
-                // ESSA LINHA ABAIXO É O SEGREDO PARA O NGROK NÃO DAR 403
-                'ngrok-skip-browser-warning': 'true' 
-            },
-            body: JSON.stringify({ instanceName: instancia, token: apiKey, qrcode: true })
-        });
-
-        await new Promise(r => setTimeout(r, 3000));
-
-        const res = await fetch(`${baseURL}/instance/connect/${instancia}`, {
-            headers: { 
-                'apikey': apiKey,
-                'ngrok-skip-browser-warning': 'true' // Adicione aqui também
-            }
-        });
-
-        const data = await res.json();
-        if (data.base64) {
-            document.getElementById('wa-qr-code').src = data.base64;
-            document.getElementById('wa-status').innerText = "QR CODE PRONTO!";
-        }
-    } catch (e) {
-        console.log("Quase lá!");
-    }
-}
-    </script>
 </body>
-
 </html>
