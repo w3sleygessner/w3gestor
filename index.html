@@ -812,53 +812,39 @@
 async function conectarWhatsAppReal() {
     const baseURL = "https://crazy-licorice-that.ngrok-free.dev";
     const apiKey = "Wesley123!";
-    const instancia = "wesley_final_pro"; // Nome novo para garantir
+    const instancia = "wesley_gestor_v1"; 
 
     const statusLabel = document.getElementById('wa-status');
     const qrImage = document.getElementById('wa-qr-code');
-    statusLabel.innerText = "GERANDO QR CODE...";
+    statusLabel.innerText = "CONECTANDO...";
 
     try {
-        // PASSO 1: CRIAR E JÁ PEGAR O QR NO RETORNO
-        const res = await fetch(`${baseURL}/instance/create`, {
+        // Tenta criar
+        const resCreate = await fetch(`${baseURL}/instance/create`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json', 
-                'apikey': apiKey,
-                'ngrok-skip-browser-warning': 'true'
-            },
-            body: JSON.stringify({ 
-                instanceName: instancia, 
-                token: apiKey, 
-                qrcode: true 
-            })
+            headers: { 'Content-Type': 'application/json', 'apikey': apiKey, 'ngrok-skip-browser-warning': 'true' },
+            body: JSON.stringify({ instanceName: instancia, token: apiKey, qrcode: true })
         });
 
-        const data = await res.json();
+        // Espera 3 segundos para o arquivo ser populado
+        await new Promise(r => setTimeout(r, 3000));
 
-        // Na v1.8.2, o QR vem em data.qrcode.base64 logo após o create
-        if (data.qrcode && data.qrcode.base64) {
-            qrImage.src = data.qrcode.base64;
+        // Busca o QR Code
+        const resConnect = await fetch(`${baseURL}/instance/connect/${instancia}`, {
+            headers: { 'apikey': apiKey, 'ngrok-skip-browser-warning': 'true' }
+        });
+
+        const data = await resConnect.json();
+        if (data && data.base64) {
+            qrImage.src = data.base64;
             statusLabel.innerText = "QR CODE PRONTO!";
-            return;
-        } 
-        
-        // Se a instância já existir, vamos apenas conectar
-        if (res.status === 403 || res.status === 400) {
-            statusLabel.innerText = "BUSCANDO QR...";
-            const resConn = await fetch(`${baseURL}/instance/connect/${instancia}`, {
-                headers: { 'apikey': apiKey, 'ngrok-skip-browser-warning': 'true' }
-            });
-            const dataConn = await resConn.json();
-            if (dataConn.base64) {
-                qrImage.src = dataConn.base64;
-                statusLabel.innerText = "QR CODE PRONTO!";
-            }
+        } else {
+            statusLabel.innerText = "TENTANDO NOVAMENTE...";
+            setTimeout(conectarWhatsAppReal, 5000);
         }
-    } catch (error) {
-        console.error("Erro:", error);
-        statusLabel.innerText = "TENTANDO NOVAMENTE...";
-        setTimeout(conectarWhatsAppReal, 5000);
+    } catch (e) {
+        console.error(e);
+        statusLabel.innerText = "ERRO NA REDE";
     }
 }
     </script>
