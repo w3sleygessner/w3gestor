@@ -821,10 +821,15 @@
     statusLabel.innerText = "BUSCANDO CONEXÃO...";
 
     try {
-        const response = await fetch(`${baseURL}/instance/connect/${instancia}`, {
-            method: 'GET',
-            headers: { 'apikey': apiKey }
-        });
+       // No seu index.html, dentro do fetch:
+const response = await fetch(`${baseURL}/instance/connect/${instancia}`, {
+    method: 'GET',
+    headers: { 
+        'apikey': apiKey,
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true' // Isso pula o aviso do Ngrok que causa erro de CORS
+    }
+});
         
         const data = await response.json();
 
