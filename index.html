@@ -820,27 +820,25 @@
 
     statusLabel.innerText = "BUSCANDO CONEXÃO...";
 try {
-    // 1. Tenta buscar o QR Code da instância que já foi criada (wesley_v4)
-    const response = await fetch(`${baseURL}/instance/connect/wesley_v4`, {
-        method: 'GET',
-        headers: { 
-            'apikey': 'Wesley123!',
-            'ngrok-skip-browser-warning': 'true'
-        }
-    });
-
-    const data = await response.json();
-
-    if (data.base64) {
-        qrImage.src = data.base64; // O QR CODE VAI APARECER AQUI!
-        statusLabel.innerText = "QR CODE PRONTO! ESCANEIE AGORA.";
-    } else if (response.status === 404 || data.error) {
-        // Se não existir, aí sim tenta criar
-        statusLabel.innerText = "INSTÂNCIA NÃO ENCONTRADA, CRIANDO...";
-        await criarInstanciaNova(); 
+  const response = await fetch(`${baseURL}/instance/connect/wesley_v4`, {
+    method: 'GET',
+    headers: { 
+        'apikey': 'Wesley123!',
+        'ngrok-skip-browser-warning': 'true'
     }
-} catch (error) {
-    console.error(error);
+});
+
+// Isso evita o erro de JSON.parse se a API falhar
+if (response.ok) {
+    const data = await response.json();
+    if (data.base64) {
+        document.getElementById('wa-qr-code').src = data.base64;
+        document.getElementById('wa-status').innerText = "QR CODE PRONTO!";
+    }
+} else {
+    const textoErro = await response.text();
+    console.log("A API respondeu com erro:", textoErro);
+    document.getElementById('wa-status').innerText = "ERRO AO BUSCAR QR CODE";
 }
 }
     </script>
