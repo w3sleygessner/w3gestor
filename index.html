@@ -822,14 +822,15 @@
 
     try {
        // No seu index.html, dentro do fetch:
-const response = await fetch(`${baseURL}/instance/connect/${instancia}`, {
-    method: 'GET',
-    headers: { 
-        'apikey': apiKey,
-        'Content-Type': 'application/json',
-        'ngrok-skip-browser-warning': 'true' // Isso pula o aviso do Ngrok que causa erro de CORS
-    }
-});
+const response = await fetch(`${baseURL}/instance/create`, { /* ... configurações ... */ });
+
+// Ajuste essa parte para ver o erro real no console:
+if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Erro da API:", errorText);
+    return;
+}
+
         
         const data = await response.json();
 
@@ -852,6 +853,7 @@ await fetch(`${baseURL}/instance/create`, {
         instanceName: 'wesley_v3', 
         token: 'Wesley123!', // O token da instância pode ser igual à apikey
         qrcode: true,    // ISSO AQUI É O QUE VAI FAZER CONECTAR:
+        integration: "WHATSAPP-BAILEYS", // Tente adicionar essa linha
     options: {
         disableCall: true,
         disableGroup: true,      // Ignora grupos no login (pesa muito)
