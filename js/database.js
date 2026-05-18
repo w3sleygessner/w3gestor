@@ -2,7 +2,7 @@ import { ref, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-da
 import { auth, db_firebase } from "./firebase-config.js";
 import { updateDashboard } from "./ui.js";
 
-// Objeto global de dados inicializado vazio para evitar sobrescrever a nuvem com padrões
+// Objeto global de dados
 export let db = { 
     clientes: [], 
     planos: [], 
@@ -10,57 +10,50 @@ export let db = {
     apps: [], 
     config: { 
         aviso_dias: 3,
-        msg_boas_vindas: "",
-        msg_renovacao: "",
-        msg_sucesso: "",
-        msg_suspensa: ""
+        msg_boas_vindas: "Olá {cliente}, seu acesso ao {app} está ativo até {vencimento}.",
+        msg_renovacao: "Olá {cliente}, seu plano {plano} vence em {vencimento}. Vamos renovar?",
+        msg_sucesso: "Obrigado pelo pagamento, {cliente}!",
+        msg_suspensa: "Olá {cliente}, seu acesso venceu em {vencimento}."
     },
     account: { type: 'free', expiresAt: 0 } 
 };
 
-// Esta função é vital: ela garante que o objeto 'db' que o resto do app usa seja o mesmo
+// Função para carregar os dados e garantir que existam exemplos se estiver vazio
 export function setDb(data) {
-    // Mantém as propriedades que podem vir vazias da nuvem
     db.clientes = data.clientes || [];
-    db.planos = data.planos || [];
     db.faturas = data.faturas || [];
-    db.apps = data.apps || [];
     db.config = data.config || db.config;
     db.account = data.account || db.account;
+
+    // Se não houver planos no banco, insere o exemplo
+    if (!data.planos || data.planos.length === 0) {
+        db.planos = [{ id: 1, nome: 'Mensal Gold', valor: 30.00, custo: 7.00, dias: 30 }];
+    } else {
+        db.planos = data.planos;
+    }
+
+    // Se não houver apps no banco, insere o exemplo
+    if (!data.apps || data.apps.length === 0) {
+        db.apps = [{ id: 101, nome: "XCIPTV", url: "http://adonay.top", pin: "0000" }];
+    } else {
+        db.apps = data.apps;
+    }
     
-    // Sincroniza com o objeto global window para o console e outros módulos
     window.db = db; 
 }
 
 export function save() {
     const user = auth.currentUser;
     if (user) {
-        // Importante: Salvamos o estado atual do objeto 'db'
         set(ref(db_firebase, 'usuarios/' + user.uid), db)
             .then(() => {
-                console.log("✅ Nuvem sincronizada com sucesso!");
-                // Sincroniza o objeto global sempre que salvar
+                console.log("✅ Nuvem sincronizada!");
                 window.db = db;
             })
-            .catch((e) => {
-                console.error("❌ Erro ao sincronizar nuvem:", e);
-                if(e.message.includes("permission_denied")) {
-                    alert("Erro de permissão: Verifique se sua conta expirou ou se o limite foi atingido.");
-                }
-            });
+            .catch((e) => console.error("❌ Erro ao salvar:", e));
     }
     updateDashboard();
 }
 
-// Expõe a função de salvar para o escopo global (usado nos modais e console)
+// CORREÇÃO DO ERRO: Atribuímos a função já declarada ao window sem usar "let" ou "const"
 window.save = save;
-export async function save() {
-    const auth = getAuth();
-    const user = auth.currentUser;
-    const db = getDatabase();
-
-    if (user) {
-        // Garante que está salvando na SUA pasta de usuário
-        await set(ref(db, `usuarios/${user.uid}`), window.db);
-    }
-}
