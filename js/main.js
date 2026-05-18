@@ -214,6 +214,58 @@ document.getElementById('formCliente').onsubmit = function (e) {
 // PROTEÇÃO BÁSICA CONTRA CURIOSOS
 document.addEventListener('contextmenu', event => event.preventDefault()); // Bloqueia clique direito
 
+
+// --- FORMULÁRIO DE PLANOS ---
+document.getElementById('formPlano').onsubmit = function (e) {
+    e.preventDefault();
+    const editId = document.getElementById('plan_edit_id').value;
+    
+    const data = { 
+        nome: document.getElementById('plan_nome').value, 
+        valor: parseFloat(document.getElementById('plan_valor').value), 
+        custo: parseFloat(document.getElementById('plan_custo').value), 
+        dias: document.getElementById('plan_dias_select').value === 'custom' ? 
+              parseInt(document.getElementById('plan_dias_custom').value) : 
+              parseInt(document.getElementById('plan_dias_select').value)
+    };
+
+    if (editId) { 
+        const idx = db.planos.findIndex(p => p.id == editId); 
+        db.planos[idx] = { ...db.planos[idx], ...data }; 
+    } else { 
+        db.planos.push({ id: Date.now(), ...data }); 
+    }
+    
+    save(); 
+    UI.closeModal('modalPlano'); 
+    UI.renderPlanos(); 
+    UI.renderClientes(); // Atualiza a lista de seleção nos clientes
+};
+
+// --- FORMULÁRIO DE APPS ---
+document.getElementById('formApp').onsubmit = function (e) {
+    e.preventDefault();
+    const editId = document.getElementById('app_edit_id').value;
+    
+    const data = { 
+        nome: document.getElementById('app_nome').value, 
+        url: document.getElementById('app_url').value, 
+        pin: document.getElementById('app_pin').value 
+    };
+
+    if (editId) { 
+        const idx = db.apps.findIndex(a => a.id == editId); 
+        db.apps[idx] = { ...db.apps[idx], ...data }; 
+    } else { 
+        db.apps.push({ id: Date.now(), ...data }); 
+    }
+    
+    save(); 
+    UI.closeModal('modalApp'); 
+    UI.renderApps(); 
+    UI.renderClientes(); // Atualiza a lista de seleção nos clientes
+};
+
 document.onkeydown = function(e) {
     // Bloqueia F12
     if(e.keyCode == 123) return false;
