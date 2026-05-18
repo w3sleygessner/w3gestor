@@ -822,7 +822,19 @@
 
     try {
        // No seu index.html, dentro do fetch:
-const response = await fetch(`${baseURL}/instance/create`, { /* ... configurações ... */ });
+const response = await fetch(`${baseURL}/instance/create`, {
+    method: 'POST',
+    headers: { 
+        'Content-Type': 'application/json', 
+        'apikey': 'Wesley123!',
+        'ngrok-skip-browser-warning': 'true'
+    },
+    body: JSON.stringify({ 
+        instanceName: 'wesley_v4', // Tente um nome novo (v4) para limpar erros antigos
+        token: 'Wesley123!',
+        qrcode: true
+    })
+});
 
 // Ajuste essa parte para ver o erro real no console:
 if (!response.ok) {
