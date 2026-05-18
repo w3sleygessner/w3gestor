@@ -819,70 +819,29 @@
     const qrImage = document.getElementById('wa-qr-code');
 
     statusLabel.innerText = "BUSCANDO CONEXÃO...";
-
-    try {
-       // No seu index.html, dentro do fetch:
-const response = await fetch(`${baseURL}/instance/create`, {
-    method: 'POST',
-    headers: { 
-        'Content-Type': 'application/json', 
-        'apikey': 'Wesley123!',
-        'ngrok-skip-browser-warning': 'true'
-    },
-    body: JSON.stringify({ 
-        instanceName: 'wesley_v4', // Tente um nome novo (v4) para limpar erros antigos
-        token: 'Wesley123!',
-        qrcode: true
-    })
-});
-
-// Ajuste essa parte para ver o erro real no console:
-if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Erro da API:", errorText);
-    return;
-}
-
-        
-        const data = await response.json();
-
-        if (data.base64) {
-            qrImage.src = data.base64;
-            statusLabel.innerText = "QR CODE PRONTO!";
-        } else {
-            // Se der 404 ou não tiver base64, criamos do zero
-            statusLabel.innerText = "CRIANDO INSTÂNCIA...";
-
-            // No seu index.html, no bloco que faz o POST para /instance/create:
-await fetch(`${baseURL}/instance/create`, {
-    method: 'POST',
-    headers: { 
-        'Content-Type': 'application/json', 
-        'apikey': 'Wesley123!', // <--- VERIFIQUE SE ESTÁ IGUAL AO .ENV
-        'ngrok-skip-browser-warning': 'true'
-    },
-    body: JSON.stringify({ 
-        instanceName: 'wesley_v3', 
-        token: 'Wesley123!', // O token da instância pode ser igual à apikey
-        qrcode: true,    // ISSO AQUI É O QUE VAI FAZER CONECTAR:
-        integration: "WHATSAPP-BAILEYS", // Tente adicionar essa linha
-    options: {
-        disableCall: true,
-        disableGroup: true,      // Ignora grupos no login (pesa muito)
-        disableAdmin: true,
-        // Bloqueia a sincronização pesada que trava o celular
-        syncFullHistory: false, 
-        msgRetryCounterCache: false
-    }
-    })
-});
-            // Espera 5 segundos e tenta ler o QR de novo
-            setTimeout(conectarWhatsAppReal, 5000);
+try {
+    // 1. Tenta buscar o QR Code da instância que já foi criada (wesley_v4)
+    const response = await fetch(`${baseURL}/instance/connect/wesley_v4`, {
+        method: 'GET',
+        headers: { 
+            'apikey': 'Wesley123!',
+            'ngrok-skip-browser-warning': 'true'
         }
-    } catch (error) {
-        statusLabel.innerText = "ERRO DE REDE";
-        console.error(error);
+    });
+
+    const data = await response.json();
+
+    if (data.base64) {
+        qrImage.src = data.base64; // O QR CODE VAI APARECER AQUI!
+        statusLabel.innerText = "QR CODE PRONTO! ESCANEIE AGORA.";
+    } else if (response.status === 404 || data.error) {
+        // Se não existir, aí sim tenta criar
+        statusLabel.innerText = "INSTÂNCIA NÃO ENCONTRADA, CRIANDO...";
+        await criarInstanciaNova(); 
     }
+} catch (error) {
+    console.error(error);
+}
 }
     </script>
 </body>
