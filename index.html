@@ -809,42 +809,55 @@
         function initApp() { renderPlanos(); renderApps(); updateDashboard(); renderConfig(); renderClientes(); }
         window.onload = () => { checkSession(); };
 
- async function conectarWhatsAppReal() {
+async function conectarWhatsAppReal() {
     const baseURL = "https://crazy-licorice-that.ngrok-free.dev";
     const apiKey = "Wesley123!";
-    const instancia = "wesley_v4"; // Usando a v4 que já sabemos que existe
+    const instancia = "wesley_final"; // Nome limpo
 
     const statusLabel = document.getElementById('wa-status');
     const qrImage = document.getElementById('wa-qr-code');
-
-    statusLabel.innerText = "BUSCANDO CONEXÃO...";
+    statusLabel.innerText = "PROCESSANDO...";
 
     try {
-        const response = await fetch(`${baseURL}/instance/connect/${instancia}`, {
+        // Tenta criar a instância primeiro (se já existir, a API apenas ignorará ou dará erro, o que é ok)
+        const resCreate = await fetch(`${baseURL}/instance/create`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json', 
+                'apikey': apiKey,
+                'ngrok-skip-browser-warning': 'true'
+            },
+            body: JSON.stringify({ 
+                instanceName: instancia, 
+                token: apiKey, 
+                qrcode: true 
+            })
+        });
+
+        // Agora, independente de ter criado ou já existir, vamos buscar o QR Code
+        const resConnect = await fetch(`${baseURL}/instance/connect/${instancia}`, {
             method: 'GET',
-            headers: {
+            headers: { 
                 'apikey': apiKey,
                 'ngrok-skip-browser-warning': 'true'
             }
         });
 
-        if (response.ok) {
-            const data = await response.json();
-            if (data.base64) {
-                qrImage.src = data.base64;
-                statusLabel.innerText = "QR CODE PRONTO!";
-            } else {
-                statusLabel.innerText = "ERRO: SEM BASE64";
-            }
+        const data = await resConnect.json();
+
+        if (data.base64) {
+            qrImage.src = data.base64;
+            statusLabel.innerText = "QR CODE PRONTO! ESCANEIE.";
         } else {
-            const textoErro = await response.text();
-            console.log("Erro da API:", textoErro);
-            statusLabel.innerText = "ERRO NA API (401/404)";
+            statusLabel.innerText = "AGUARDANDO QR CODE...";
+            // Tenta de novo em 5 segundos se não veio o base64
+            setTimeout(conectarWhatsAppReal, 5000);
         }
+
     } catch (error) {
-        console.error("Erro de Rede:", error);
-        statusLabel.innerText = "ERRO DE CONEXÃO";
-    } // FECHAMENTO DO CATCH CORRIGIDO AQUI
+        console.error("Erro detalhado:", error);
+        statusLabel.innerText = "ERRO NA CONEXÃO";
+    }
 }
     </script>
 </body>
