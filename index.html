@@ -812,39 +812,31 @@
 async function conectarWhatsAppReal() {
     const baseURL = "https://crazy-licorice-that.ngrok-free.dev";
     const apiKey = "Wesley123!";
-    const instancia = "wesley_gestor_v1"; 
-
-    const statusLabel = document.getElementById('wa-status');
-    const qrImage = document.getElementById('wa-qr-code');
-    statusLabel.innerText = "CONECTANDO...";
+    const instancia = "wesley_sucesso"; // Nome novo
 
     try {
-        // Tenta criar
-        const resCreate = await fetch(`${baseURL}/instance/create`, {
+        // TENTA CRIAR
+        await fetch(`${baseURL}/instance/create`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'apikey': apiKey, 'ngrok-skip-browser-warning': 'true' },
             body: JSON.stringify({ instanceName: instancia, token: apiKey, qrcode: true })
         });
 
-        // Espera 3 segundos para o arquivo ser populado
+        // ESPERA 3 SEGUNDOS
         await new Promise(r => setTimeout(r, 3000));
 
-        // Busca o QR Code
-        const resConnect = await fetch(`${baseURL}/instance/connect/${instancia}`, {
+        // BUSCA CONEXÃO
+        const res = await fetch(`${baseURL}/instance/connect/${instancia}`, {
             headers: { 'apikey': apiKey, 'ngrok-skip-browser-warning': 'true' }
         });
 
-        const data = await resConnect.json();
-        if (data && data.base64) {
-            qrImage.src = data.base64;
-            statusLabel.innerText = "QR CODE PRONTO!";
-        } else {
-            statusLabel.innerText = "TENTANDO NOVAMENTE...";
-            setTimeout(conectarWhatsAppReal, 5000);
+        const data = await res.json();
+        if (data.base64) {
+            document.getElementById('wa-qr-code').src = data.base64;
+            document.getElementById('wa-status').innerText = "QR CODE PRONTO!";
         }
     } catch (e) {
-        console.error(e);
-        statusLabel.innerText = "ERRO NA REDE";
+        console.log("Erro ainda persiste, mas estamos no caminho!");
     }
 }
     </script>
