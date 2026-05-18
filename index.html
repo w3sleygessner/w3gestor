@@ -811,23 +811,28 @@
 
 async function conectarWhatsAppReal() {
     const baseURL = "https://crazy-licorice-that.ngrok-free.dev";
-    const apiKey = "Wesley123!";
-    const instancia = "wesley_sucesso"; // Nome novo
+    const apiKey = "Wesley123!"; // Verifique se é EXATAMENTE essa que está no seu env.config.ts
+    const instancia = "wesley_final_ok"; 
 
     try {
-        // TENTA CRIAR
         await fetch(`${baseURL}/instance/create`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'apikey': apiKey, 'ngrok-skip-browser-warning': 'true' },
+            headers: { 
+                'Content-Type': 'application/json', 
+                'apikey': apiKey,
+                // ESSA LINHA ABAIXO É O SEGREDO PARA O NGROK NÃO DAR 403
+                'ngrok-skip-browser-warning': 'true' 
+            },
             body: JSON.stringify({ instanceName: instancia, token: apiKey, qrcode: true })
         });
 
-        // ESPERA 3 SEGUNDOS
         await new Promise(r => setTimeout(r, 3000));
 
-        // BUSCA CONEXÃO
         const res = await fetch(`${baseURL}/instance/connect/${instancia}`, {
-            headers: { 'apikey': apiKey, 'ngrok-skip-browser-warning': 'true' }
+            headers: { 
+                'apikey': apiKey,
+                'ngrok-skip-browser-warning': 'true' // Adicione aqui também
+            }
         });
 
         const data = await res.json();
@@ -836,7 +841,7 @@ async function conectarWhatsAppReal() {
             document.getElementById('wa-status').innerText = "QR CODE PRONTO!";
         }
     } catch (e) {
-        console.log("Erro ainda persiste, mas estamos no caminho!");
+        console.log("Quase lá!");
     }
 }
     </script>
