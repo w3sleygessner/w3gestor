@@ -809,37 +809,42 @@
         function initApp() { renderPlanos(); renderApps(); updateDashboard(); renderConfig(); renderClientes(); }
         window.onload = () => { checkSession(); };
 
-        async function conectarWhatsAppReal() {
-    const baseURL = "https://crazy-licorice-that.ngrok-free.dev"; 
-    const apiKey = "Wesley123!"; 
-    // Mudamos o nome para forçar uma instância nova e limpa
-    const instancia = "wesley_v3";
+     async function conectarWhatsAppReal() {
+    const baseURL = "https://crazy-licorice-that.ngrok-free.dev";
+    const apiKey = "Wesley123!";
+    const instancia = "wesley_v4"; // Usando a v4 que já sabemos que existe
 
     const statusLabel = document.getElementById('wa-status');
     const qrImage = document.getElementById('wa-qr-code');
 
     statusLabel.innerText = "BUSCANDO CONEXÃO...";
-try {
-  const response = await fetch(`${baseURL}/instance/connect/wesley_v4`, {
-    method: 'GET',
-    headers: { 
-        'apikey': 'Wesley123!',
-        'ngrok-skip-browser-warning': 'true'
-    }
-});
 
-// Isso evita o erro de JSON.parse se a API falhar
-if (response.ok) {
-    const data = await response.json();
-    if (data.base64) {
-        document.getElementById('wa-qr-code').src = data.base64;
-        document.getElementById('wa-status').innerText = "QR CODE PRONTO!";
-    }
-} else {
-    const textoErro = await response.text();
-    console.log("A API respondeu com erro:", textoErro);
-    document.getElementById('wa-status').innerText = "ERRO AO BUSCAR QR CODE";
-}
+    try {
+        const response = await fetch(`${baseURL}/instance/connect/${instancia}`, {
+            method: 'GET',
+            headers: {
+                'apikey': apiKey,
+                'ngrok-skip-browser-warning': 'true'
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.base64) {
+                qrImage.src = data.base64;
+                statusLabel.innerText = "QR CODE PRONTO!";
+            } else {
+                statusLabel.innerText = "ERRO: SEM BASE64";
+            }
+        } else {
+            const textoErro = await response.text();
+            console.log("Erro da API:", textoErro);
+            statusLabel.innerText = "ERRO NA API (401/404)";
+        }
+    } catch (error) {
+        console.error("Erro de Rede:", error);
+        statusLabel.innerText = "ERRO DE CONEXÃO";
+    } // FECHAMENTO DO CATCH CORRIGIDO AQUI
 }
     </script>
 </body>
