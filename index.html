@@ -839,15 +839,19 @@ const response = await fetch(`${baseURL}/instance/connect/${instancia}`, {
         } else {
             // Se der 404 ou não tiver base64, criamos do zero
             statusLabel.innerText = "CRIANDO INSTÂNCIA...";
-            await fetch(`${baseURL}/instance/create`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
-               // Dentro da sua função, no bloco do POST (criação):
-body: JSON.stringify({ 
-    instanceName: instancia, 
-    token: apiKey,
-    qrcode: true,
-    // ISSO AQUI É O QUE VAI FAZER CONECTAR:
+
+            // No seu index.html, no bloco que faz o POST para /instance/create:
+await fetch(`${baseURL}/instance/create`, {
+    method: 'POST',
+    headers: { 
+        'Content-Type': 'application/json', 
+        'apikey': 'Wesley123!', // <--- VERIFIQUE SE ESTÁ IGUAL AO .ENV
+        'ngrok-skip-browser-warning': 'true'
+    },
+    body: JSON.stringify({ 
+        instanceName: 'wesley_v3', 
+        token: 'Wesley123!', // O token da instância pode ser igual à apikey
+        qrcode: true,    // ISSO AQUI É O QUE VAI FAZER CONECTAR:
     options: {
         disableCall: true,
         disableGroup: true,      // Ignora grupos no login (pesa muito)
@@ -856,7 +860,8 @@ body: JSON.stringify({
         syncFullHistory: false, 
         msgRetryCounterCache: false
     }
-})
+    })
+});
             });
             // Espera 5 segundos e tenta ler o QR de novo
             setTimeout(conectarWhatsAppReal, 5000);
