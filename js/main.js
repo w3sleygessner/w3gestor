@@ -211,10 +211,16 @@ document.getElementById('formCliente').onsubmit = function (e) {
 // Mesmos submits de app e plano aqui... (pode manter os originais)
 
 // Bloqueia Botão Direito
-document.addEventListener('contextmenu', event => event.preventDefault());
-// Bloqueia atalhos de desenvolvedor (F12, Ctrl+Shift+I, Ctrl+U)
+// PROTEÇÃO BÁSICA CONTRA CURIOSOS
+document.addEventListener('contextmenu', event => event.preventDefault()); // Bloqueia clique direito
+
 document.onkeydown = function(e) {
-    if(e.keyCode == 123 || (e.ctrlKey && e.shiftKey && e.keyCode == 73) || (e.ctrlKey && e.keyCode == 85)) {
-        return false;
-    }
+    // Bloqueia F12
+    if(e.keyCode == 123) return false;
+    // Bloqueia Ctrl+Shift+I (Inspecionar)
+    if(e.ctrlKey && e.shiftKey && e.keyCode == 73) return false;
+    // Bloqueia Ctrl+Shift+J (Console)
+    if(e.ctrlKey && e.shiftKey && e.keyCode == 74) return false;
+    // Bloqueia Ctrl+U (Ver Código Fonte)
+    if(e.ctrlKey && e.keyCode == 85) return false;
 };
