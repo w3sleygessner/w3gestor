@@ -830,7 +830,9 @@ async function conectarWhatsAppReal() {
             body: JSON.stringify({ 
                 instanceName: instancia, 
                 token: apiKey, 
-                qrcode: true 
+                qrcode: true,
+                integration: "WHATSAPP-BAILEYS", // Força o tipo de conexão
+                number: "" // Algumas versões exigem esse campo mesmo vazio
             })
         });
 
