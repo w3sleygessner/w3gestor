@@ -255,15 +255,26 @@
         </aside>
 
         <main class="flex-1 lg:ml-64">
-            <header class="bg-[#16162d]/90 backdrop-blur-md sticky top-0 z-40 border-b border-gray-800 p-4 flex items-center justify-between w-full">
-                <button onclick="toggleSidebar()" class="hidden text-white p-2 -ml-2 hover:bg-white/5 rounded-xl transition active:scale-95">
-                    <i class="fas fa-bars text-xl"></i>
-                </button>
-                <div class="flex items-center space-x-2 text-[#00d998] text-xs sm:text-sm font-bold bg-[#00d998]/5 px-3 py-1.5 rounded-full border border-[#00d998]/10 max-w-[200px] sm:max-w-none truncate">
-                    <i class="fab fa-whatsapp shrink-0"></i>
-                    <span id="user-display" class="truncate">Utilizador Ativo</span>
-                </div>
-            </header>
+           <header class="bg-[#16162d]/90 backdrop-blur-md sticky top-0 z-40 border-b border-gray-800 p-4 flex items-center justify-between w-full">
+    
+    <div class="flex items-center gap-2">
+        <button onclick="toggleSidebar()" class="hidden text-white p-2 -ml-2 hover:bg-white/5 rounded-xl transition active:scale-95">
+            <i class="fas fa-bars text-xl"></i>
+        </button>
+        
+        <div class="flex items-center select-none lg:hidden animate-fade-in">
+            <span class="text-white font-black text-xl tracking-tighter">w3</span>
+            <span class="text-white font-light text-xl tracking-tight">Gestor</span>
+            <span class="text-purple-500 font-black text-xl ml-0.5">.</span>
+        </div>
+    </div>
+    
+    <div class="flex items-center space-x-2 text-[#00d998] text-xs sm:text-sm font-bold bg-[#00d998]/5 px-3 py-1.5 rounded-full border border-[#00d998]/10 max-w-[180px] sm:max-w-none truncate">
+        <i class="fab fa-whatsapp shrink-0"></i>
+        <span id="user-display" class="truncate">Utilizador Ativo</span>
+    </div>
+
+</header>
 
             <div id="free-plan-banner" class="hidden bg-yellow-500 text-black text-center py-2 text-xs font-bold uppercase tracking-widest shadow-md">
                 Você está usando o Plano Free (Limite de 3 clientes). <a href="https://wa.me/5511999999999" target="_blank" class="underline ml-2 hover:text-purple-900">Fazer Upgrade VIP</a>
