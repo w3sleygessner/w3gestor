@@ -712,3 +712,19 @@ export function toggleFiltrosGaveta(open) {
 }
 
 window.toggleFiltrosGaveta = toggleFiltrosGaveta;
+
+// ====== ADICIONE NO FINAL DO SEU JS/UI.JS ======
+window.alternarAbasAuth = function(irParaCadastro) {
+    const wrapLogin = document.getElementById('wrapper-login');
+    const wrapRegister = document.getElementById('wrapper-register');
+    
+    if (!wrapLogin || !wrapRegister) return;
+
+    if (irParaCadastro) {
+        wrapLogin.classList.add('hidden');
+        wrapRegister.classList.remove('hidden');
+    } else {
+        wrapRegister.classList.add('hidden');
+        wrapLogin.classList.remove('hidden');
+    }
+};
