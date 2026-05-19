@@ -14,7 +14,7 @@ window.save = save;
 
 const MEU_EMAIL_ADMIN = "w3sleygessner@gmail.com";
 
-// 👤 DECLARAÇÃO DA FUNÇÃO: Oculta a splash screen com fade suave com total segurança
+// 👤 FUNÇÃO QUE ESTAVA EM FALTA: Oculta a splash screen com fade suave de forma segura
 function esconderSplashScreen() {
     const splash = document.getElementById('splash-screen');
     if (splash) {
@@ -24,11 +24,11 @@ function esconderSplashScreen() {
     }
 }
 
-// ⏱️ TRAVA DE CONCILIAÇÃO DE REDE: Se em até 4 segundos o Firebase não responder, destrava o ecrã à força
+// ⏱️ TRAVA DE SEGURANÇA: Se em até 4 segundos o Firebase não responder, remove o loader para não congelar a tela
 setTimeout(() => {
     const splash = document.getElementById('splash-screen');
     if (splash) {
-        console.warn("w3Gestor: Firebase lento. Removendo cortina de loading.");
+        console.warn("w3Gestor: O Firebase demorou muito para responder. Forçando a remoção do loader.");
         esconderSplashScreen();
     }
 }, 4000);
@@ -36,7 +36,11 @@ setTimeout(() => {
 // ====== OBSERVADOR DE SESSÃO DO FIREBASE AUTH ======
 onAuthStateChanged(auth, (currentUser) => {
     if (currentUser) {
-        console.log("w3Gestor: Usuário conectado com sucesso.");
+        console.log("w3Gestor: Usuário autenticado. Montando ambiente...");
+        
+        // Remove a dependência estrita do elemento antigo do cabeçalho para evitar quebras
+        const userDisplay = document.getElementById('user-display');
+        if (userDisplay) userDisplay.innerText = currentUser.email;
 
         const userRef = ref(db_firebase, 'usuarios/' + currentUser.uid);
         onValue(userRef, (snapshot) => {
@@ -110,7 +114,7 @@ onAuthStateChanged(auth, (currentUser) => {
                 esconderSplashScreen();
 
             } catch (err) {
-                console.error("Erro interno ao renderizar os dados sincronizados:", err);
+                console.error("Erro crítico na montagem das abas:", err);
                 esconderSplashScreen();
             }
         });
@@ -299,7 +303,7 @@ window.atualizarBarraAcoes = function() {
 
 window.toggleSelectAll = function(source) {
     if (!source || source.id !== 'select-all-clients') return;
-    const body = document.getElementById('table-clientes-desktop tbody') || document.getElementById('table-clientes-body');
+    const body = document.getElementById('table-clientes-body');
     if (!body) return;
 
     const checkboxes = body.querySelectorAll('.client-checkbox');
@@ -322,4 +326,42 @@ window.excluirEmMassa = function() {
         window.atualizarBarraAcoes();
         UI.updateDashboard();
     }
+};
+
+window.exportarSistema = function() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.db));
+    const dlAnchor = document.createElement('a');
+    const dataAtual = new Date().toLocaleDateString().replace(/\//g, '-');
+    
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", `w3gestor_backup_${dataAtual}.json`);
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+    UI.showNotify("Backup", "Download do arquivo iniciado!", "success");
+};
+
+window.importarSistema = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const backupValido = JSON.parse(e.target.result);
+            if (!backupValido.clientes) {
+                UI.showNotify("Erro na Importação", "Arquivo JSON inválido ou corrompido.", "error");
+                return;
+            }
+
+            if (confirm(`Atenção: Deseja restaurar este backup contendo ${backupValido.clientes.length} clientes?`)) {
+                setDb(backupValido);
+                save();
+                location.reload();
+            }
+        } catch (err) {
+            UI.showNotify("Erro", "Falha ao processar o arquivo de backup.", "error");
+        }
+    };
+    reader.readAsText(file);
 };
