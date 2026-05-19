@@ -14,7 +14,7 @@ window.exportarParaTexto = function() {
     textarea.select();
     document.execCommand('copy');
     textarea.remove();
-    showNotify("Código de backup copiado para a sua área de transferência! Cole onde quiser salvar.");
+    showNotify("Copiado!", "Código de backup copiado para a sua área de transferência!");
 };
 
 window.importarDeTexto = function() {
@@ -32,7 +32,7 @@ window.importarDeTexto = function() {
             location.reload();
         }
     } catch (err) {
-        showNotify("Código de backup inválido ou corrompido.");
+        showNotify("Erro", "Código de backup inválido ou corrompido.", "error");
     }
 };
 
@@ -42,8 +42,19 @@ window.toggleAuthMode = function() {
     document.getElementById('btn-auth-action').innerText = isRegisterMode ? "Registar" : "Entrar"; 
 }
 
-// ====== SUBSTITUA APENAS A FUNÇÃO switchTab NO SEU js/ui.js ======
 export function switchTab(tab) {
+    const bottomButtons = document.querySelectorAll('#bottom-nav button');
+    bottomButtons.forEach(btn => {
+        const isCurrent = btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(tab);
+        if (isCurrent) {
+            btn.classList.remove('text-gray-400');
+            btn.classList.add('text-purple-400');
+        } else {
+            btn.classList.remove('text-purple-400');
+            btn.classList.add('text-gray-400');
+        }
+    });
+
     document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
     if (document.getElementById('tab-' + tab)) document.getElementById('tab-' + tab).classList.remove('hidden');
     
@@ -63,12 +74,26 @@ export function switchTab(tab) {
             moduloAdmin.carregarAssinantes();
         }).catch(err => console.error("Erro ao carregar o arquivo admin.js:", err));
     }
+
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar && !sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) {
+        sidebar.classList.add('-translate-x-full');
+    }
 }
 
-export function toggleSidebar() { document.getElementById('sidebar').classList.toggle('-translate-x-full'); }
+export function toggleSidebar() { 
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+    
+    if (sidebar.classList.contains('-translate-x-full')) {
+        sidebar.classList.remove('-translate-x-full');
+    } else {
+        sidebar.classList.add('-translate-x-full');
+    }
+}
+
 export function openModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
 export function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
-export function showNotify(t, m) { const n = document.createElement('div'); n.className = "fixed bottom-5 right-5 bg-purple-600 text-white p-4 rounded-xl shadow-2xl z-[200]"; n.innerHTML = `<h5 class="font-bold text-sm uppercase">${t}</h5><p class="text-xs opacity-90">${m}</p>`; document.body.appendChild(n); setTimeout(() => n.remove(), 3000); }
 export function checkCustomDays(v) { const el = document.getElementById('plan_dias_custom'); if (el) el.classList.toggle('hidden', v !== 'custom'); }
 
 // --- DASHBOARD E GRÁFICOS ---
@@ -127,11 +152,11 @@ export function renderChartEvolucao() {
     financeChart = new ApexCharts(el, options);
     financeChart.render();
 }
-
 export function renderClientes() {
-    const body = document.getElementById('table-clientes-body'); if (!body) return; 
-    
-    body.innerHTML = '';
+    const tableBody = document.getElementById('table-clientes-body'); 
+    if (!tableBody) return; 
+
+    tableBody.innerHTML = '';
     const checkMestre = document.getElementById('select-all-clients');
     if (checkMestre) checkMestre.checked = false;
     
@@ -145,12 +170,18 @@ export function renderClientes() {
     const elStatus = document.getElementById('filter-status');
     const elInad = document.getElementById('filter-inadimplentes');
 
-    const nF = elName ? elName.value.toLowerCase() : "";
-    const aF = elApp ? elApp.value : "";
-    const pF = elPlano ? elPlano.value : "";
-    const sF = elStatus ? elStatus.value : "";
+    // FILTROS BLINDADOS CONTRA ERROS DE ELEMENTO NULL
+    const nF = (elName && elName.value) ? elName.value.toLowerCase() : "";
+    const aF = (elApp && elApp.value) ? elApp.value : "";
+    const pF = (elPlano && elPlano.value) ? elPlano.value : "";
+    const sF = (elStatus && elStatus.value) ? elStatus.value : "";
     const iF = elInad ? elInad.checked : true;
-    const hoje = new Date(); const hojeS = hoje.toISOString().split('T')[0];
+    
+    const hoje = new Date(); 
+    const hojeS = hoje.toISOString().split('T')[0];
+
+    // Array para guardar os clientes filtrados
+    const clientesFiltrados = [];
 
     db.clientes.sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento)).forEach(cli => {
         const p = db.planos.find(x => x.id == cli.plano_id) || { nome: 'N/A' };
@@ -168,12 +199,15 @@ export function renderClientes() {
         if (sF === 'overdue' && !isOverdue) return;
         if (sF === 'inadimplente' && !isInadimplente) return;
 
+        // Guarda o cliente válido
+        clientesFiltrados.push(cli);
+
         let rCls = '';
         if (isInadimplente) rCls = 'row-inadimplente';
         else if (isOverdue) rCls = 'row-overdue';
         else if (isWarning) rCls = 'row-warning';
 
-        body.innerHTML += `<tr class="border-t border-gray-800/50 transition hover:bg-white/5 ${rCls}">
+        tableBody.innerHTML += `<tr class="border-t border-gray-800/50 transition hover:bg-white/5 ${rCls}">
             <td class="p-3 text-center w-10">
                 <input type="checkbox" class="client-checkbox" value="${cli.id}" onchange="window.atualizarBarraAcoes()"
                        style="appearance: none; -webkit-appearance: none; width: 16px; height: 16px; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; background: rgba(255,255,255,0.05); cursor: pointer; display: inline-grid; place-content: center; transition: all 0.2s;">
@@ -200,8 +234,64 @@ export function renderClientes() {
             </td>
         </tr>`;
     });
-}
 
+    // RENDERIZAÇÃO DOS CARDS EM AMBIENTE MOBILE (DENTRO DA FUNÇÃO!)
+    const mobileContainer = document.getElementById('lista-clientes-mobile');
+    if (mobileContainer) {
+        mobileContainer.innerHTML = ''; 
+
+        if (clientesFiltrados.length === 0) {
+            mobileContainer.innerHTML = `<div class="text-center p-6 text-gray-500 text-xs uppercase font-bold">Nenhum cliente encontrado</div>`;
+        } else {
+            clientesFiltrados.forEach(cli => {
+                const p = db.planos.find(x => x.id == cli.plano_id) || { nome: 'Sem Plano' };
+                const app = db.apps.find(x => x.id == cli.app_id) || { nome: 'Sem App' };
+                
+                const isOverdue = cli.vencimento < hojeS;
+                const statusBorder = isOverdue ? 'border-red-500/30' : 'border-green-500/30';
+                const badgeColor = isOverdue ? 'bg-red-600/20 text-red-400 border border-red-500/30' : 'bg-green-600/20 text-green-400 border border-green-500/30';
+
+                mobileContainer.innerHTML += `
+                    <div class="card p-4 rounded-2xl border ${statusBorder} bg-[#16162d] flex flex-col gap-3.5 shadow-xl mx-1 mb-3">
+                        <div class="flex items-center justify-between gap-2 w-full">
+                            <div class="truncate flex-1">
+                                <h4 class="font-black text-white text-sm uppercase tracking-tight truncate">${cli.nome}</h4>
+                                <p class="text-[10px] text-gray-400 mt-0.5 uppercase truncate">${p.nome} • <span class="text-purple-400 font-bold">${app.nome}</span></p>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-mono font-black uppercase tracking-tighter shrink-0 ${badgeColor}">
+                                ${cli.vencimento.split('-').reverse().join('/')}
+                            </span>
+                        </div>
+
+                        <div class="flex items-center justify-between border-t border-white/5 pt-3 gap-2 w-full">
+                            <div class="flex flex-col">
+                                <span class="text-[9px] text-gray-500 uppercase font-black tracking-wider">WhatsApp</span>
+                                <span class="text-xs text-gray-300 font-mono font-bold">${cli.whatsapp}</span>
+                            </div>
+                            <div class="flex gap-4 bg-black/30 px-3.5 py-2 rounded-xl border border-white/5 shrink-0">
+                                <button onclick="sendManualWA(${cli.id}, 'renew')" title="Aviso" class="text-purple-400 text-sm active:scale-75 transition"><i class="fas fa-redo"></i></button>
+                                <button onclick="sendManualWA(${cli.id}, 'welcome')" title="Boas-vindas" class="text-green-400 text-sm active:scale-75 transition"><i class="fas fa-star"></i></button>
+                                <button onclick="sendManualWA(${cli.id}, 'suspended')" title="Suspender" class="text-red-400 text-sm active:scale-75 transition"><i class="fas fa-ban"></i></button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between gap-1.5 border-t border-white/5 pt-3 mt-0.5 w-full">
+                            <div class="flex gap-1">
+                                <button onclick="copyFullAccess(${cli.id})" title="Copiar Acesso" class="w-9 h-9 flex items-center justify-center text-purple-400 bg-purple-500/10 rounded-xl text-xs active:scale-90 transition"><i class="fas fa-copy"></i></button>
+                                <button onclick="openModalEdit(${cli.id})" title="Editar" class="w-9 h-9 flex items-center justify-center text-gray-400 bg-white/5 rounded-xl text-xs active:scale-90 transition"><i class="fas fa-edit"></i></button>
+                                <button onclick="deleteCliente(${cli.id})" title="Excluir" class="w-9 h-9 flex items-center justify-center text-red-400 bg-red-500/10 rounded-xl text-xs active:scale-90 transition"><i class="fas fa-trash"></i></button>
+                            </div>
+                            <div class="flex gap-1 flex-1 justify-end">
+                                <button onclick="addThreeDays(${cli.id})" class="h-9 px-3 bg-purple-600/20 text-purple-400 border border-purple-500/20 rounded-xl text-[11px] font-black active:scale-95 transition">+3 DIAS</button>
+                                <button onclick="openModalRenovar(${cli.id})" class="h-9 px-5 bg-green-600 text-white rounded-xl text-[11px] font-black shadow-lg shadow-green-500/10 text-center active:scale-95 transition">PAGO</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+    }
+} // <--- FIM REAL DA FUNÇÃO
 export function addThreeDays(id) {
     const idx = db.clientes.findIndex(c => c.id == id);
     if (idx !== -1) {
@@ -360,7 +450,7 @@ export function deleteCliente(id) {
         text: "Tem certeza que deseja apagar este cliente? Esta ação não pode ser desfeita.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#dc2626', // Vermelho
+        confirmButtonColor: '#dc2626',
         cancelButtonColor: '#374151',
         confirmButtonText: 'Sim, apagar!',
         cancelButtonText: 'Cancelar',
@@ -376,7 +466,9 @@ export function deleteCliente(id) {
             showNotify('Removido', 'O cliente foi excluído com sucesso.', 'success');
         }
     });
-}export function openModalAppAdd() { document.getElementById('formApp').reset(); document.getElementById('app_edit_id').value = ""; document.getElementById('modalAppTitle').innerText = "Novo App"; openModal('modalApp'); }
+}
+
+export function openModalAppAdd() { document.getElementById('formApp').reset(); document.getElementById('app_edit_id').value = ""; document.getElementById('modalAppTitle').innerText = "Novo App"; openModal('modalApp'); }
 
 export function openModalAppEdit(id) {
     const a = db.apps.find(x => x.id == id);
@@ -405,7 +497,9 @@ export function deleteApp(id) {
             showNotify('App Removido', 'A aplicação foi excluída com sucesso.', 'success');
         }
     });
-}export function openModalPlanoAdd() { document.getElementById('formPlano').reset(); document.getElementById('plan_edit_id').value = ""; document.getElementById('modalPlanoTitle').innerText = "Novo Plano"; openModal('modalPlano'); }
+}
+
+export function openModalPlanoAdd() { document.getElementById('formPlano').reset(); document.getElementById('plan_edit_id').value = ""; document.getElementById('modalPlanoTitle').innerText = "Novo Plano"; openModal('modalPlano'); }
 
 export function openModalPlanoEdit(id) {
     const p = db.planos.find(pl => pl.id == id);
@@ -437,6 +531,7 @@ export function deletePlano(id) {
         }
     });
 }
+
 export function openModalRenovar(id) {
     const cli = db.clientes.find(c => c.id == id);
     const p = db.planos.find(pl => pl.id == cli.plano_id) || { valor: 0 };
@@ -488,12 +583,11 @@ export function copyFullAccess(id) {
     showNotify('Copiado!', 'Dados copiados.');
 }
 
-// FUNÇÃO GLOBAL DE NOTIFICAÇÃO MODERNA
-window.showNotify = function(titulo, mensagem, tipo = 'success') {
+// INTERFACE DE NOTIFICAÇÃO CORRIGIDA (SEM ERRO DE SINTAXE)
+export function showNotify(titulo, message, tipo = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
 
-    // Configuração de cores e ícones por tipo
     let bgIcon = 'bg-green-500/20 text-green-400 border-green-500/30';
     let icon = 'fas fa-check-circle';
     
@@ -508,9 +602,8 @@ window.showNotify = function(titulo, mensagem, tipo = 'success') {
         icon = 'fas fa-info-circle';
     }
 
-    // Criar o elemento do Toast
     const toast = document.createElement('div');
-    toast.className = `pointer-events-auto w-full bg-[#16162d]/95 backdrop-blur-md border border-white/5 p-4 rounded-xl shadow-2xl flex items-start gap-3 transform translate-x-20 opacity-0 transition-all duration-300`;
+    toast.className = "pointer-events-auto w-full bg-[#16162d]/95 backdrop-blur-md border border-white/5 p-4 rounded-xl shadow-2xl flex items-start gap-3 transform translate-x-20 opacity-0 transition-all duration-300";
     
     toast.innerHTML = `
         <div class="h-8 w-8 rounded-lg border flex items-center justify-center shrink-0 ${bgIcon}">
@@ -518,22 +611,41 @@ window.showNotify = function(titulo, mensagem, tipo = 'success') {
         </div>
         <div class="flex-1">
             <h4 class="text-xs font-bold text-white uppercase tracking-wider">${titulo}</h4>
-            <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">${mensagem}</p>
+            <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">${message}</p>
         </div>
     `;
 
-    // Adicionar ao ecrã
     container.appendChild(toast);
 
-    // Animação de Entrada (Slide-in)
     setTimeout(() => {
         toast.classList.remove('translate-x-20', 'opacity-0');
     }, 10);
 
-    // Animação de Saída automática após 4 segundos
     setTimeout(() => {
         toast.classList.add('translate-x-20', 'opacity-0');
-        // Remove do HTML após a animação terminar
         setTimeout(() => { toast.remove(); }, 300);
     }, 4000);
-};
+}
+
+// 2. Tornamos ela global aqui embaixo para os botões antigos funcionarem
+window.showNotify = showNotify;
+
+// ====== ADICIONE ESSAS FUNÇÕES DENTRO DO SEU js/ui.js ======
+
+export function toggleFiltrosGaveta(open) {
+    const gaveta = document.getElementById('gaveta-filtros');
+    const fundo = document.getElementById('fundo-gaveta');
+    
+    if (!gaveta || !fundo) return;
+
+    if (open) {
+        gaveta.classList.remove('translate-y-full');
+        fundo.classList.remove('hidden');
+    } else {
+        gaveta.classList.add('translate-y-full');
+        fundo.classList.add('hidden');
+    }
+}
+
+// Tornamos a função global para o HTML enxergar o clique
+window.toggleFiltrosGaveta = toggleFiltrosGaveta;

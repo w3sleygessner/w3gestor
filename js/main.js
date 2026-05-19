@@ -289,19 +289,6 @@ document.getElementById('formApp').onsubmit = function (e) {
     UI.renderClientes(); // Atualiza a lista de seleção nos clientes
 };
 
-document.onkeydown = function(e) {
-    // Bloqueia F12
-    if(e.keyCode == 123) return false;
-    // Bloqueia Ctrl+Shift+I (Inspecionar)
-    if(e.ctrlKey && e.shiftKey && e.keyCode == 73) return false;
-    // Bloqueia Ctrl+Shift+J (Console)
-    if(e.ctrlKey && e.shiftKey && e.keyCode == 74) return false;
-    // Bloqueia Ctrl+U (Ver Código Fonte)
-    if(e.ctrlKey && e.keyCode == 85) return false;
-};
-
-// Cole este bloco a partir do final do seu script atual (abaixo das validações do teclado)
-
 // --- MÉTODOS DE CONTROLE EM MASSA DO w3GESTOR ---
 
 window.atualizarBarraAcoes = function() {

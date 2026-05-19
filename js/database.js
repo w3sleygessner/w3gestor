@@ -76,7 +76,7 @@ window.importarSistema = function(event) {
         try {
             const backupValido = JSON.parse(e.target.result);
             if (!backupValido.clientes) {
-                alert("Erro: Arquivo JSON inválido.");
+                showNotify("Erro: Arquivo JSON inválido.");
                 return;
             }
             if (confirm(`Atenção: Deseja importar este backup?`)) {
@@ -85,7 +85,7 @@ window.importarSistema = function(event) {
                 location.reload();
             }
         } catch (err) {
-            alert("Erro ao ler o arquivo de backup.");
+            showNotify("Erro ao ler o arquivo de backup.");
         }
     };
     reader.readAsText(file);
