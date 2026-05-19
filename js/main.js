@@ -19,6 +19,14 @@ const MEU_EMAIL_ADMIN = "w3sleygessner@gmail.com"; // <-- SEU EMAIL AQUI
 
 onAuthStateChanged(auth, (currentUser) => {
     if (currentUser) {
+        console.log("w3Gestor: Forçando entrada do painel...");
+        const aC = document.getElementById('auth-container');
+        const eC = document.getElementById('expired-container');
+        const apC = document.getElementById('app-container');
+        if (aC) aC.classList.add('hidden');
+        if (eC) eC.classList.add('hidden');
+        if (apC) apC.classList.remove('hidden');
+        esconderSplashScreen();
         document.getElementById('user-display').innerText = currentUser.email;
 
         const userRef = ref(db_firebase, 'usuarios/' + currentUser.uid);
