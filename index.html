@@ -7,43 +7,60 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="./style.css">
+    <style>
+        #bulk-actions-bar {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .translate-y-0 {
+            transform: translate(-50%, 0px) !important;
+        }
+        .translate-y-20 {
+            transform: translate(-50%, 80px) !important;
+        }
+        .client-checkbox:checked, #select-all-clients:checked {
+            background: #9333ea !important;
+            border-color: #a855f7 !important;
+        }
+        .client-checkbox:checked::before, #select-all-clients:checked::before {
+            content: "✓";
+            color: #fff;
+            font-size: 10px;
+            font-weight: black;
+        }
+    </style>
 </head>
 <body class="overflow-x-hidden bg-[#0f0f1e]">
 
-  <div id="auth-container" class="fixed inset-0 z-[100] flex bg-[#0f0f1e] overflow-y-auto">
-        
+    <div id="auth-container" class="fixed inset-0 z-[100] flex bg-[#0f0f1e] overflow-y-auto">
         <div class="flex flex-col lg:flex-row w-full min-h-screen">
-            
             <div class="w-full lg:w-1/2 p-8 lg:p-16 flex flex-col justify-center bg-[#0f0f1e] relative">
-                
                 <div class="w-full max-w-md mx-auto">
-                    
-<div class="mb-10 flex justify-center lg:justify-start items-center cursor-pointer select-none">
-    <span class="text-white font-black text-3xl tracking-tighter">w3</span>
-    <span class="text-white font-light text-3xl tracking-tight">Gestor</span>
-    <span class="text-purple-500 font-black text-3xl ml-1">.</span>
-</div>
-
+                    <div class="mb-10 flex justify-center lg:justify-start items-center cursor-pointer select-none">
+                        <span class="text-white font-black text-3xl tracking-tighter">w3</span>
+                        <span class="text-white font-light text-3xl tracking-tight">Gestor</span>
+                        <span class="text-purple-500 font-black text-3xl ml-1">.</span>
+                    </div>
                     <div>
                         <h2 class="text-2xl font-black text-white uppercase tracking-tighter mb-1">Aceder ao Painel</h2>
                         <p class="text-xs text-gray-500 mb-6">Insira as suas credenciais para gerir os clientes</p>
                         <form id="formLogin" class="space-y-4">
                             <div class="flex flex-col sm:flex-row gap-4">
-                                <input type="email" id="login_email" placeholder="E-mail" required class="w-full rounded-xl p-3.5 outline-none bg-black/40 text-white border border-white/5 text-xs focus:border-purple-500/50 transition">
-                                <input type="password" id="login_pass" placeholder="Palavra-passe" required class="w-full rounded-xl p-3.5 outline-none bg-black/40 text-white border border-white/5 text-xs focus:border-purple-500/50 transition">
+                                <input type="email" id="login_email" placeholder="E-mail" required
+                                    class="w-full rounded-xl p-3.5 outline-none bg-black/40 text-white border border-white/5 text-xs focus:border-purple-500/50 transition">
+                                <input type="password" id="login_pass" placeholder="Palavra-passe" required
+                                    class="w-full rounded-xl p-3.5 outline-none bg-black/40 text-white border border-white/5 text-xs focus:border-purple-500/50 transition">
                             </div>
-                            <button type="submit" class="w-full bg-purple-600 p-4 rounded-xl font-bold text-white uppercase tracking-widest text-[11px] hover:bg-purple-700 transition shadow-lg shadow-purple-500/20 flex justify-center items-center mt-2">
+                            <button type="submit"
+                                class="w-full bg-purple-600 p-4 rounded-xl font-bold text-white uppercase tracking-widest text-[11px] hover:bg-purple-700 transition shadow-lg shadow-purple-500/20 flex justify-center items-center mt-2">
                                 <i class="fas fa-sign-in-alt mr-2"></i> Entrar no Sistema
                             </button>
                         </form>
                     </div>
-
                     <div class="flex items-center my-10">
                         <div class="flex-grow border-t border-white/5"></div>
                         <span class="mx-4 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Ainda não tem conta?</span>
                         <div class="flex-grow border-t border-white/5"></div>
                     </div>
-
                     <div>
                         <div class="flex items-center gap-3 mb-1">
                             <h2 class="text-2xl font-black text-white uppercase tracking-tighter">Criar Conta</h2>
@@ -52,73 +69,79 @@
                         <p class="text-xs text-gray-500 mb-6">Inicie o seu teste VIP agora mesmo</p>
                         <form id="formRegister" class="space-y-4">
                             <div class="flex flex-col sm:flex-row gap-4">
-                                <input type="email" id="register_email" placeholder="Novo E-mail" required class="w-full rounded-xl p-3.5 outline-none bg-black/40 text-white border border-white/5 text-xs focus:border-purple-500/50 transition">
-                                <input type="password" id="register_pass" placeholder="Criar Palavra-passe" required class="w-full rounded-xl p-3.5 outline-none bg-black/40 text-white border border-white/5 text-xs focus:border-purple-500/50 transition">
+                                <input type="email" id="register_email" placeholder="Novo E-mail" required
+                                    class="w-full rounded-xl p-3.5 outline-none bg-black/40 text-white border border-white/5 text-xs focus:border-purple-500/50 transition">
+                                <input type="password" id="register_pass" placeholder="Criar Palavra-passe" required
+                                    class="w-full rounded-xl p-3.5 outline-none bg-black/40 text-white border border-white/5 text-xs focus:border-purple-500/50 transition">
                             </div>
-                            <button type="submit" class="w-full bg-transparent border border-white/10 p-4 rounded-xl font-bold text-gray-300 uppercase tracking-widest text-[11px] hover:bg-white/5 transition flex justify-center items-center mt-2">
+                            <button type="submit"
+                                class="w-full bg-transparent border border-white/10 p-4 rounded-xl font-bold text-gray-300 uppercase tracking-widest text-[11px] hover:bg-white/5 transition flex justify-center items-center mt-2">
                                 <i class="fas fa-user-plus mr-2"></i> Registar e Testar
                             </button>
                         </form>
                     </div>
                 </div>
-
             </div>
-
             <div class="w-full lg:w-1/2 p-8 lg:p-16 relative flex flex-col justify-center bg-gradient-to-br from-[#1e1e38] via-[#16162d] to-black overflow-hidden border-l border-white/5 shadow-2xl">
-                
                 <div class="absolute top-0 right-0 w-96 h-96 bg-yellow-500/10 rounded-full blur-[100px] pointer-events-none"></div>
                 <div class="absolute bottom-0 left-0 w-96 h-96 bg-purple-600/10 rounded-full blur-[100px] pointer-events-none"></div>
-                
                 <div class="w-full max-w-lg mx-auto relative z-10">
-                    
                     <div class="inline-flex items-center justify-center p-4 bg-yellow-500/10 rounded-2xl border border-yellow-500/20 mb-6 shadow-inner">
                         <i class="fas fa-crown text-yellow-500 text-3xl"></i>
                     </div>
-                    
                     <h2 class="text-4xl lg:text-5xl font-black text-white uppercase tracking-tighter mb-4">Gestor VIP Pro</h2>
                     <p class="text-sm lg:text-base text-gray-400 mb-10 leading-relaxed">Liberte o verdadeiro potencial do seu negócio. Faça a gestão de clientes sem limites e com automação completa através do WhatsApp.</p>
-                    
                     <ul class="space-y-5 mb-12">
                         <li class="flex items-center text-sm lg:text-base text-gray-300">
-                            <div class="h-8 w-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mr-4 text-sm shadow-inner"><i class="fas fa-check"></i></div>
+                            <div class="h-8 w-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mr-4 text-sm shadow-inner">
+                                <i class="fas fa-check"></i>
+                            </div>
                             <span class="font-bold text-white mr-1">Clientes Ilimitados</span> (Fim do bloqueio de 3)
                         </li>
                         <li class="flex items-center text-sm lg:text-base text-gray-300">
-                            <div class="h-8 w-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mr-4 text-sm shadow-inner"><i class="fas fa-check"></i></div>
+                            <div class="h-8 w-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mr-4 text-sm shadow-inner">
+                                <i class="fas fa-check"></i>
+                            </div>
                             <span class="font-bold text-white mr-1">Mensagens Automáticas</span> Editáveis
                         </li>
                         <li class="flex items-center text-sm lg:text-base text-gray-300">
-                            <div class="h-8 w-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mr-4 text-sm shadow-inner"><i class="fas fa-check"></i></div>
+                            <div class="h-8 w-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mr-4 text-sm shadow-inner">
+                                <i class="fas fa-check"></i>
+                            </div>
                             <span class="font-bold text-white mr-1">Gráficos Avançados</span> de Evolução
                         </li>
                         <li class="flex items-center text-sm lg:text-base text-gray-300">
-                            <div class="h-8 w-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mr-4 text-sm shadow-inner"><i class="fas fa-check"></i></div>
+                            <div class="h-8 w-8 rounded-full bg-green-500/20 text-green-400 flex items-center justify-center mr-4 text-sm shadow-inner">
+                                <i class="fas fa-check"></i>
+                            </div>
                             <span class="font-bold text-white mr-1">Painel Administrativo</span> Liberado
                         </li>
                     </ul>
-
                     <div class="relative z-10 bg-black/40 backdrop-blur-md border border-white/5 rounded-3xl p-8 shadow-2xl flex flex-col sm:flex-row items-center justify-between gap-6">
                         <div>
                             <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-1">Licença Mensal</p>
                             <h3 class="text-4xl font-black text-yellow-400">R$ 25<span class="text-xl text-gray-500 font-medium">,00</span></h3>
                         </div>
-                        <a href="https://wa.me/5511999999999?text=Quero%20fazer%20o%20upgrade%20para%20o%20Gestor%20VIP" target="_blank" class="w-full sm:w-auto px-8 py-4 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-yellow-500/20 transition flex items-center justify-center whitespace-nowrap">
+                        <a href="https://wa.me/5511999999999?text=Quero%20fazer%20o%20upgrade%20para%20o%20Gestor%20VIP"
+                            target="_blank"
+                            class="w-full sm:w-auto px-8 py-4 bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl font-black uppercase tracking-widest text-[11px] shadow-lg shadow-yellow-500/20 transition flex items-center justify-center whitespace-nowrap">
                             <i class="fab fa-whatsapp mr-2 text-lg"></i> Assinar Agora
                         </a>
                     </div>
-
                 </div>
             </div>
-
         </div>
     </div>
 
     <div id="expired-container" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-[#0f0f1e]">
         <div class="card w-full max-w-md rounded-3xl p-8 shadow-2xl border border-red-500/30 bg-[#16162d] text-center">
-            <div class="h-16 w-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl"><i class="fas fa-lock"></i></div>
+            <div class="h-16 w-16 bg-red-500/20 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                <i class="fas fa-lock"></i>
+            </div>
             <h2 class="text-2xl font-bold text-white uppercase tracking-tighter mb-2">Tempo Expirado</h2>
             <p class="text-gray-400 text-sm mb-6">Seus 7 dias de teste acabaram. Assine o plano VIP por apenas R$ 25,00/mês para continuar gerenciando seus clientes.</p>
-            <a href="https://wa.me/5511999999999?text=Quero%20assinar%20o%20Gestor%20VIP" target="_blank" class="w-full bg-green-600 p-4 rounded-xl font-bold text-white uppercase tracking-widest text-sm inline-block shadow-lg hover:bg-green-700 transition">Falar com Suporte</a>
+            <a href="https://wa.me/5511999999999?text=Quero%20assinar%20o%20Gestor%20VIP" target="_blank"
+                class="w-full bg-green-600 p-4 rounded-xl font-bold text-white uppercase tracking-widest text-sm inline-block shadow-lg hover:bg-green-700 transition">Falar com Suporte</a>
             <button onclick="logout()" class="mt-4 text-xs text-gray-500 hover:text-white w-full">Sair da conta</button>
         </div>
     </div>
@@ -126,11 +149,11 @@
     <div id="app-container" class="hidden flex min-h-screen">
         <aside id="sidebar" class="w-64 sidebar fixed inset-y-0 left-0 z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 border-r border-gray-800 bg-[#16162d]">
             <div class="p-6 flex flex-col h-full">
-<div class="flex items-center justify-center mb-10 select-none">
-    <span class="text-white font-black text-2xl tracking-tighter">w3</span>
-    <span class="text-white font-light text-2xl tracking-tight">Gestor</span>
-    <span class="text-purple-500 font-black text-2xl ml-1">.</span>
-</div>
+                <div class="flex items-center justify-center mb-10 select-none">
+                    <span class="text-white font-black text-2xl tracking-tighter">w3</span>
+                    <span class="text-white font-light text-2xl tracking-tight">Gestor</span>
+                    <span class="text-purple-500 font-black text-2xl ml-1">.</span>
+                </div>
                 <nav class="flex-1 space-y-1">
                     <a href="#" onclick="switchTab('dashboard')" class="nav-link active flex items-center p-3 text-sm font-medium rounded-lg text-gray-300"><i class="fas fa-th mr-3 text-lg opacity-70"></i> DASHBOARD</a>
                     <a href="#" onclick="switchTab('clientes')" class="nav-link flex items-center p-3 text-sm font-medium rounded-lg text-gray-300"><i class="fas fa-users mr-3 text-lg opacity-70"></i> CLIENTES</a>
@@ -138,10 +161,9 @@
                     <a href="#" onclick="switchTab('planos')" class="nav-link flex items-center p-3 text-sm font-medium rounded-lg text-gray-300"><i class="fas fa-box mr-3 text-lg opacity-70"></i> PLANOS</a>
                     <a href="#" onclick="switchTab('apps')" class="nav-link flex items-center p-3 text-sm font-medium rounded-lg text-gray-300"><i class="fas fa-mobile-alt mr-3 text-lg opacity-70"></i> APPS</a>
                     <a href="#" onclick="switchTab('configuracoes')" class="nav-link flex items-center p-3 text-sm font-medium rounded-lg text-gray-300"><i class="fas fa-cog mr-3 text-lg opacity-70"></i> CONFIGS</a>
-                    
+                    <a href="#" onclick="switchTab('export-import')" class="nav-link flex items-center p-3 text-sm font-medium rounded-lg text-gray-300"><i class="fas fa-file-export mr-3 text-lg opacity-70"></i>EXPORT / IMPORT </a>
                     <hr class="border-gray-800 my-4">
                     <a href="#" onclick="switchTab('admin')" id="nav-admin" class="nav-link hidden flex items-center p-3 text-sm font-bold text-yellow-500 rounded-lg hover:bg-yellow-500/10 transition"><i class="fas fa-crown mr-3 text-lg"></i> GESTÃO VIP</a>
-                    
                     <a href="#" onclick="logout()" class="flex items-center p-3 text-sm font-medium text-red-500 hover:bg-red-500/10 rounded-lg mt-2"><i class="fas fa-sign-out-alt mr-3 text-lg"></i> SAIR</a>
                 </nav>
             </div>
@@ -152,7 +174,8 @@
                 <button onclick="toggleSidebar()" class="lg:hidden text-white"><i class="fas fa-bars text-xl"></i></button>
                 <div class="flex items-center space-x-2 text-[#00d998] text-sm font-bold bg-[#00d998]/5 px-3 py-1 rounded-full border border-[#00d998]/10">
                     <i class="fab fa-whatsapp"></i><span id="user-display">Utilizador Ativo</span>
-                </div>            </header>
+                </div>
+            </header>
 
             <div id="free-plan-banner" class="hidden bg-yellow-500 text-black text-center py-2 text-xs font-bold uppercase tracking-widest shadow-md">
                 Você está usando o Plano Free (Limite de 3 clientes). <a href="https://wa.me/5511999999999" target="_blank" class="underline ml-2 hover:text-purple-900">Fazer Upgrade VIP</a>
@@ -160,10 +183,22 @@
 
             <div id="tab-dashboard" class="p-6 space-y-6">
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="card p-4 rounded-2xl text-center bg-[#16162d]"><p class="text-gray-500 text-[10px] uppercase mb-1">Clientes</p><h3 id="stat-total" class="text-2xl font-bold text-white">0</h3></div>
-                    <div class="card p-4 rounded-2xl text-center border-b-2 border-green-500/50 bg-[#16162d]"><p class="text-gray-500 text-[10px] uppercase mb-1">Receita</p><h3 id="stat-bruto" class="text-2xl font-bold text-green-400">R$ 0,00</h3></div>
-                    <div class="card p-4 rounded-2xl text-center border-b-2 border-purple-500/50 bg-[#16162d]"><p class="text-gray-500 text-[10px] uppercase mb-1">Lucro</p><h3 id="stat-lucro" class="text-2xl font-bold text-purple-400">R$ 0,00</h3></div>
-                    <div class="card p-4 rounded-2xl text-center border-b-2 border-red-500/50 bg-[#16162d]"><p class="text-gray-500 text-[10px] uppercase mb-1">Vencendo</p><h3 id="stat-atrasados" class="text-2xl font-bold text-red-500">0</h3></div>
+                    <div class="card p-4 rounded-2xl text-center bg-[#16162d]">
+                        <p class="text-gray-500 text-[10px] uppercase mb-1">Clientes</p>
+                        <h3 id="stat-total" class="text-2xl font-bold text-white">0</h3>
+                    </div>
+                    <div class="card p-4 rounded-2xl text-center border-b-2 border-green-500/50 bg-[#16162d]">
+                        <p class="text-gray-500 text-[10px] uppercase mb-1">Receita</p>
+                        <h3 id="stat-bruto" class="text-2xl font-bold text-green-400">R$ 0,00</h3>
+                    </div>
+                    <div class="card p-4 rounded-2xl text-center border-b-2 border-purple-500/50 bg-[#16162d]">
+                        <p class="text-gray-500 text-[10px] uppercase mb-1">Lucro</p>
+                        <h3 id="stat-lucro" class="text-2xl font-bold text-purple-400">R$ 0,00</h3>
+                    </div>
+                    <div class="card p-4 rounded-2xl text-center border-b-2 border-red-500/50 bg-[#16162d]">
+                        <p class="text-gray-500 text-[10px] uppercase mb-1">Vencendo</p>
+                        <h3 id="stat-atrasados" class="text-2xl font-bold text-red-500">0</h3>
+                    </div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div class="card p-6 rounded-2xl bg-[#16162d]">
@@ -187,8 +222,12 @@
                         <i class="fas fa-search absolute left-2.5 top-2.5 text-gray-400 text-[10px]"></i>
                         <input type="text" id="filter-name" placeholder="Pesquisar..." class="w-full pl-8 bg-black/20 text-white rounded outline-none border border-white/5 py-1.5 text-xs" onkeyup="renderClientes()">
                     </div>
-                    <select id="filter-app" onchange="renderClientes()" class="bg-black/20 text-white rounded outline-none border border-white/5 py-1.5 text-xs"><option value="">Apps</option></select>
-                    <select id="filter-plano" onchange="renderClientes()" class="bg-black/20 text-white rounded outline-none border border-white/5 py-1.5 text-xs"><option value="">Planos</option></select>
+                    <select id="filter-app" onchange="renderClientes()" class="bg-black/20 text-white rounded outline-none border border-white/5 py-1.5 text-xs">
+                        <option value="">Apps</option>
+                    </select>
+                    <select id="filter-plano" onchange="renderClientes()" class="bg-black/20 text-white rounded outline-none border border-white/5 py-1.5 text-xs">
+                        <option value="">Planos</option>
+                    </select>
                     <select id="filter-status" onchange="renderClientes()" class="bg-black/20 text-white rounded outline-none border border-white/5 py-1.5 text-xs">
                         <option value="">Status</option>
                         <option value="warning">Vencendo (3 dias)</option>
@@ -197,13 +236,22 @@
                     </select>
                     <div class="flex items-center gap-2 px-3 py-1.5 bg-black/20 rounded border border-white/5">
                         <span class="text-[8px] text-gray-400 font-bold uppercase">Inadimplentes</span>
-                        <input type="checkbox" id="filter-inadimplentes" onchange="renderClientes()" checked class="w-3 h-3 accent-purple-500 cursor-pointer">
+                        <input type="checkbox" id="filter-inadimplentes" onchange="renderClientes()" checked class="w-4 h-4 rounded border-white/10 bg-white/5 text-purple-600 focus:ring-purple-500/50">
                     </div>
                 </div>
                 <div class="card rounded-2xl overflow-hidden overflow-x-auto shadow-2xl bg-[#16162d]">
                     <table class="w-full text-left text-sm border-separate border-spacing-y-0.5 px-1">
-                        <thead class="bg-black/40 text-gray-500 uppercase text-[8px] tracking-widest font-black">
-                            <tr><th class="p-3">Cliente</th><th class="p-3">Serviço</th><th class="p-3 text-center">Vencimento</th><th class="p-3 text-center">Mensagens</th><th class="p-3 text-right">Gerenciar</th></tr>
+                        <thead>
+                            <tr class="text-[10px] text-gray-500 font-bold uppercase tracking-widest border-b border-gray-800">
+                                <th class="p-3 text-center w-10">
+                                    <input type="checkbox" id="select-all-clients" onclick="window.toggleSelectAll(this)" class="w-4 h-4 rounded border-white/10 bg-white/5 text-purple-600 focus:ring-purple-500/50 focus:ring-offset-0 cursor-pointer transition">
+                                </th>
+                                <th class="p-3 text-left">Cliente</th>
+                                <th class="p-3 text-left">Plano / App</th>
+                                <th class="p-3 text-center">Vencimento</th>
+                                <th class="p-3 text-center">WhatsApp</th>
+                                <th class="p-3 text-right">Ações</th>
+                            </tr>
                         </thead>
                         <tbody id="table-clientes-body"></tbody>
                     </table>
@@ -223,7 +271,13 @@
                     <div class="card rounded-2xl overflow-hidden shadow-xl border border-yellow-500/10 bg-[#16162d]">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-yellow-500/5 text-gray-500 uppercase text-[10px] tracking-widest">
-                                <tr><th class="p-4">Vencimento</th><th class="p-4">Cliente</th><th class="p-4">Plano</th><th class="p-4">Valor</th><th class="p-4 text-right">Ação</th></tr>
+                                <tr>
+                                    <th class="p-4">Vencimento</th>
+                                    <th class="p-4">Cliente</th>
+                                    <th class="p-4">Plano</th>
+                                    <th class="p-4">Valor</th>
+                                    <th class="p-4 text-right">Ação</th>
+                                </tr>
                             </thead>
                             <tbody id="table-faturas-pendentes-body"></tbody>
                         </table>
@@ -234,7 +288,13 @@
                     <div class="card rounded-2xl overflow-hidden shadow-xl bg-[#16162d]">
                         <table class="w-full text-left text-sm">
                             <thead class="bg-black/40 text-gray-500 uppercase text-[10px] tracking-widest">
-                                <tr><th class="p-4">Data Pgto</th><th class="p-4">Cliente</th><th class="p-4">Valor Pago</th><th class="p-4 text-purple-400 font-black">Lucro Real</th><th class="p-4 text-right">Estornar</th></tr>
+                                <tr>
+                                    <th class="p-4">Data Pgto</th>
+                                    <th class="p-4">Cliente</th>
+                                    <th class="p-4">Valor Pago</th>
+                                    <th class="p-4 text-purple-400 font-black">Lucro Real</th>
+                                    <th class="p-4 text-right">Estornar</th>
+                                </tr>
                             </thead>
                             <tbody id="table-faturas-body"></tbody>
                         </table>
@@ -261,49 +321,88 @@
             <div id="tab-configuracoes" class="p-6 hidden">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-bold text-white uppercase tracking-tighter">Configurações</h2>
-                    <button onclick="openModal('modalChangePassword')" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-bold text-[10px] uppercase shadow-lg border border-white/10 transition">
-                        <i class="fas fa-lock mr-1"></i> Alterar Senha
-                    </button>
+                    <button onclick="openModal('modalChangePassword')" class="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-bold text-[10px] uppercase shadow-lg border border-white/10 transition"><i class="fas fa-lock mr-1"></i> Alterar Senha</button>
                 </div>
-                
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                    <div class="card p-6 rounded-2xl shadow-xl flex flex-col h-full border border-white/5 bg-[#16162d]">
-                        <h4 class="font-bold flex items-center text-green-400 uppercase text-xs tracking-widest mb-4">
-                            <i class="fab fa-whatsapp mr-2"></i> Integração WhatsApp
-                        </h4>
-                        <div class="flex flex-col items-center justify-center flex-grow py-4">
-                            <div class="bg-white p-2 rounded-xl mb-4">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=GestorLite_Conectar" id="wa-qr-code" class="w-[150px]">
-                            </div>
-                            <div id="wa-status" class="text-[10px] font-bold text-red-500 uppercase animate-pulse">Desconectado</div>
-                        </div>
-                        <button onclick="conectarWhatsAppReal()" class="w-full bg-green-600/20 text-green-500 border border-green-500/30 p-3 rounded-xl font-bold text-[10px] uppercase mt-auto hover:bg-green-600/30 transition">
-                            Atualizar Conexão
-                        </button>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+    
+    <div class="card p-6 rounded-2xl shadow-xl flex flex-col h-full border border-white/5 bg-[#16162d]">
+        <h4 class="font-bold flex items-center text-green-400 uppercase text-xs tracking-widest mb-4">
+            <i class="fab fa-whatsapp mr-2"></i> Integração WhatsApp
+        </h4>
+        <div class="flex flex-col items-center justify-center flex-grow py-4">
+            <div class="bg-white p-2 rounded-xl mb-4">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=GestorLite_Conectar"
+                    id="wa-qr-code" class="w-[150px]">
+            </div>
+            <div id="wa-status" class="text-[10px] font-bold text-red-500 uppercase animate-pulse">
+                Desconectado
+            </div>
+        </div>
+        <button onclick="conectarWhatsAppReal()"
+            class="w-full bg-green-600/20 text-green-500 border border-green-500/30 p-3 rounded-xl font-bold text-[10px] uppercase mt-auto hover:bg-green-600/30 transition">
+            Atualizar Conexão
+        </button>
+    </div>
+
+    <div class="flex flex-col gap-6 h-full">
+        <div class="card p-6 rounded-2xl shadow-xl border border-white/5 bg-[#16162d]">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-2">
+                    <h4 class="font-bold flex items-center text-purple-400 uppercase text-xs tracking-widest whitespace-nowrap">
+                        <i class="fas fa-bell mr-2"></i> Avisos
+                    </h4>
+                    <div class="flex items-center gap-2 ml-4">
+                        <label class="text-[10px] text-gray-500 uppercase font-bold">Avisar</label>
+                        <input type="number" id="cfg_aviso_dias" class="w-16 bg-black/20 border border-white/10 rounded-lg p-1 text-center text-white outline-none text-xs" value="3">
+                        <label class="text-[10px] text-gray-500 uppercase font-bold whitespace-nowrap">dias antes</label>
                     </div>
+                </div>
+                <button onclick="updateConfig()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-bold text-[10px] uppercase shadow-lg whitespace-nowrap">Salvar Tudo</button>
+            </div>
+        </div>
+        
+        <div class="card p-6 rounded-2xl shadow-xl border border-white/5 bg-[#16162d]">
+            <h4 class="font-bold text-green-400 uppercase text-xs tracking-widest mb-4"><i class="fas fa-comment-alt mr-2"></i> Mensagens Padrão</h4>
+            <div class="space-y-4">
+                <div><label class="text-[9px] text-gray-500 uppercase font-bold mb-1 block">Boas-vindas</label><textarea id="cfg_msg_boas_vindas" rows="2" class="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500/50 transition"></textarea></div>
+                <div><label class="text-[9px] text-gray-500 uppercase font-bold mb-1 block">Cobrança / Renovação</label><textarea id="cfg_msg_renovacao" rows="2" class="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500/50 transition"></textarea></div>
+                <div><label class="text-[9px] text-gray-500 uppercase font-bold mb-1 block">Confirmação de Pagamento</label><textarea id="cfg_msg_sucesso" rows="2" class="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500/50 transition"></textarea></div>
+            </div>
+        </div>
+    </div>
 
-                    <div class="flex flex-col gap-6 h-full">
-                        <div class="card p-6 rounded-2xl shadow-xl border border-white/5 bg-[#16162d]">
-                            <div class="flex flex-col md:flex-row items-center justify-between gap-4">
-                                <div class="flex items-center gap-2">
-                                    <h4 class="font-bold flex items-center text-purple-400 uppercase text-xs tracking-widest whitespace-nowrap"><i class="fas fa-bell mr-2"></i> Avisos</h4>
-                                    <div class="flex items-center gap-2 ml-4">
-                                        <label class="text-[10px] text-gray-500 uppercase font-bold">Avisar</label>
-                                        <input type="number" id="cfg_aviso_dias" class="w-16 bg-black/20 border border-white/10 rounded-lg p-1 text-center text-white outline-none text-xs" value="3">
-                                        <label class="text-[10px] text-gray-500 uppercase font-bold whitespace-nowrap">dias antes</label>
-                                    </div>
+</div>
+            </div>
+
+            <div id="tab-export-import" class="p-6 hidden">
+                <div class="mt-6 p-5 bg-gray-950/40 rounded-2xl border border-white/5 space-y-4">
+                    <div>
+                        <h4 class="text-[10px] text-purple-400 font-black uppercase tracking-widest">Central de Segurança</h4>
+                        <p class="text-[11px] text-gray-500 mt-1">Gerencie cópias de segurança locais de todos os seus clientes, planos e configurações.</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                        <div class="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex flex-col justify-between items-start gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400 text-sm"><i class="fas fa-cloud-download-alt"></i></div>
+                                <div>
+                                    <h5 class="text-xs font-bold text-white uppercase">Exportar Dados</h5>
+                                    <p class="text-[10px] text-gray-500">Baixe um ponto de restauração em arquivo .json</p>
                                 </div>
-                                <button onclick="updateConfig()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-bold text-[10px] uppercase shadow-lg whitespace-nowrap">Salvar Tudo</button>
                             </div>
+                            <button onclick="window.exportarSistema()" class="w-full bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/20 py-2.5 px-4 rounded-xl text-[10px] font-bold uppercase tracking-wider transition flex items-center justify-center gap-2"><i class="fas fa-download"></i> Gerar Backup</button>
                         </div>
-
-                        <div class="card p-6 rounded-2xl shadow-xl flex-grow border border-white/5 bg-[#16162d]">
-                            <h4 class="font-bold text-green-400 uppercase text-xs tracking-widest mb-4"><i class="fas fa-comment-alt mr-2"></i> Mensagens Padrão</h4>
-                            <div class="space-y-4">
-                                <div><label class="text-[9px] text-gray-500 uppercase font-bold mb-1 block">Boas-vindas</label><textarea id="cfg_msg_boas_vindas" rows="2" class="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500/50 transition"></textarea></div>
-                                <div><label class="text-[9px] text-gray-500 uppercase font-bold mb-1 block">Cobrança / Renovação</label><textarea id="cfg_msg_renovacao" rows="2" class="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500/50 transition"></textarea></div>
-                                <div><label class="text-[9px] text-gray-500 uppercase font-bold mb-1 block">Confirmação de Pagamento</label><textarea id="cfg_msg_sucesso" rows="2" class="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500/50 transition"></textarea></div>
+                        <div class="p-4 bg-white/[0.02] border border-white/5 rounded-xl flex flex-col justify-between items-start gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 text-sm"><i class="fas fa-cloud-upload-alt"></i></div>
+                                <div>
+                                    <h5 class="text-xs font-bold text-white uppercase">Restaurar Sistema</h5>
+                                    <p class="text-[10px] text-gray-500">Suba um arquivo de backup para mesclar dados</p>
+                                </div>
                             </div>
+                            <label class="w-full bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 border border-purple-500/20 py-2.5 px-4 rounded-xl text-[10px] font-bold uppercase tracking-wider transition flex items-center justify-center gap-2 cursor-pointer text-center">
+                                <i class="fas fa-upload"></i> Carregar Backup
+                                <input type="file" id="input-backup-sistema" class="hidden" onchange="window.importarSistema(event)">
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -312,20 +411,23 @@
             <div id="tab-admin" class="p-6 hidden">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-bold text-white uppercase tracking-tighter">Gestão VIP</h2>
-                    <button onclick="openModal('modalCriarUsuario')" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-bold text-[10px] uppercase shadow-lg transition">
-                        <i class="fas fa-user-plus mr-2"></i> Criar Conta de Cliente
-                    </button>
+                    <button onclick="openModal('modalCriarUsuario')" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-bold text-[10px] uppercase shadow-lg transition"><i class="fas fa-user-plus mr-2"></i> Criar Conta de Cliente</button>
                 </div>
                 <div class="card rounded-2xl overflow-hidden shadow-2xl border border-white/5 bg-[#16162d]">
                     <table class="w-full text-left text-sm border-separate border-spacing-y-0.5 px-1">
                         <thead class="bg-black/40 text-gray-500 uppercase text-[8px] tracking-widest font-black">
-                            <tr><th class="p-4">E-mail do Cliente</th><th class="p-4 text-center">Status</th><th class="p-4 text-center">Vencimento</th><th class="p-4 text-center">Editar</th><th class="p-4 text-right">Ação</th></tr>
+                            <tr>
+                                <th class="p-4">E-mail do Cliente</th>
+                                <th class="p-4 text-center">Status</th>
+                                <th class="p-4 text-center">Vencimento</th>
+                                <th class="p-4 text-center">Editar</th>
+                                <th class="p-4 text-right">Ação</th>
+                            </tr>
                         </thead>
                         <tbody id="table-admin-body"></tbody>
                     </table>
                 </div>
             </div>
-
         </main>
     </div>
 
@@ -377,7 +479,10 @@
                 </div>
                 <div class="flex gap-2">
                     <select id="plan_dias_select" class="flex-1 rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10" onchange="checkCustomDays(this.value)">
-                        <option value="30">30 Dias</option><option value="60">60 Dias</option><option value="90">90 Dias</option><option value="custom">Manual...</option>
+                        <option value="30">30 Dias</option>
+                        <option value="60">60 Dias</option>
+                        <option value="90">90 Dias</option>
+                        <option value="custom">Manual...</option>
                     </select>
                     <input type="number" id="plan_dias_custom" placeholder="Dias" class="hidden flex-1 rounded-xl p-3 outline-none bg-black/20 text-white border border-white/10">
                 </div>
@@ -481,8 +586,19 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script type="module" src="./js/main.js"></script>
+    <div id="bulk-actions-bar" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 border border-white/10 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 transition-all transform translate-y-20 opacity-0 pointer-events-none z-50">
+        <span id="bulk-count" class="text-[11px] text-gray-400 font-medium">0 selecionados</span>
+        <div class="h-4 w-px bg-white/10"></div>
+        <div class="flex gap-2">
+            <button onclick="dispararNotificacaoEmMassa()" class="bg-green-600/20 text-green-400 border border-green-500/20 px-3 py-2 rounded-xl text-[10px] font-bold uppercase hover:bg-green-600/30 transition"><i class="fab fa-whatsapp mr-1"></i> Notificar</button>
+            <button onclick="excluirEmMassa()" class="bg-red-600/20 text-red-400 border border-red-500/20 px-3 py-2 rounded-xl text-[10px] font-bold uppercase hover:bg-red-600/30 transition"><i class="fas fa-trash mr-1"></i> Excluir</button>
+        </div>
+    </div>
 
+<div id="toast-container" class="fixed top-5 right-5 z-[200] flex flex-col gap-3 pointer-events-none max-w-sm w-full"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>

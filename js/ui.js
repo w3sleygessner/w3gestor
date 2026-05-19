@@ -5,27 +5,63 @@ export let isRegisterMode = false;
 let financeChart;
 
 // --- NAVEGAÇÃO E MODAIS ---
-export function toggleAuthMode() { 
+
+window.exportarParaTexto = function() {
+    const dadosStr = btoa(unescape(encodeURIComponent(JSON.stringify(window.db))));
+    const textarea = document.createElement('textarea');
+    textarea.value = dadosStr;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+    showNotify("Código de backup copiado para a sua área de transferência! Cole onde quiser salvar.");
+};
+
+window.importarDeTexto = function() {
+    const codigo = prompt("Cole o código de backup gerado pelo w3Gestor aqui:");
+    if (!codigo) return;
+
+    try {
+        const dadosDecodificados = JSON.parse(decodeURIComponent(escape(atob(codigo))));
+        if (confirm("Isso vai mesclar com seus dados atuais. Continuar?")) {
+            if(dadosDecodificados.clientes) window.db.clientes = [...window.db.clientes, ...dadosDecodificados.clientes];
+            if(dadosDecodificados.planos) window.db.planos = dadosDecodificados.planos;
+            if(dadosDecodificados.apps) window.db.apps = dadosDecodificados.apps;
+            
+            window.save();
+            location.reload();
+        }
+    } catch (err) {
+        showNotify("Código de backup inválido ou corrompido.");
+    }
+};
+
+window.toggleAuthMode = function() { 
     isRegisterMode = !isRegisterMode; 
     document.getElementById('auth-title').innerText = isRegisterMode ? "Criar Conta Local" : "Aceder ao Painel"; 
     document.getElementById('btn-auth-action').innerText = isRegisterMode ? "Registar" : "Entrar"; 
 }
 
+// ====== SUBSTITUA APENAS A FUNÇÃO switchTab NO SEU js/ui.js ======
 export function switchTab(tab) {
     document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
     if (document.getElementById('tab-' + tab)) document.getElementById('tab-' + tab).classList.remove('hidden');
+    
     document.querySelectorAll('.sidebar .nav-link').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.sidebar .nav-link').forEach(l => { if (l.getAttribute('onclick').includes(tab)) l.classList.add('active'); });
+    document.querySelectorAll('.sidebar .nav-link').forEach(l => { 
+        if (l.getAttribute('onclick') && l.getAttribute('onclick').includes(tab)) l.classList.add('active'); 
+    });
     
     if (tab === 'clientes') renderClientes();
     if (tab === 'faturas') renderFaturas();
     if (tab === 'planos') renderPlanos();
     if (tab === 'apps') renderApps();
     if (tab === 'configuracoes') renderConfig();
+
     if (tab === 'admin') {
-        if(typeof window.carregarAssinantes === 'function') {
-            window.carregarAssinantes(); 
-        }
+        import('./admin.js').then(moduloAdmin => {
+            moduloAdmin.carregarAssinantes();
+        }).catch(err => console.error("Erro ao carregar o arquivo admin.js:", err));
     }
 }
 
@@ -92,9 +128,17 @@ export function renderChartEvolucao() {
     financeChart.render();
 }
 
-// --- RENDERIZADORES DE TABELAS ---
 export function renderClientes() {
-    const body = document.getElementById('table-clientes-body'); if (!body) return; body.innerHTML = '';
+    const body = document.getElementById('table-clientes-body'); if (!body) return; 
+    
+    body.innerHTML = '';
+    const checkMestre = document.getElementById('select-all-clients');
+    if (checkMestre) checkMestre.checked = false;
+    
+    if (window.atualizarBarraAcoes) {
+        setTimeout(() => window.atualizarBarraAcoes(), 50);
+    }
+
     const elName = document.getElementById('filter-name');
     const elApp = document.getElementById('filter-app');
     const elPlano = document.getElementById('filter-plano');
@@ -117,8 +161,8 @@ export function renderClientes() {
         const isWarning = diff >= 0 && diff <= 3;
 
         if (nF && !cli.nome.toLowerCase().includes(nF)) return;
-        if (aF && cli.app_id != aF) return;
-        if (pF && cli.plano_id != pF) return;
+        if (aF && (!cli.app_id || cli.app_id.toString() !== aF.toString())) return;
+        if (pF && (!cli.plano_id || cli.plano_id.toString() !== pF.toString())) return;
         if (!iF && isInadimplente) return;
         if (sF === 'warning' && !isWarning) return;
         if (sF === 'overdue' && !isOverdue) return;
@@ -130,6 +174,10 @@ export function renderClientes() {
         else if (isWarning) rCls = 'row-warning';
 
         body.innerHTML += `<tr class="border-t border-gray-800/50 transition hover:bg-white/5 ${rCls}">
+            <td class="p-3 text-center w-10">
+                <input type="checkbox" class="client-checkbox" value="${cli.id}" onchange="window.atualizarBarraAcoes()"
+                       style="appearance: none; -webkit-appearance: none; width: 16px; height: 16px; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; background: rgba(255,255,255,0.05); cursor: pointer; display: inline-grid; place-content: center; transition: all 0.2s;">
+            </td>
             <td class="p-3"><p class="font-bold text-white text-xs uppercase tracking-tight">${cli.nome}</p></td>
             <td class="p-3 text-[9px] uppercase"><span class="text-gray-400">${p.nome}</span><br><span class="text-purple-400 font-bold">${app.nome}</span></td>
             <td class="p-3 text-center text-[10px] font-bold ${isOverdue ? 'text-red-500' : (isWarning ? 'text-yellow-500' : 'text-green-500')}">${cli.vencimento.split('-').reverse().join('/')}</td>
@@ -211,7 +259,7 @@ export function renderFaturas() {
 export function renderPlanos() {
     const list = document.getElementById('planos-list'); if (!list) return;
     list.innerHTML = db.planos.map(p => `
-        <div class="card p-4 rounded-xl relative shadow-xl border border-white/5">
+        <div class="card p-4 rounded-xl relative shadow-xl border border-white/5 bg-gray-900/40">
             <div class="absolute top-2 right-2 flex gap-2">
                 <button onclick="openModalPlanoEdit(${p.id})" class="text-gray-500 hover:text-white transition"><i class="fas fa-edit"></i></button>
                 <button onclick="deletePlano(${p.id})" class="text-gray-700 hover:text-red-500 transition"><i class="fas fa-trash"></i></button>
@@ -223,20 +271,36 @@ export function renderPlanos() {
                 <span class="text-purple-400 font-bold">Lucro: R$ ${(p.valor - p.custo).toFixed(2)}</span>
             </div>
         </div>`).join('');
-    if (document.getElementById('cli_plano_id')) document.getElementById('cli_plano_id').innerHTML = db.planos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+    
+    if (document.getElementById('cli_plano_id')) {
+        document.getElementById('cli_plano_id').innerHTML = db.planos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+    }
+
+    if (document.getElementById('filter-plano')) {
+        document.getElementById('filter-plano').innerHTML = `<option value="">Planos</option>` + 
+            db.planos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+    }
 }
 
 export function renderApps() {
     const list = document.getElementById('apps-list'); if (!list) return;
     list.innerHTML = db.apps.map(a => `
-        <div class="card p-3 flex justify-between items-center shadow border border-white/5 rounded-xl">
+        <div class="card p-3 flex justify-between items-center shadow border border-white/5 rounded-xl bg-gray-900/40">
             <div><p class="font-bold text-xs uppercase text-purple-400">${a.nome}</p></div>
             <div class="flex gap-3">
                 <button onclick="openModalAppEdit(${a.id})" class="text-gray-500 hover:text-white transition"><i class="fas fa-edit"></i></button>
                 <button onclick="deleteApp(${a.id})" class="text-gray-700 hover:text-red-500 transition"><i class="fas fa-trash"></i></button>
             </div>
         </div>`).join('');
-    if (document.getElementById('cli_app_id')) document.getElementById('cli_app_id').innerHTML = db.apps.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
+    
+    if (document.getElementById('cli_app_id')) {
+        document.getElementById('cli_app_id').innerHTML = db.apps.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
+    }
+
+    if (document.getElementById('filter-app')) {
+        document.getElementById('filter-app').innerHTML = `<option value="">Apps</option>` + 
+            db.apps.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
+    }
 }
 
 export function renderConfig() {
@@ -254,7 +318,6 @@ export function renderConfig() {
     if(elSuspensa) elSuspensa.value = config.msg_suspensa || "";
 }
 
-// --- CRUD & AÇÕES ---
 export function updateConfig() {
     const elAviso = document.getElementById('cfg_aviso_dias');
     const elBoasVindas = document.getElementById('cfg_msg_boas_vindas');
@@ -273,35 +336,77 @@ export function updateConfig() {
 }
 
 export function openModalAdd() { 
-    // INTERCEPTAÇÃO: Se for Free e já possuir 3 ou mais clientes cadastrados
     if (db.account && db.account.type !== 'vip' && db.clientes.length >= 3) {
-        openModal('modalLimiteClientes'); // Exibe o modal elegante de trava
-        return; // Interrompe o fluxo aqui
+        openModal('modalLimiteClientes'); 
+        return; 
     }
-
-    // Caso seja VIP ou tenha espaço na conta, abre o formulário original normalmente
     document.getElementById('formCliente').reset(); 
     document.getElementById('cli_edit_id').value = ""; 
     document.getElementById('modalClienteTitle').innerText = "Novo Cliente"; 
     renderPlanos(); 
     renderApps(); 
     openModal('modalCliente'); 
-}export function openModalEdit(id) {
+}
+
+export function openModalEdit(id) {
     const cli = db.clientes.find(c => c.id == id);
     document.getElementById('cli_edit_id').value = cli.id; document.getElementById('cli_nome').value = cli.nome; document.getElementById('cli_whatsapp').value = cli.whatsapp; document.getElementById('cli_plano_id').value = cli.plano_id; document.getElementById('cli_app_id').value = cli.app_id; document.getElementById('cli_vencimento').value = cli.vencimento; document.getElementById('cli_credenciais').value = cli.credenciais || "";
     document.getElementById('modalClienteTitle').innerText = "Editar Cliente"; openModal('modalCliente');
 }
-export function deleteCliente(id) { if (confirm("Excluir cliente?")) { db.clientes = db.clientes.filter(c => c.id != id); save(); renderClientes(); updateDashboard(); } }
 
-export function openModalAppAdd() { document.getElementById('formApp').reset(); document.getElementById('app_edit_id').value = ""; document.getElementById('modalAppTitle').innerText = "Novo App"; openModal('modalApp'); }
+export function deleteCliente(id) {
+    Swal.fire({
+        title: 'Excluir Cliente?',
+        text: "Tem certeza que deseja apagar este cliente? Esta ação não pode ser desfeita.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626', // Vermelho
+        cancelButtonColor: '#374151',
+        confirmButtonText: 'Sim, apagar!',
+        cancelButtonText: 'Cancelar',
+        background: '#16162d',
+        color: '#ffffff',
+        iconColor: '#ef4444'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            db.clientes = db.clientes.filter(c => c.id != id);
+            save();
+            renderClientes();
+            updateDashboard();
+            showNotify('Removido', 'O cliente foi excluído com sucesso.', 'success');
+        }
+    });
+}export function openModalAppAdd() { document.getElementById('formApp').reset(); document.getElementById('app_edit_id').value = ""; document.getElementById('modalAppTitle').innerText = "Novo App"; openModal('modalApp'); }
+
 export function openModalAppEdit(id) {
     const a = db.apps.find(x => x.id == id);
     document.getElementById('app_edit_id').value = a.id; document.getElementById('app_nome').value = a.nome; document.getElementById('app_url').value = a.url || ""; document.getElementById('app_host').value = a.host || ""; document.getElementById('app_pin').value = a.pin || ""; document.getElementById('app_links').value = a.links || "";
     document.getElementById('modalAppTitle').innerText = "Editar App"; openModal('modalApp');
 }
-export function deleteApp(id) { if (confirm("Excluir esta aplicação?")) { db.apps = db.apps.filter(a => a.id != id); save(); renderApps(); } }
 
-export function openModalPlanoAdd() { document.getElementById('formPlano').reset(); document.getElementById('plan_edit_id').value = ""; document.getElementById('modalPlanoTitle').innerText = "Novo Plano"; openModal('modalPlano'); }
+export function deleteApp(id) {
+    Swal.fire({
+        title: 'Excluir Esta Aplicação?',
+        text: "Os clientes que usam este app perderão as credenciais e dados de acesso vinculados.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#374151',
+        confirmButtonText: 'Sim, remover!',
+        cancelButtonText: 'Cancelar',
+        background: '#16162d',
+        color: '#ffffff',
+        iconColor: '#ef4444'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            db.apps = db.apps.filter(a => a.id != id);
+            save();
+            renderApps();
+            showNotify('App Removido', 'A aplicação foi excluída com sucesso.', 'success');
+        }
+    });
+}export function openModalPlanoAdd() { document.getElementById('formPlano').reset(); document.getElementById('plan_edit_id').value = ""; document.getElementById('modalPlanoTitle').innerText = "Novo Plano"; openModal('modalPlano'); }
+
 export function openModalPlanoEdit(id) {
     const p = db.planos.find(pl => pl.id == id);
     document.getElementById('plan_edit_id').value = p.id; document.getElementById('plan_nome').value = p.nome; document.getElementById('plan_valor').value = p.valor; document.getElementById('plan_custo').value = p.custo;
@@ -309,8 +414,29 @@ export function openModalPlanoEdit(id) {
     if (p.dias != 30 && p.dias != 60 && p.dias != 90) document.getElementById('plan_dias_custom').value = p.dias;
     checkCustomDays(document.getElementById('plan_dias_select').value); document.getElementById('modalPlanoTitle').innerText = "Editar Plano"; openModal('modalPlano');
 }
-export function deletePlano(id) { if (confirm("Excluir este plano?")) { db.planos = db.planos.filter(p => p.id != id); save(); renderPlanos(); } }
 
+export function deletePlano(id) {
+    Swal.fire({
+        title: 'Excluir Este Plano?',
+        text: "Os clientes vinculados a este plano perderão a referência de preço.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#374151',
+        confirmButtonText: 'Sim, remover!',
+        cancelButtonText: 'Cancelar',
+        background: '#16162d',
+        color: '#ffffff',
+        iconColor: '#ef4444'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            db.planos = db.planos.filter(p => p.id != id);
+            save();
+            renderPlanos();
+            showNotify('Plano Removido', 'O plano foi excluído com sucesso.', 'success');
+        }
+    });
+}
 export function openModalRenovar(id) {
     const cli = db.clientes.find(c => c.id == id);
     const p = db.planos.find(pl => pl.id == cli.plano_id) || { valor: 0 };
@@ -318,6 +444,7 @@ export function openModalRenovar(id) {
     document.getElementById('renovar-info').innerText = `Marcar R$ ${p.valor.toFixed(2)} pagos por ${cli.nome}?`;
     openModal('modalRenovar');
 }
+
 export function confirmarRenovacao() {
     const id = document.getElementById('renovar-cli-id').value;
     const cliIdx = db.clientes.findIndex(c => c.id == id);
@@ -328,9 +455,10 @@ export function confirmarRenovacao() {
     base.setDate(base.getDate() + parseInt(p.dias));
     db.clientes[cliIdx].vencimento = base.toISOString().split('T')[0];
     db.faturas.unshift({ id: Date.now(), cliId: cli.id, data_pgto: new Date().toLocaleDateString(), cliente: cli.nome, valor: p.valor, lucro: p.valor - p.custo, dias_somados: p.dias });
-    save(); closeModal('modalRenovar'); renderClientes(); renderFaturas(); updateDashboard(); showNotify('Pago!', 'Vencimento atualizado.');
+    save(); closeModal('modalRenovar'); renderClientes(); renderFaturas(); updateDashboard(); showNotify('Pago!', 'Vencimento updated.');
     setTimeout(() => sendManualWA(id, 'success'), 500);
 }
+
 export function deleteFatura(fid) {
     if (!confirm("Estornar pagamento? O vencimento voltará ao anterior.")) return;
     const f = db.faturas.find(x => x.id == fid);
@@ -359,3 +487,53 @@ export function copyFullAccess(id) {
     const el = document.createElement('textarea'); el.value = txt; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
     showNotify('Copiado!', 'Dados copiados.');
 }
+
+// FUNÇÃO GLOBAL DE NOTIFICAÇÃO MODERNA
+window.showNotify = function(titulo, mensagem, tipo = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    // Configuração de cores e ícones por tipo
+    let bgIcon = 'bg-green-500/20 text-green-400 border-green-500/30';
+    let icon = 'fas fa-check-circle';
+    
+    if (tipo === 'error' || tipo === 'danger') {
+        bgIcon = 'bg-red-500/20 text-red-400 border-red-500/30';
+        icon = 'fas fa-times-circle';
+    } else if (tipo === 'warning') {
+        bgIcon = 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30';
+        icon = 'fas fa-exclamation-triangle';
+    } else if (tipo === 'info') {
+        bgIcon = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+        icon = 'fas fa-info-circle';
+    }
+
+    // Criar o elemento do Toast
+    const toast = document.createElement('div');
+    toast.className = `pointer-events-auto w-full bg-[#16162d]/95 backdrop-blur-md border border-white/5 p-4 rounded-xl shadow-2xl flex items-start gap-3 transform translate-x-20 opacity-0 transition-all duration-300`;
+    
+    toast.innerHTML = `
+        <div class="h-8 w-8 rounded-lg border flex items-center justify-center shrink-0 ${bgIcon}">
+            <i class="${icon} text-sm"></i>
+        </div>
+        <div class="flex-1">
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider">${titulo}</h4>
+            <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">${mensagem}</p>
+        </div>
+    `;
+
+    // Adicionar ao ecrã
+    container.appendChild(toast);
+
+    // Animação de Entrada (Slide-in)
+    setTimeout(() => {
+        toast.classList.remove('translate-x-20', 'opacity-0');
+    }, 10);
+
+    // Animação de Saída automática após 4 segundos
+    setTimeout(() => {
+        toast.classList.add('translate-x-20', 'opacity-0');
+        // Remove do HTML após a animação terminar
+        setTimeout(() => { toast.remove(); }, 300);
+    }, 4000);
+};

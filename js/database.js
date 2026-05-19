@@ -2,8 +2,9 @@ import { ref, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-da
 import { auth, db_firebase } from "./firebase-config.js";
 import { updateDashboard } from "./ui.js";
 
-// Objeto global de dados
+// Objeto global de dados (Adicionado campo email)
 export let db = { 
+    email: "",
     clientes: [], 
     planos: [], 
     faturas: [], 
@@ -18,21 +19,19 @@ export let db = {
     account: { type: 'free', expiresAt: 0 } 
 };
 
-// Função para carregar os dados e garantir que existam exemplos se estiver vazio
 export function setDb(data) {
+    db.email = data.email || (auth.currentUser ? auth.currentUser.email : "");
     db.clientes = data.clientes || [];
     db.faturas = data.faturas || [];
     db.config = data.config || db.config;
     db.account = data.account || db.account;
 
-    // Se não houver planos no banco, insere o exemplo
     if (!data.planos || data.planos.length === 0) {
         db.planos = [{ id: 1, nome: 'Mensal Gold', valor: 30.00, custo: 7.00, dias: 30 }];
     } else {
         db.planos = data.planos;
     }
 
-    // Se não houver apps no banco, insere o exemplo
     if (!data.apps || data.apps.length === 0) {
         db.apps = [{ id: 101, nome: "XCIPTV", url: "http://adonay.top", pin: "0000" }];
     } else {
@@ -45,6 +44,9 @@ export function setDb(data) {
 export function save() {
     const user = auth.currentUser;
     if (user) {
+        // PULO DO GATO: Garante que o e-mail atual do login esteja dentro do pacote antes de salvar
+        db.email = user.email;
+
         set(ref(db_firebase, 'usuarios/' + user.uid), db)
             .then(() => {
                 console.log("✅ Nuvem sincronizada!");
@@ -55,5 +57,36 @@ export function save() {
     updateDashboard();
 }
 
-// CORREÇÃO DO ERRO: Atribuímos a função já declarada ao window sem usar "let" ou "const"
-window.save = save;
+window.exportarSistema = function() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
+    const dlAnchor = document.createElement('a');
+    const dataAtual = new Date().toLocaleDateString().replace(/\//g, '-');
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", `w3gestor_backup_${dataAtual}.json`);
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+};
+
+window.importarSistema = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const backupValido = JSON.parse(e.target.result);
+            if (!backupValido.clientes) {
+                alert("Erro: Arquivo JSON inválido.");
+                return;
+            }
+            if (confirm(`Atenção: Deseja importar este backup?`)) {
+                setDb(backupValido);
+                save();
+                location.reload();
+            }
+        } catch (err) {
+            alert("Erro ao ler o arquivo de backup.");
+        }
+    };
+    reader.readAsText(file);
+};

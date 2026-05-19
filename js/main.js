@@ -6,6 +6,7 @@ import * as UI from "./ui.js";
 import * as API from "./api.js";
 import * as ADMIN from "./admin.js";
 
+
 Object.assign(window, UI);
 Object.assign(window, API);
 Object.assign(window, ADMIN);
@@ -14,21 +15,24 @@ window.save = save;
 
 const MEU_EMAIL_ADMIN = "w3sleygessner@gmail.com"; // <-- SEU EMAIL AQUI
 
+// ====== AJUSTE O INÍCIO DO onAuthStateChanged NO SEU js/main.js ======
+
 onAuthStateChanged(auth, (currentUser) => {
     if (currentUser) {
         document.getElementById('user-display').innerText = currentUser.email;
 
-        // Mantém o e-mail atualizado na raiz para controle do Admin
-        update(ref(db_firebase, 'usuarios/' + currentUser.uid), { email: currentUser.email });
-
         const userRef = ref(db_firebase, 'usuarios/' + currentUser.uid);
         onValue(userRef, (snapshot) => {
-            const data = snapshot.val();
-            let accountInfo = data?.account;
+            const data = snapshot.val() || {};
             
+            // Injeta o e-mail vindo da autenticação caso ele não exista no nó
+            if (!data.email) data.email = currentUser.email;
+
+            let accountInfo = data?.account;
             if (!accountInfo) {
                 accountInfo = { type: 'free', expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000), forcePasswordChange: false };
             }
+// ... o resto do seu código segue normal ...
 
             // Definição estrita dos fallbacks de exemplos iniciais obrigatórios
             const planosPadrao = [{ id: 1, nome: 'Mensal Gold', valor: 30.00, custo: 7.00, dias: 30 }];
@@ -118,7 +122,7 @@ window.alterarSenha = async function(e) {
     const inputSenha = document.getElementById('change_password_input');
     
     if (!inputSenha) {
-        alert("Erro: Campo de senha não encontrado na tela.");
+        showNotify("Erro: Campo de senha não encontrado na tela.");
         return;
     }
 
@@ -130,10 +134,10 @@ window.alterarSenha = async function(e) {
         inputSenha.value = ""; // Limpa o campo após o sucesso
     } catch(err) {
         if(err.code === 'auth/requires-recent-login') {
-            alert("Por segurança, você precisa sair da conta e logar novamente antes de trocar a senha.");
+            showNotify("Por segurança, você precisa sair da conta e logar novamente antes de trocar a senha.");
             logout();
         } else {
-            alert("Erro ao alterar senha: " + err.message);
+            showNotify("Erro ao alterar senha: " + err.message);
         }
     }
 }
@@ -144,7 +148,7 @@ window.alterarSenhaForcada = async function(e) {
     const inputSenha = document.getElementById('force_password_input');
     
     if (!inputSenha) {
-        alert("Erro: Campo de senha não encontrado na tela.");
+        showNotify("Erro: Campo de senha não encontrado na tela.");
         return;
     }
 
@@ -158,7 +162,7 @@ window.alterarSenhaForcada = async function(e) {
         UI.closeModal('modalForcePassword');
         inputSenha.value = ""; // Limpa o campo após o sucesso
     } catch(err) {
-        alert("Erro ao salvar nova senha. Tente novamente. Erro: " + err.message);
+        showNotify("Erro ao salvar nova senha. Tente novamente. Erro: " + err.message);
     }
 }
 
@@ -170,9 +174,10 @@ document.getElementById('formLogin').onsubmit = async function (e) {
     try {
         await signInWithEmailAndPassword(auth, email, pass);
     } catch (error) { 
-        alert("Erro no Login: " + error.message); 
+        showNotify("Erro no Login: " + error.message); 
     }
 };
+
 
 // --- FORMULÁRIO DE CADASTRO INDEPENDENTE ---
 document.getElementById('formRegister').onsubmit = async function (e) {
@@ -180,9 +185,27 @@ document.getElementById('formRegister').onsubmit = async function (e) {
     const email = document.getElementById('register_email').value;
     const pass = document.getElementById('register_pass').value;
     try {
-        await createUserWithEmailAndPassword(auth, email, pass);
+        // 1. Cria a conta no Firebase Auth
+        const userCred = await createUserWithEmailAndPassword(auth, email, pass);
+        const oUid = userCred.user.uid;
+
+        // 2. SALVA O E-MAIL E A CONTA DIRETO NO BANCO PARA O ADMIN VER
+        await update(ref(db_firebase, 'usuarios/' + oUid), {
+            email: email,
+            account: {
+                type: 'free',
+                expiresAt: Date.now() + (7 * 24 * 60 * 60 * 1000), // 7 dias grátis
+                forcePasswordChange: false
+            }
+        });
+
+        showNotify("Conta criada com sucesso! O painel será carregado.");
     } catch (error) { 
-        alert("Erro ao Registrar: " + error.message); 
+        if (error.code === 'auth/email-already-in-use') {
+            showNotify("🚨 Este e-mail já está em uso por outro usuário.");
+        } else {
+            showNotify("Erro ao Registrar: " + error.message); 
+        }
     }
 };
 
@@ -193,7 +216,7 @@ document.getElementById('formCliente').onsubmit = function (e) {
     
     // TRAVA: Se for Free, não for edição, e já tiver 3 clientes
     if (db.account.type !== 'vip' && !editId && db.clientes.length >= 3) {
-        alert("🚨 O plano FREE permite apenas 3 clientes. Assine o VIP para gerenciar clientes ilimitados!");
+        showNotify("🚨 O plano FREE permite apenas 3 clientes. Assine o VIP para gerenciar clientes ilimitados!");
         return;
     }
 
@@ -275,4 +298,120 @@ document.onkeydown = function(e) {
     if(e.ctrlKey && e.shiftKey && e.keyCode == 74) return false;
     // Bloqueia Ctrl+U (Ver Código Fonte)
     if(e.ctrlKey && e.keyCode == 85) return false;
+};
+
+// Cole este bloco a partir do final do seu script atual (abaixo das validações do teclado)
+
+// --- MÉTODOS DE CONTROLE EM MASSA DO w3GESTOR ---
+
+window.atualizarBarraAcoes = function() {
+    const selecionados = document.querySelectorAll('.client-checkbox:checked');
+    const barra = document.getElementById('bulk-actions-bar');
+    const contador = document.getElementById('bulk-count');
+
+    if (!barra) return;
+
+    if (selecionados.length > 0) {
+        if (contador) contador.innerText = `${selecionados.length} selecionado(s)`;
+        barra.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+    } else {
+        barra.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+    }
+};
+
+window.toggleSelectAll = function(source) {
+    if (!source || source.id !== 'select-all-clients') return;
+
+    const body = document.getElementById('table-clientes-body');
+    if (!body) return;
+
+    const checkboxes = body.querySelectorAll('.client-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = source.checked;
+    });
+
+    window.atualizarBarraAcoes();
+};
+
+window.excluirEmMassa = function() {
+    const selecionados = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
+    
+    if (selecionados.length === 0) return;
+
+    if (confirm(`Tem certeza que deseja apagar esses ${selecionados.length} clientes?`)) {
+        window.db.clientes = window.db.clientes.filter(c => !selecionados.includes(c.id.toString()));
+        window.save();
+        
+        const checkMestre = document.getElementById('select-all-clients');
+        if (checkMestre) checkMestre.checked = false;
+
+        window.renderClientes();
+        window.atualizarBarraAcoes();
+    }
+};
+
+window.dispararNotificacaoEmMassa = async function() {
+    const selecionados = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
+    
+    if (selecionados.length === 0) return;
+
+    showNotify(`Iniciando envio de ${selecionados.length} mensagens. Não feche a página até concluir.`);
+
+    for (let i = 0; i < selecionados.length; i++) {
+        const idCliente = selecionados[i];
+        
+        if (typeof window.sendManualWA === "function") {
+            window.sendManualWA(idCliente, 'renew');
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+
+    showNotify("🎉 Todos os envios foram processados!");
+    
+    document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = false);
+    const checkMestre = document.getElementById('select-all-clients');
+    if (checkMestre) checkMestre.checked = false;
+
+    window.atualizarBarraAcoes();
+};
+
+// --- CONTROLES DE IMPORTAÇÃO/EXPORTAÇÃO DE ARQUIVOS JSON ---
+window.exportarSistema = function() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.db));
+    const dlAnchor = document.createElement('a');
+    const dataAtual = new Date().toLocaleDateString().replace(/\//g, '-');
+    
+    dlAnchor.setAttribute("href", dataStr);
+    dlAnchor.setAttribute("download", `w3gestor_backup_${dataAtual}.json`);
+    document.body.appendChild(dlAnchor);
+    dlAnchor.click();
+    dlAnchor.remove();
+    
+    UI.showNotify("Backup", "Download iniciado com sucesso!");
+};
+
+window.importarSistema = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const backupValido = JSON.parse(e.target.result);
+            if (!backupValido.clientes) {
+                showNotify("Erro: Arquivo JSON inválido.");
+                return;
+            }
+
+            if (confirm(`Atenção: Deseja restaurar este backup contendo ${backupValido.clientes.length} clientes?`)) {
+                setDb(backupValido);
+                save();
+                location.reload();
+            }
+        } catch (err) {
+            showNotify("Erro ao ler o arquivo de backup.");
+        }
+    };
+    reader.readAsText(file);
 };
