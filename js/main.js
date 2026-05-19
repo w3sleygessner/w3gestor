@@ -19,8 +19,6 @@ const MEU_EMAIL_ADMIN = "w3sleygessner@gmail.com"; // <-- SEU EMAIL AQUI
 
 onAuthStateChanged(auth, (currentUser) => {
     if (currentUser) {
-onAuthStateChanged(auth, (currentUser) => {
-    if (currentUser) {
         
         // --- FORÇAR ENTRADA VIP DE EMERGÊNCIA (APAGUE DEPOIS DE TESTAR) ---
         console.log("w3Gestor: Forçando entrada do painel...");
