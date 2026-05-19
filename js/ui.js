@@ -475,27 +475,28 @@ export function renderConfig() {
     const elRenovacao = document.getElementById('cfg_msg_renovacao');
     const elSucesso = document.getElementById('cfg_msg_sucesso');
     const elSuspensa = document.getElementById('cfg_msg_suspensa');
+    // Novos campos
+    const elOscilacao = document.getElementById('cfg_msg_oscilacao');
+    const elManutencao = document.getElementById('cfg_msg_manutencao');
 
     if(elAviso) elAviso.value = config.aviso_dias || 3;
     if(elBoasVindas) elBoasVindas.value = config.msg_boas_vindas || "";
     if(elRenovacao) elRenovacao.value = config.msg_renovacao || "";
     if(elSucesso) elSucesso.value = config.msg_sucesso || "";
     if(elSuspensa) elSuspensa.value = config.msg_suspensa || "";
+    if(elOscilacao) elOscilacao.value = config.msg_oscilacao || "";
+    if(elManutencao) elManutencao.value = config.msg_manutencao || "";
 }
 
 export function updateConfig() {
-    const elAviso = document.getElementById('cfg_aviso_dias');
-    const elBoasVindas = document.getElementById('cfg_msg_boas_vindas');
-    const elRenovacao = document.getElementById('cfg_msg_renovacao');
-    const elSucesso = document.getElementById('cfg_msg_sucesso');
-    const elSuspensa = document.getElementById('cfg_msg_suspensa');
-
     db.config = {
-        aviso_dias: elAviso ? parseInt(elAviso.value) : 3,
-        msg_boas_vindas: elBoasVindas ? elBoasVindas.value : "",
-        msg_renovacao: elRenovacao ? elRenovacao.value : "",
-        msg_sucesso: elSucesso ? elSucesso.value : "",
-        msg_suspensa: elSuspensa ? elSuspensa.value : ""
+        aviso_dias: document.getElementById('cfg_aviso_dias') ? parseInt(document.getElementById('cfg_aviso_dias').value) : 3,
+        msg_boas_vindas: document.getElementById('cfg_msg_boas_vindas') ? document.getElementById('cfg_msg_boas_vindas').value : "",
+        msg_renovacao: document.getElementById('cfg_msg_renovacao') ? document.getElementById('cfg_msg_renovacao').value : "",
+        msg_sucesso: document.getElementById('cfg_msg_sucesso') ? document.getElementById('cfg_msg_sucesso').value : "",
+        msg_suspensa: document.getElementById('cfg_msg_suspensa') ? document.getElementById('cfg_msg_suspensa').value : "",
+        msg_oscilacao: document.getElementById('cfg_msg_oscilacao') ? document.getElementById('cfg_msg_oscilacao').value : "",
+        msg_manutencao: document.getElementById('cfg_msg_manutencao') ? document.getElementById('cfg_msg_manutencao').value : ""
     };
     save(); showNotify('Sucesso', 'Configurações salvas!');
 }
