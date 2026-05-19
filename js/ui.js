@@ -154,14 +154,34 @@ export function renderChartEvolucao() {
 }
 export function renderClientes() {
     const tableBody = document.getElementById('table-clientes-body'); 
-    if (!tableBody) return; 
+    const mobileContainer = document.getElementById('lista-clientes-mobile');
+    const gavetaFiltros = document.getElementById('gaveta-filtros');
+    const btnFiltrosMobile = document.querySelector('button[onclick="toggleFiltrosGaveta(true)"]');
+
+    if (!tableBody || !mobileContainer) return; 
 
     tableBody.innerHTML = '';
+    mobileContainer.innerHTML = '';
+    
     const checkMestre = document.getElementById('select-all-clients');
     if (checkMestre) checkMestre.checked = false;
     
     if (window.atualizarBarraAcoes) {
         setTimeout(() => window.atualizarBarraAcoes(), 50);
+    }
+
+    // SE A CONTA NÃO TIVER CLIENTES: Esconde gaveta/botões e limpa as listas
+    if (!db.clientes || db.clientes.length === 0) {
+        if (gavetaFiltros) gavetaFiltros.classList.add('hidden');
+        if (btnFiltrosMobile) btnFiltrosMobile.classList.add('hidden');
+        
+        tableBody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-500 italic">Nenhum cliente cadastrado ainda.</td></tr>';
+        mobileContainer.innerHTML = '<div class="p-6 text-center text-gray-500 text-xs uppercase font-bold bg-[#16162d] rounded-2xl border border-white/5">Nenhum cliente cadastrado ainda.</div>';
+        return;
+    } else {
+        // Se houver pelo menos 1 cliente, remove a trava hidden das abas
+        if (gavetaFiltros && window.innerWidth >= 1024) gavetaFiltros.classList.remove('hidden');
+        if (btnFiltrosMobile) btnFiltrosMobile.classList.remove('hidden');
     }
 
     const elName = document.getElementById('filter-name');
@@ -170,19 +190,20 @@ export function renderClientes() {
     const elStatus = document.getElementById('filter-status');
     const elInad = document.getElementById('filter-inadimplentes');
 
-    // FILTROS BLINDADOS CONTRA ERROS DE ELEMENTO NULL
     const nF = (elName && elName.value) ? elName.value.toLowerCase() : "";
     const aF = (elApp && elApp.value) ? elApp.value : "";
     const pF = (elPlano && elPlano.value) ? elPlano.value : "";
     const sF = (elStatus && elStatus.value) ? elStatus.value : "";
-    const iF = elInad ? elInad.checked : true;
+    
+    // MODIFICAÇÃO PEDIDA: Agora iF é true apenas se a checkbox for Explicitamente Marcada!
+    const iF = elInad ? elInad.checked : false;
     
     const hoje = new Date(); 
     const hojeS = hoje.toISOString().split('T')[0];
 
-    // Array para guardar os clientes filtrados
     const clientesFiltrados = [];
 
+    // Loop de Filtragem e Renderização na Tabela (PC)
     db.clientes.sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento)).forEach(cli => {
         const p = db.planos.find(x => x.id == cli.plano_id) || { nome: 'N/A' };
         const app = db.apps.find(x => x.id == cli.app_id) || { nome: 'N/A' };
@@ -194,12 +215,15 @@ export function renderClientes() {
         if (nF && !cli.nome.toLowerCase().includes(nF)) return;
         if (aF && (!cli.app_id || cli.app_id.toString() !== aF.toString())) return;
         if (pF && (!cli.plano_id || cli.plano_id.toString() !== pF.toString())) return;
-        if (!iF && isInadimplente) return;
+        
+        // Aplicação do filtro dinâmico de Inadimplência baseado na marcação
+        if (iF && !isInadimplente) return; 
+
         if (sF === 'warning' && !isWarning) return;
         if (sF === 'overdue' && !isOverdue) return;
         if (sF === 'inadimplente' && !isInadimplente) return;
 
-        // Guarda o cliente válido
+        // Guarda no array para uso na versão mobile logo abaixo
         clientesFiltrados.push(cli);
 
         let rCls = '';
@@ -234,6 +258,66 @@ export function renderClientes() {
             </td>
         </tr>`;
     });
+
+    // 📱 LOOP DE RENDERIZAÇÃO DOS CARDS COMPACTOS (MOBILE)
+    if (clientesFiltrados.length === 0) {
+        mobileContainer.innerHTML = `<div class="text-center p-6 text-gray-500 text-xs uppercase font-bold bg-[#16162d] rounded-2xl border border-white/5">Nenhum cliente corresponde aos filtros</div>`;
+    } else {
+        clientesFiltrados.forEach(cli => {
+            const p = db.planos.find(x => x.id == cli.plano_id) || { nome: 'N/A' };
+            const app = db.apps.find(x => x.id == cli.app_id) || { nome: 'N/A' };
+            const diff = Math.ceil((new Date(cli.vencimento) - hoje) / (1000 * 60 * 60 * 24));
+            
+            const isOverdue = cli.vencimento < hojeS;
+            const isInadimplente = diff < -20;
+            const isWarning = diff >= 0 && diff <= 3;
+
+            let cardBorder = 'border-white/5 bg-[#16162d]';
+            let statusBadge = '<span class="px-2 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-[9px] font-bold uppercase tracking-wider">Ativo</span>';
+
+            if (isInadimplente) {
+                cardBorder = 'border-purple-500/20 bg-purple-950/5';
+                statusBadge = '<span class="px-2 py-0.5 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded text-[9px] font-bold uppercase tracking-wider">Inadimplente</span>';
+            } else if (isOverdue) {
+                cardBorder = 'border-red-500/20 bg-red-950/5';
+                statusBadge = '<span class="px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded text-[9px] font-bold uppercase tracking-wider">Atrasado</span>';
+            } else if (isWarning) {
+                cardBorder = 'border-yellow-500/20 bg-yellow-950/5';
+                statusBadge = '<span class="px-2 py-0.5 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded text-[9px] font-bold uppercase tracking-wider">Vence logo</span>';
+            }
+
+            mobileContainer.innerHTML += `
+                <div class="card p-4 rounded-2xl border ${cardBorder} flex flex-col gap-3 shadow-xl mx-0.5 mb-3">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <input type="checkbox" value="${cli.id}" onchange="window.atualizarBarraAcoes()" class="client-checkbox w-4 h-4 rounded border-white/10 bg-white/5 text-purple-600 focus:ring-purple-500/50 cursor-pointer transition shrink-0"
+                                   style="appearance: none; -webkit-appearance: none; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; background: rgba(255,255,255,0.05); display: inline-grid; place-content: center;">
+                            <div class="min-w-0">
+                                <h4 class="font-black text-white uppercase text-xs tracking-tight truncate">${cli.nome}</h4>
+                                <div class="flex items-center gap-2 mt-1.5">${statusBadge}</div>
+                            </div>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <span class="text-[9px] text-gray-500 uppercase block font-bold tracking-wider">Vencimento</span>
+                            <strong class="text-xs font-mono text-white block mt-0.5">${cli.vencimento.split('-').reverse().join('/')}</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2 my-1 bg-black/20 p-2.5 rounded-xl border border-white/5 text-[10px]">
+                        <div><span class="text-gray-500 font-bold uppercase text-[8px] block tracking-wide">Plano</span> <strong class="text-purple-400 font-black uppercase">${p.nome}</strong></div>
+                        <div><span class="text-gray-500 font-bold uppercase text-[8px] block tracking-wide">Aplicativo</span> <strong class="text-gray-300 font-bold uppercase">${app.nome}</strong></div>
+                    </div>
+
+                    <div class="flex gap-2 w-full mt-1">
+                        <button onclick="openModalNotifyMenu(${cli.id})" class="flex-1 py-2 bg-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider text-center shadow-md active:scale-95 transition"><i class="fas fa-bell mr-1"></i> Cobrar</button>
+                        <a href="https://wa.me/${cli.whatsapp.replace(/\D/g,'')}" target="_blank" class="w-10 h-9 flex items-center justify-center bg-green-600/10 hover:bg-green-600/20 text-green-400 border border-green-500/20 rounded-xl transition active:scale-95"><i class="fab fa-whatsapp text-sm"></i></a>
+                        <button onclick="openModalEdit(${cli.id})" class="w-10 h-9 flex items-center justify-center bg-white/5 text-gray-400 rounded-xl border border-white/5 transition active:scale-95"><i class="fas fa-edit text-xs"></i></button>
+                        <button onclick="deleteCliente(${cli.id})" class="w-10 h-9 flex items-center justify-center bg-red-600/5 text-red-500/70 rounded-xl border border-red-500/10 transition active:scale-95"><i class="fas fa-trash text-xs"></i></button>
+                    </div>
+                </div>`;
+        });
+    }
+}
 
     // RENDERIZAÇÃO DOS CARDS EM AMBIENTE MOBILE (DENTRO DA FUNÇÃO!)
     const mobileContainer = document.getElementById('lista-clientes-mobile');
@@ -331,74 +415,164 @@ export function renderPlanos() {
     }
 }
 
-// ====== EVENTO PARA COPIAR O DNS DO CARD DE APLICATIVOS AO CLICAR EM QUALQUER LUGAR DELES ======
-window.copyDnsApp = function(url, nomeApp) {
-    if (!url || url === 'N/A') {
-        showNotify("Aviso", "Este aplicativo não possui URL/DNS cadastrada.", "warning");
-        return;
-    }
+// ====== NOVA FUNÇÃO: COPIA TODOS OS DADOS DO APP FORMATADOS ======
+window.copyAllAppInfo = function(nome, url, pin) {
+    const textoParaCopiar = `*Aplicativo:* ${nome}\n*DNS/URL:* ${url || 'N/A'}\n*PIN:* ${pin || 'N/A'}`;
+    
     const el = document.createElement('textarea');
-    el.value = url;
+    el.value = textoParaCopiar;
     document.body.appendChild(el);
     el.select();
     document.execCommand('copy');
     document.body.removeChild(el);
-    showNotify("Copiado!", `DNS do ${nomeApp} copiado com sucesso!`);
+    
+    showNotify("Copiado!", `Dados do ${nome} copiados com sucesso!`);
 };
 
-export function renderFaturas() {
-    const pBody = document.getElementById('table-faturas-pendentes-body');
-    const hBody = document.getElementById('table-faturas-body');
-    if (!pBody || !hBody) return;
+export function renderClientes() {
+    const tBody = document.getElementById('table-clientes-body');
+    const mList = document.getElementById('lista-clientes-mobile');
+    const gavetaFiltros = document.getElementById('gaveta-filtros');
+    const btnFiltrosMobile = document.querySelector('button[onclick="toggleFiltrosGaveta(true)"]');
+    
+    if (!tBody || !mList) return;
+
+    const clientes = db.clientes || [];
+
+    // RESOLVE O BUG 3: Se não houver clientes na conta, esconde completamente o card/botão de filtros no mobile
+    if (clientes.length === 0) {
+        if (gavetaFiltros) gavetaFiltros.classList.add('hidden', 'lg:hidden');
+        if (btnFiltrosMobile) btnFiltrosMobile.classList.add('hidden');
+        
+        tBody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-500 italic">Nenhum cliente cadastrado ainda.</td></tr>';
+        mList.innerHTML = '<div class="p-8 text-center text-gray-500 italic bg-gray-900/20 rounded-2xl border border-white/5">Nenhum cliente cadastrado ainda.</div>';
+        return;
+    } else {
+        // Se houver clientes, garante que as estruturas normais de filtros fiquem visíveis
+        if (gavetaFiltros) gavetaFiltros.classList.remove('hidden');
+        if (btnFiltrosMobile) btnFiltrosMobile.classList.remove('hidden');
+    }
+
+    const queryName = document.getElementById('filter-name')?.value.toLowerCase() || "";
+    const filterApp = document.getElementById('filter-app')?.value || "";
+    const filterPlano = document.getElementById('filter-plano')?.value || "";
+    const filterStatus = document.getElementById('filter-status')?.value || "";
+    const filterInadimplentes = document.getElementById('filter-inadimplentes')?.checked || false;
 
     const hoje = new Date().toISOString().split('T')[0];
-    const clientes = db.clientes || [];
-    const faturas = db.faturas || [];
+    const tresDiasPraFrente = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const vinteDiasAtras = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    // ORDENAÇÃO EXIGIDA: Organiza do último que estiver em aberto (data mais distante no topo)
-    const pendentes = clientes
-        .filter(c => c.vencimento <= hoje)
-        .sort((a, b) => new Date(b.vencimento) - new Date(a.vencimento));
+    const filtrados = clientes.filter(c => {
+        if (queryName && !c.nome.toLowerCase().includes(queryName)) return false;
+        if (filterApp && c.app_id != filterApp) return false;
+        if (filterPlano && c.plano_id != filterPlano) return false;
+        
+        if (filterInadimplentes && c.vencimento > vinteDiasAtras) return false;
 
-    pBody.innerHTML = pendentes.map(cli => {
-        const plano = db.planos.find(p => p.id == cli.plano_id) || { nome: 'N/A', valor: 0 };
-        return `<tr class="border-t border-gray-800 text-[10px] hover:bg-white/5">
-    <td class="p-4 font-bold text-red-400">${cli.vencimento.split('-').reverse().join('/')}</td>
-    <td class="p-4 text-white uppercase font-bold">${cli.nome}</td>
-    <td class="p-4 text-gray-400 uppercase">${plano.nome}</td>
-    <td class="p-4 text-white">R$ ${plano.valor.toFixed(2)}</td>
-    <td class="p-4 text-right">
-        <button onclick="openModalRenovar(${cli.id})" class="px-3 py-1 bg-green-600/20 text-green-500 border border-green-500/30 rounded text-[9px] font-black hover:bg-green-600 hover:text-white transition">RECEBER AGORA</button>
-    </td>
-</tr>`;
-    }).join('') || '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Nenhuma fatura em aberto.</td></tr>';
+        if (filterStatus === 'warning' && (c.vencimento < hoje || c.vencimento > tresDiasPraFrente)) return false;
+        if (filterStatus === 'overdue' && c.vencimento >= hoje) return false;
+        if (filterStatus === 'inadimplente' && c.vencimento > vinteDiasAtras) return false;
 
-    let totalLucro = 0;
-    hBody.innerHTML = faturas.map(f => {
-        totalLucro += (f.lucro || 0);
-        return `<tr class="border-t border-gray-800 text-[10px]">
-    <td class="p-4 text-gray-500">${f.data_pgto}</td>
-    <td class="p-4 font-bold text-white uppercase">${f.cliente}</td>
-    <td class="p-4 text-green-500 font-bold">R$ ${(f.valor || 0).toFixed(2)}</td>
-    <td class="p-4 text-purple-400 font-bold">R$ ${(f.lucro || 0).toFixed(2)}</td>
-    <td class="p-4 text-right">
-        <button onclick="deleteFatura(${f.id})" class="text-red-500 hover:text-red-400 transition"><i class="fas fa-undo"></i></button>
-    </td>
-</tr>`;
-    }).join('') || '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Sem histórico de pagamentos.</td></tr>';
+        return true;
+    });
 
-    if (document.getElementById('fatura-total-lucro')) {
-        document.getElementById('fatura-total-lucro').innerText = `R$ ${totalLucro.toFixed(2)}`;
-    }
+    // Renderização Desktop
+    tBody.innerHTML = filtrados.map(c => {
+        const plano = db.planos.find(p => p.id == c.plano_id) || { nome: 'N/A' };
+        const app = db.apps.find(a => a.id == c.app_id) || { nome: 'N/A' };
+        
+        let statusBadge = '<span class="px-2 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-[9px] font-bold uppercase tracking-wider">Ativo</span>';
+        if (c.vencimento < vinteDiasAtras) {
+            statusBadge = '<span class="px-2 py-0.5 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded text-[9px] font-bold uppercase tracking-wider">Inadimplente</span>';
+        } else if (c.vencimento < hoje) {
+            statusBadge = '<span class="px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded text-[9px] font-bold uppercase tracking-wider">Atrasado</span>';
+        } else if (c.vencimento <= tresDiasPraFrente) {
+            statusBadge = '<span class="px-2 py-0.5 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded text-[9px] font-bold uppercase tracking-wider">Vence logo</span>';
+        }
+
+        return `<tr class="border-t border-white/5 text-xs hover:bg-white/5 transition-colors align-middle">
+            <td class="p-3 text-center">
+                <input type="checkbox" value="${c.id}" onclick="window.atualizarBarraAcoes()" class="client-checkbox w-4 h-4 rounded border-white/10 bg-white/5 text-purple-600 focus:ring-purple-500/50 cursor-pointer transition">
+            </td>
+            <td class="p-3">
+                <div class="font-black text-white uppercase tracking-tight truncate max-w-[160px]">${c.nome}</div>
+                <div class="mt-0.5">${statusBadge}</div>
+            </td>
+            <td class="p-3">
+                <div class="text-purple-400 font-bold uppercase text-[10px]">${plano.nome}</div>
+                <div class="text-gray-500 text-[10px] uppercase font-medium mt-0.5">${app.nome}</div>
+            </td>
+            <td class="p-3 text-center font-mono font-bold text-white">${c.vencimento.split('-').reverse().join('/')}</td>
+            <td class="p-3 text-center">
+                <a href="https://wa.me/${c.whatsapp.replace(/\D/g,'')}" target="_blank" class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-green-600/10 hover:bg-green-600/20 border border-green-500/20 text-green-400 text-xs transition active:scale-95"><i class="fab fa-whatsapp"></i></a>
+            </td>
+            <td class="p-3 text-right">
+                <div class="inline-flex gap-1.5">
+                    <button onclick="openModalNotifyMenu(${c.id})" class="h-8 px-2.5 bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 border border-purple-500/20 rounded-xl text-[10px] font-bold uppercase tracking-wider transition active:scale-95"><i class="fas fa-bell mr-1"></i> Avisar</button>
+                    <button onclick="openModalClienteEdit(${c.id})" class="w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl text-xs border border-white/5 transition active:scale-95"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteCliente(${c.id})" class="w-8 h-8 flex items-center justify-center bg-red-600/5 hover:bg-red-600/20 text-red-500/70 hover:text-red-400 rounded-xl text-xs border border-red-500/10 transition active:scale-95"><i class="fas fa-trash"></i></button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('') || '<tr><td colspan="6" class="p-4 text-center text-gray-500 italic">Nenhum cliente corresponde aos filtros selecionados.</td></tr>';
+
+    // Renderização Mobile
+    mList.innerHTML = filtrados.map(c => {
+        const plano = db.planos.find(p => p.id == c.plano_id) || { nome: 'N/A' };
+        const app = db.apps.find(a => a.id == c.app_id) || { nome: 'N/A' };
+        
+        let cardBorder = 'border-white/5 bg-gray-900/20';
+        let statusText = '<span class="text-green-400 font-bold uppercase text-[9px] bg-green-500/10 px-2 py-0.5 rounded border border-green-500/10">Ativo</span>';
+        
+        if (c.vencimento < vinteDiasAtras) {
+            cardBorder = 'border-purple-500/20 bg-purple-950/5';
+            statusText = '<span class="text-purple-400 font-bold uppercase text-[9px] bg-purple-500/20 px-2 py-0.5 rounded border border-purple-500/20">Inadimplente</span>';
+        } else if (c.vencimento < hoje) {
+            cardBorder = 'border-red-500/20 bg-red-950/5';
+            statusText = '<span class="text-red-400 font-bold uppercase text-[9px] bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Atrasado</span>';
+        } else if (c.vencimento <= tresDiasPraFrente) {
+            cardBorder = 'border-yellow-500/20 bg-yellow-950/5';
+            statusText = '<span class="text-yellow-400 font-bold uppercase text-[9px] bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/10">Vence logo</span>';
+        }
+
+        return `<div class="card p-4 rounded-2xl border ${cardBorder} mb-3 flex flex-col relative shadow-lg">
+            <div class="flex items-start justify-between gap-2">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <input type="checkbox" value="${c.id}" onclick="window.atualizarBarraAcoes()" class="client-checkbox w-4 h-4 rounded border-white/10 bg-white/5 text-purple-600 focus:ring-purple-500/50 cursor-pointer transition shrink-0">
+                    <div class="min-w-0">
+                        <h4 class="font-black text-white uppercase text-xs tracking-tight truncate">${c.nome}</h4>
+                        <div class="flex items-center gap-2 mt-1.5">${statusText}</div>
+                    </div>
+                </div>
+                <div class="text-right shrink-0">
+                    <span class="text-[9px] text-gray-500 uppercase block font-bold tracking-wider">Vencimento</span>
+                    <strong class="text-xs font-mono text-white block mt-0.5">${c.vencimento.split('-').reverse().join('/')}</strong>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2 my-3.5 bg-black/20 p-2.5 rounded-xl border border-white/5 text-[10px]">
+                <div><span class="text-gray-500 font-bold uppercase text-[8px] block tracking-wide">Plano</span> <strong class="text-purple-400 font-black uppercase">${plano.nome}</strong></div>
+                <div><span class="text-gray-500 font-bold uppercase text-[8px] block tracking-wide">Aplicativo</span> <strong class="text-gray-300 font-bold uppercase">${app.nome}</strong></div>
+            </div>
+
+            <div class="flex gap-2 w-full mt-1">
+                <button onclick="openModalNotifyMenu(${c.id})" class="flex-1 py-2 bg-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider text-center shadow-md active:scale-95 transition"><i class="fas fa-bell mr-1"></i> Cobrar</button>
+                <a href="https://wa.me/${c.whatsapp.replace(/\D/g,'')}" target="_blank" class="w-10 h-9 flex items-center justify-center bg-green-600/10 hover:bg-green-600/20 text-green-400 border border-green-500/20 rounded-xl transition active:scale-95"><i class="fab fa-whatsapp text-sm"></i></a>
+                <button onclick="openModalClienteEdit(${c.id})" class="w-10 h-9 flex items-center justify-center bg-white/5 text-gray-400 rounded-xl border border-white/5 transition active:scale-95"><i class="fas fa-edit text-xs"></i></button>
+                <button onclick="deleteCliente(${c.id})" class="w-10 h-9 flex items-center justify-center bg-red-600/5 text-red-500/70 rounded-xl border border-red-500/10 transition active:scale-95"><i class="fas fa-trash text-xs"></i></button>
+            </div>
+        </div>`;
+    }).join('') || '<div class="p-4 text-center text-gray-500 italic bg-gray-900/20 rounded-xl border border-white/5 text-xs">Nenhum cliente corresponde aos filtros selecionados.</div>';
 }
 
 export function renderApps() {
     const list = document.getElementById('apps-list'); 
     if (!list) return;
     
-    // RECONSTRUÇÃO: Cards de Apps premium e clicáveis idênticos aos de planos, com gatilho de cópia rápida
+    // ATUALIZAÇÃO DO CARD: Agora chama window.copyAllAppInfo passando nome, url e pin
     list.innerHTML = db.apps.map(a => `
-        <div onclick="window.copyDnsApp('${a.url || 'N/A'}', '${a.nome}')" class="card p-4 rounded-xl relative shadow-xl border border-white/5 bg-gray-900/40 cursor-pointer hover:border-purple-500/30 transition-all active:scale-95 duration-100">
+        <div onclick="window.copyAllAppInfo('${a.nome}', '${a.url || ''}', '${a.pin || ''}')" class="card p-4 rounded-xl relative shadow-xl border border-white/5 bg-gray-900/40 cursor-pointer hover:border-purple-500/30 transition-all active:scale-95 duration-100">
             <div class="absolute top-3 right-3 flex gap-2.5 z-20" onclick="event.stopPropagation();">
                 <button onclick="openModalAppEdit(${a.id})" class="text-gray-500 hover:text-white transition"><i class="fas fa-edit"></i></button>
                 <button onclick="deleteApp(${a.id})" class="text-gray-700 hover:text-red-500 transition"><i class="fas fa-trash"></i></button>
@@ -407,7 +581,7 @@ export function renderApps() {
             <p class="text-[10px] text-gray-400 mt-1 truncate uppercase"><span class="text-gray-600 font-bold">DNS:</span> ${a.url || 'N/A'}</p>
             <div class="mt-3 text-[9px] font-mono flex justify-between border-t border-white/5 pt-2.5 text-gray-500">
                 <span>PIN: <strong class="text-white font-bold">${a.pin || 'N/A'}</strong></span>
-                <span class="text-purple-400 uppercase font-black tracking-wider"><i class="fas fa-copy text-[8px] mr-1"></i> Clique para Copiar</span>
+                <span class="text-purple-400 uppercase font-black tracking-wider"><i class="fas fa-copy text-[8px] mr-1"></i> Copiar Tudo</span>
             </div>
         </div>`).join('');
     
@@ -420,7 +594,6 @@ export function renderApps() {
             db.apps.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
     }
 }
-
 
 export function renderConfig() {
     const config = db.config || {};
@@ -659,8 +832,7 @@ export function showNotify(titulo, message, tipo = 'success') {
 // 2. Tornamos ela global aqui embaixo para os botões antigos funcionarem
 window.showNotify = showNotify;
 
-// ====== ADICIONE ESSAS FUNÇÕES DENTRO DO SEU js/ui.js ======
-
+// ====== FUNÇÃO DA GAVETA MOBILE ULTRA FLUIDA E CORRIGIDA ======
 export function toggleFiltrosGaveta(open) {
     const gaveta = document.getElementById('gaveta-filtros');
     const fundo = document.getElementById('fundo-gaveta');
@@ -668,11 +840,28 @@ export function toggleFiltrosGaveta(open) {
     if (!gaveta || !fundo) return;
 
     if (open) {
-        gaveta.classList.remove('translate-y-full');
+        // 1. Remove o hidden para o navegador renderizar a div no mobile
+        gaveta.classList.remove('hidden');
         fundo.classList.remove('hidden');
+        
+        // 2. Pequeno delay de 10ms para o Tailwind aplicar a animação de subida suave
+        setTimeout(() => {
+            gaveta.classList.remove('translate-y-full');
+            gaveta.classList.add('translate-y-0');
+        }, 10);
     } else {
+        // 1. Aplica a animação de descida para fora da tela
+        gaveta.classList.remove('translate-y-0');
         gaveta.classList.add('translate-y-full');
         fundo.classList.add('hidden');
+        
+        // 2. Espera os 300ms da animação acabar e aplica o hidden real (display: none)
+        setTimeout(() => {
+            // Garante que no desktop ela continue visível por causa do layout do PC
+            if (window.innerWidth < 1024) {
+                gaveta.classList.add('hidden');
+            }
+        }, 300);
     }
 }
 
