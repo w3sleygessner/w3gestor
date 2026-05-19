@@ -9,6 +9,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <link rel="stylesheet" href="./style.css">
     <style>
+
+        .scrollable-table-container {
+    max-height: 50vh; /* Ajusta conforme necessário */
+    overflow-y: auto;
+    display: block;
+}
+/* Estilo elegante para o scroll */
+.scrollbar-thin::-webkit-scrollbar { width: 6px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: #16162d; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: #4a4a6a; border-radius: 10px; }
         /* Tela de Pré-carregamento para evitar piscadas */
         #splash-screen {
             position: fixed;
@@ -432,7 +442,12 @@
                                 <th class="p-3 text-right">Ações</th>
                             </tr>
                         </thead>
-                        <tbody id="table-clientes-body"></tbody>
+                        <div class="scrollable-table-container scrollbar-thin">
+    <table class="w-full text-left text-sm">
+        </table>
+        <tbody id="table-clientes-body"></tbody>
+</div>
+                        
                     </table>
                 </div>
 
@@ -461,7 +476,11 @@
                                     <th class="p-4 text-right">Ação</th>
                                 </tr>
                             </thead>
+                            <div class="scrollable-table-container scrollbar-thin">
+    <table class="w-full text-left text-sm">
                             <tbody id="table-faturas-pendentes-body"></tbody>
+        </table>
+</div>
                         </table>
                     </div>
                 </div>
