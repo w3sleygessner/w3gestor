@@ -6,7 +6,7 @@ let financeChart;
 let appsDonutChart;
 
 // ====== FUNÇÃO PARA RECOLHER / EXPANDIR SIDEBAR NO DESKTOP ======
-window.controlarSidebarGeral = function() {
+export function controlarSidebarGeral() {
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.getElementById('main-content');
     if (!sidebar || !mainContent) return;
@@ -17,7 +17,8 @@ window.controlarSidebarGeral = function() {
     } else {
         sidebar.classList.toggle('-translate-x-full');
     }
-};
+}
+window.controlarSidebarGeral = controlarSidebarGeral;
 
 window.exportarParaTexto = function() {
     const dadosStr = btoa(unescape(encodeURIComponent(JSON.stringify(window.db))));
@@ -97,9 +98,13 @@ export function toggleSidebar() {
     }
 }
 
+// EXPORTS TÉCNICOS EXIGIDOS COM ESCOPO GLOBAL WINDOW
 export function openModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
 export function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
 export function checkCustomDays(v) { const el = document.getElementById('plan_dias_custom'); if (el) el.classList.toggle('hidden', v !== 'custom'); }
+
+window.openModal = openModal;
+window.closeModal = closeModal;
 
 export function initApp() {
     renderPlanos(); renderApps(); renderClientes(); renderFaturas(); updateDashboard(); renderConfig();
@@ -122,14 +127,11 @@ export function updateDashboard() {
     const hj = new Date().toISOString().split('T')[0];
     const otr = clientes.filter(c => c.vencimento <= hj).length;
 
-    // PREVISÃO DO MÊS CORRIGIDA: Filtra inadimplentes severos (>20d) e calcula Lucro Líquido Real (Preço - Custo)
     const previsaoLucroLiquido = clientes.reduce((acc, cli) => {
         const diffDias = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
         if (diffDias < -20) return acc;
-        
         const plano = db.planos.find(p => p.id == cli.plano_id) || { valor: 0, custo: 0 };
-        const liquidoCli = (plano.valor || 0) - (plano.custo || 0);
-        return acc + liquidoCli;
+        return acc + ((plano.valor || 0) - (plano.custo || 0));
     }, 0);
 
     if (document.getElementById('stat-total')) document.getElementById('stat-total').innerText = clientes.length;
@@ -141,17 +143,16 @@ export function updateDashboard() {
     const list = document.getElementById('alerts-list');
     if (list) {
         list.innerHTML = '';
-        // CRÍTICOS REESTRUTURADOS: Mostra uma lista compacta e limpa em grid no dashboard
         clientes.forEach(cli => {
             const diff = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
             if (diff <= config.aviso_dias) {
                 list.innerHTML += `
-                <div class="flex items-center justify-between p-3 bg-white/[0.02] border border-white/5 shadow-inner rounded-xl">
-                    <div>
-                        <p class="text-xs text-white font-black uppercase tracking-tight truncate max-w-[130px]">${cli.nome}</p>
-                        <span class="mt-1 inline-block ${diff <= 0 ? 'text-red-400 bg-red-500/10' : 'text-yellow-500 bg-yellow-500/10'} border border-current rounded-md text-[8px] font-black px-1.5 py-0.5 uppercase">${diff <= 0 ? 'Atrasado' : 'Vence em ' + diff + ' d'}</span>
+                <div class="flex items-center justify-between p-2 bg-white/[0.02] border border-white/5 shadow-inner rounded-xl min-w-[220px] shrink-0 lg:shrink lg:min-w-0">
+                    <div class="min-w-0 flex-1 pr-2">
+                        <p class="text-[11px] text-white font-black uppercase tracking-tight truncate">${cli.nome}</p>
+                        <span class="mt-0.5 inline-block ${diff <= 0 ? 'text-red-400 bg-red-500/10' : 'text-yellow-500 bg-yellow-500/10'} border border-current rounded text-[8px] font-black px-1.5 py-0.5 uppercase">${diff <= 0 ? 'Atrasado' : 'Em ' + diff + ' d'}</span>
                     </div>
-                    <div class="flex gap-1.5">
+                    <div class="flex gap-1 shrink-0">
                         <button onclick="openModalRenovar(${cli.id})" class="w-7 h-7 flex items-center justify-center bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg text-xs active:scale-75 transition"><i class="fas fa-check-circle"></i></button>
                         <button onclick="sendManualWA(${cli.id}, 'renew')" class="w-7 h-7 flex items-center justify-center bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg text-xs active:scale-75 transition"><i class="fab fa-whatsapp"></i></button>
                     </div>
@@ -159,7 +160,7 @@ export function updateDashboard() {
             }
         });
         if (list.innerHTML === '') {
-            list.innerHTML = `<div class="p-4 text-center text-gray-500 text-xs italic w-full col-span-full">Nenhum vencimento crítico.</div>`;
+            list.innerHTML = `<div class="p-2 text-center text-gray-500 text-xs italic w-full">Nenhum vencimento crítico.</div>`;
         }
         renderChartEvolucao();
         renderChartAppsDonut();
@@ -174,11 +175,11 @@ export function renderChartEvolucao() {
     
     const options = {
         series: [{ name: 'Faturamento Diário', data: dadosRecentes.map(f => f.lucro || 0) }],
-        chart: { type: 'area', height: 200, toolbar: { show: false }, background: 'transparent' },
+        chart: { type: 'area', height: 140, toolbar: { show: false }, background: 'transparent' },
         theme: { mode: 'dark' },
-        stroke: { curve: 'smooth', width: 3 },
+        stroke: { curve: 'smooth', width: 2.5 },
         colors: ['#a855f7'],
-        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05 } },
+        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.02 } },
         xaxis: { categories: dadosRecentes.map(f => f.data_pgto ? f.data_pgto.slice(0, 5) : "") }
     };
     if (financeChart) financeChart.destroy();
@@ -200,17 +201,14 @@ export function renderChartAppsDonut() {
         if (appObj) contagem[appObj.nome] = (contagem[appObj.nome] || 0) + 1;
     });
 
-    const seriesData = Object.values(contagem);
-    const labelsData = Object.keys(contagem);
-
     const options = {
-        series: seriesData.length > 0 ? seriesData : [0],
-        labels: labelsData.length > 0 ? labelsData : ["Sem Clientes"],
-        chart: { type: 'donut', height: 200, background: 'transparent' },
+        series: Object.values(contagem).length > 0 ? Object.values(contagem) : [0],
+        labels: Object.keys(contagem).length > 0 ? Object.keys(contagem) : ["Sem Clientes"],
+        chart: { type: 'donut', height: 140, background: 'transparent' },
         theme: { mode: 'dark' },
         colors: ['#a855f7', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
         stroke: { show: false },
-        legend: { position: 'bottom', labels: { colors: '#9ca3af' } },
+        legend: { position: 'bottom', fontSize: '10px', labels: { colors: '#9ca3af' } },
         dataLabels: { enabled: false }
     };
 
@@ -249,31 +247,18 @@ export function renderClientes() {
         if (btnFiltrosMobile) btnFiltrosMobile.classList.remove('hidden');
     }
 
-    const elName = document.getElementById('filter-name');
-    const elApp = document.getElementById('filter-app');
-    const elPlano = document.getElementById('filter-plano');
-    const elStatus = document.getElementById('filter-status');
-    const elInad = document.getElementById('filter-inadimplentes');
-
-    const nF = (elName && elName.value) ? elName.value.toLowerCase() : "";
-    const aF = (elApp && elApp.value) ? elApp.value : "";
-    const pF = (elPlano && elPlano.value) ? elPlano.value : "";
-    const sF = (elStatus && elStatus.value) ? elStatus.value : "";
-    const iF = elInad ? elInad.checked : false;
+    const nF = document.getElementById('filter-name')?.value.toLowerCase() || "";
+    const aF = document.getElementById('filter-app')?.value || "";
+    const pF = document.getElementById('filter-plano')?.value || "";
+    const sF = document.getElementById('filter-status')?.value || "";
+    const iF = document.getElementById('filter-inadimplentes')?.checked || false;
     
     const hoje = new Date(); 
     const hojeS = hoje.toISOString().split('T')[0];
-
-    const inicioSemana = new Date(hoje);
-    inicioSemana.setDate(hoje.getDate() - hoje.getDay());
-    const fimSemana = new Date(inicioSemana);
-    fimSemana.setDate(inicioSemana.getDate() + 6);
+    const inicioSemana = new Date(hoje); inicioSemana.setDate(hoje.getDate() - hoje.getDay());
+    const fimSemana = new Date(inicioSemana); fimSemana.setDate(inicioSemana.getDate() + 6);
     const fimSemanaS = fimSemana.toISOString().split('T')[0];
-
-    const mesAtual = hoje.getMonth();
-    const anoAtual = hoje.getFullYear();
-
-    const clientesFiltrados = [];
+    const mesBy = hoje.getMonth(), anoBy = hoje.getFullYear();
 
     db.clientes.sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento)).forEach(cli => {
         const p = db.planos.find(x => x.id == cli.plano_id) || { nome: 'N/A' };
@@ -284,8 +269,8 @@ export function renderClientes() {
         const isWarning = diff >= 0 && diff <= 3;
 
         if (nF && !cli.nome.toLowerCase().includes(nF)) return;
-        if (aF && (!cli.app_id || cli.app_id.toString() !== aF.toString())) return;
-        if (pF && (!cli.plano_id || cli.plano_id.toString() !== pF.toString())) return;
+        if (aF && cli.app_id != aF) return;
+        if (pF && cli.plano_id != pF) return;
         if (iF && !isInadimplente) return;
 
         if (sF === 'warning' && !isWarning) return;
@@ -294,287 +279,147 @@ export function renderClientes() {
         if (sF === 'hoje' && cli.vencimento !== hojeS) return;
         if (sF === 'semana' && (cli.vencimento < hojeS || cli.vencimento > fimSemanaS)) return;
         if (sF === 'mes') {
-            const dateParts = cli.vencimento.split('-');
-            if (parseInt(dateParts[1]) !== (mesAtual + 1) || parseInt(dateParts[0]) !== anoAtual) return;
+            const dP = cli.vencimento.split('-');
+            if (parseInt(dP[1]) !== (mesBy + 1) || parseInt(dP[0]) !== anoBy) return;
         }
 
-        clientesFiltrados.push(cli);
+        let rCls = isInadimplente ? 'row-inadimplente' : (isOverdue ? 'row-overdue' : (isWarning ? 'row-warning' : ''));
 
-        let rCls = '';
-        if (isInadimplente) rCls = 'row-inadimplente';
-        else if (isOverdue) rCls = 'row-overdue';
-        else if (isWarning) rCls = 'row-warning';
-
-        tableBody.innerHTML += `<tr class="border-t border-gray-800/50 transition hover:bg-white/5 ${rCls}">
-            <td class="p-3 text-center w-10">
-                <input type="checkbox" class="client-checkbox" value="${cli.id}" onchange="window.atualizarBarraAcoes()"
-                       style="appearance: none; -webkit-appearance: none; width: 16px; height: 16px; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; background: rgba(255,255,255,0.05); cursor: pointer; display: inline-grid; place-content: center; transition: all 0.2s;">
-            </td>
-            <td class="p-3"><p class="font-bold text-white text-xs uppercase tracking-tight">${cli.nome}</p></td>
-            <td class="p-3 text-[9px] uppercase"><span class="text-gray-400">${p.nome}</span><br><span class="text-purple-400 font-bold">${app.nome}</span></td>
-            <td class="p-3 text-center text-[10px] font-bold ${isOverdue ? 'text-red-500' : (isWarning ? 'text-yellow-500' : 'text-green-500')}">${cli.vencimento.split('-').reverse().join('/')}</td>
-            <td class="p-3 text-center">
-                <div class="flex flex-col items-center gap-1">
-                    <span class="text-[9px] text-gray-500 font-mono tracking-tighter">${cli.whatsapp}</span>
-                    <div class="flex gap-2">
-                        <button onclick="sendManualWA(${cli.id}, 'renew')" title="Aviso" class="text-purple-400 text-xs"><i class="fas fa-redo"></i></button>
-                        <button onclick="sendManualWA(${cli.id}, 'welcome')" title="Boas-vindas" class="text-green-500 text-xs"><i class="fas fa-star"></i></button>
-                        <button onclick="sendManualWA(${cli.id}, 'suspended')" title="Suspender" class="text-red-500 text-xs"><i class="fas fa-ban"></i></button>
-                    </div>
+        tableBody.innerHTML += `<tr class="border-t border-gray-800/50 text-xs hover:bg-white/5 ${rCls}">
+            <td class="p-2.5 text-center w-10"><input type="checkbox" class="client-checkbox" value="${cli.id}" onchange="window.atualizarBarraAcoes()"></td>
+            <td class="p-2.5 font-bold text-white uppercase">${cli.nome}</td>
+            <td class="p-2.5 uppercase text-[10px] text-gray-400">${p.nome}<br><span class="text-purple-400 font-bold">${app.nome}</span></td>
+            <td class="p-2.5 text-center font-bold ${isOverdue ? 'text-red-500' : (isWarning ? 'text-yellow-500' : 'text-green-500')}">${cli.vencimento.split('-').reverse().join('/')}</td>
+            <td class="p-2.5 text-center">
+                <div class="flex items-center justify-center gap-3">
+                    <button onclick="sendManualWA(${cli.id}, 'renew')" class="text-purple-400"><i class="fas fa-redo"></i></button>
+                    <button onclick="sendManualWA(${cli.id}, 'welcome')" class="text-green-500"><i class="fas fa-star"></i></button>
+                    <button onclick="sendManualWA(${cli.id}, 'suspended')" class="text-red-500"><i class="fas fa-ban"></i></button>
                 </div>
             </td>
-            <td class="p-3 text-right space-x-1">
-                <button onclick="copyFullAccess(${cli.id})" title="Copiar Dados" class="p-2 text-purple-400 hover:scale-110"><i class="fas fa-copy"></i></button>
-                <button onclick="openModalRenovar(${cli.id})" class="px-3 py-1 bg-green-600 text-white rounded text-[8px] font-black hover:bg-green-700 shadow shadow-green-500/20">PAGO</button>
-                <button onclick="addThreeDays(${cli.id})" class="p-2 bg-purple-600/20 text-purple-400 rounded btn-plus-days"><i class="fas fa-plus"></i></button>
-                <button onclick="openModalEdit(${cli.id})" class="p-2 text-gray-500 hover:text-white"><i class="fas fa-edit"></i></button>
-                <button onclick="deleteCliente(${cli.id})" class="p-2 text-gray-700 hover:text-red-500"><i class="fas fa-trash"></i></button>
+            <td class="p-2.5 text-right space-x-1 whitespace-nowrap">
+                <button onclick="copyFullAccess(${cli.id})" class="text-purple-400 p-1"><i class="fas fa-copy"></i></button>
+                <button onclick="openModalRenovar(${cli.id})" class="px-2 py-0.5 bg-green-600 text-white rounded text-[9px] font-black">PAGO</button>
+                <button onclick="addThreeDays(${cli.id})" class="p-1 text-purple-400"><i class="fas fa-plus"></i></button>
+                <button onclick="openModalClienteEdit(${cli.id})" class="text-gray-500 p-1"><i class="fas fa-edit"></i></button>
+                <button onclick="deleteCliente(${cli.id})" class="text-gray-700 p-1"><i class="fas fa-trash"></i></button>
             </td>
         </tr>`;
+
+        mobileContainer.innerHTML += `
+        <div class="card p-3 rounded-xl border border-white/5 bg-[#16162d] mb-2 text-xs">
+            <div class="flex justify-between items-start">
+                <h4 class="font-black text-white uppercase truncate max-w-[150px]">${cli.nome}</h4>
+                <span class="font-mono text-[11px] text-gray-400">${cli.vencimento.split('-').reverse().join('/')}</span>
+            </div>
+            <div class="flex justify-between items-center mt-2.5 pt-2 border-t border-white/5">
+                <span class="text-[10px] text-purple-400 uppercase font-bold">${p.nome} • ${app.nome}</span>
+                <div class="flex gap-3">
+                    <button onclick="openModalNotifyMenu(${cli.id})" class="text-purple-400"><i class="fas fa-bell"></i></button>
+                    <button onclick="openModalClienteEdit(${cli.id})" class="text-gray-400"><i class="fas fa-edit"></i></button>
+                    <button onclick="openModalRenovar(${cli.id})" class="text-green-400 font-bold">PAGO</button>
+                </div>
+            </div>
+        </div>`;
     });
-
-    if (clientesFiltrados.length === 0) {
-        mobileContainer.innerHTML = `<div class="text-center p-6 text-gray-500 text-xs uppercase font-bold bg-[#16162d] rounded-2xl border border-white/5">Nenhum cliente corresponde aos filtros</div>`;
-    } else {
-        clientesFiltrados.forEach(cli => {
-            const p = db.planos.find(x => x.id == cli.plano_id) || { nome: 'N/A' };
-            const app = db.apps.find(x => x.id == cli.app_id) || { nome: 'N/A' };
-            const diff = Math.ceil((new Date(cli.vencimento) - hoje) / (1000 * 60 * 60 * 24));
-            
-            const isOverdue = cli.vencimento < hojeS;
-            const isInadimplente = diff < -20;
-            const isWarning = diff >= 0 && diff <= 3;
-
-            let cardBorder = 'border-white/5 bg-[#16162d]';
-            let statusBadge = '<span class="px-2 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-[9px] font-bold uppercase tracking-wider">Ativo</span>';
-
-            if (isInadimplente) {
-                cardBorder = 'border-purple-500/20 bg-purple-950/5';
-                statusBadge = '<span class="px-2 py-0.5 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded text-[9px] font-bold uppercase tracking-wider">Inadimplente</span>';
-            } else if (isOverdue) {
-                cardBorder = 'border-red-500/20 bg-red-950/5';
-                statusBadge = '<span class="px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded text-[9px] font-bold uppercase tracking-wider">Atrasado</span>';
-            } else if (isWarning) {
-                cardBorder = 'border-yellow-500/20 bg-yellow-950/5';
-                statusBadge = '<span class="px-2 py-0.5 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded text-[9px] font-bold uppercase tracking-wider">Vence logo</span>';
-            }
-
-            mobileContainer.innerHTML += `
-                <div class="card p-4 rounded-2xl border ${cardBorder} flex flex-col gap-3 shadow-xl mx-0.5 mb-3">
-                    <div class="flex items-start justify-between gap-2">
-                        <div class="flex items-center gap-2.5 min-w-0">
-                            <input type="checkbox" value="${cli.id}" onchange="window.atualizarBarraAcoes()" class="client-checkbox w-4 h-4 rounded border-white/10 bg-white/5 text-purple-600 focus:ring-purple-500/50 cursor-pointer transition shrink-0"
-                                   style="appearance: none; -webkit-appearance: none; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; background: rgba(255,255,255,0.05); display: inline-grid; place-content: center;">
-                            <div class="min-w-0">
-                                <h4 class="font-black text-white uppercase text-xs tracking-tight truncate">${cli.nome}</h4>
-                                <div class="flex items-center gap-2 mt-1.5">${statusBadge}</div>
-                            </div>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <span class="text-[9px] text-gray-500 uppercase block font-bold tracking-wider">Vencimento</span>
-                            <strong class="text-xs font-mono text-white block mt-0.5">${cli.vencimento.split('-').reverse().join('/')}</strong>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-2 gap-2 my-1 bg-black/20 p-2.5 rounded-xl border border-white/5 text-[10px]">
-                        <div><span class="text-gray-500 font-bold uppercase text-[8px] block tracking-wide">Plano</span> <strong class="text-purple-400 font-black uppercase">${p.nome}</strong></div>
-                        <div><span class="text-gray-500 font-bold uppercase text-[8px] block tracking-wide">Aplicativo</span> <strong class="text-gray-300 font-bold uppercase">${app.nome}</strong></div>
-                    </div>
-                    <div class="flex gap-2 w-full mt-1">
-                        <button onclick="openModalNotifyMenu(${cli.id})" class="flex-1 py-2 bg-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider text-center shadow-md active:scale-95 transition"><i class="fas fa-bell mr-1"></i> Cobrar</button>
-                        <a href="https://wa.me/${cli.whatsapp.replace(/\D/g,'')}" target="_blank" class="w-10 h-9 flex items-center justify-center bg-green-600/10 hover:bg-green-600/20 text-green-400 border border-green-500/20 rounded-xl transition active:scale-95"><i class="fab fa-whatsapp text-sm"></i></a>
-                        <button onclick="openModalEdit(${cli.id})" class="w-10 h-9 flex items-center justify-center bg-white/5 text-gray-400 rounded-xl border border-white/5 transition active:scale-95"><i class="fas fa-edit text-xs"></i></button>
-                        <button onclick="deleteCliente(${cli.id})" class="w-10 h-9 flex items-center justify-center bg-red-600/5 text-red-500/70 rounded-xl border border-red-500/10 transition active:scale-95"><i class="fas fa-trash text-xs"></i></button>
-                    </div>
-                </div>`;
-        });
-    }
+    if(tableBody.innerHTML==='') tableBody.innerHTML='<tr><td colspan="6" class="p-4 text-center text-gray-500">Nenhum cliente.</td></tr>';
+    if(mobileContainer.innerHTML==='') mobileContainer.innerHTML='<div class="text-center p-4 text-gray-500">Nenhum cliente.</div>';
 }
+
+export function openModalRenovar(id) {
+    const cli = db.clientes.find(c => c.id == id);
+    const p = db.planos.find(pl => pl.id == cli.plano_id) || { valor: 0 };
+    document.getElementById('renovar-cli-id').value = id;
+    document.getElementById('renovar-info').innerText = `Marcar R$ ${p.valor.toFixed(2)} pagos por ${cli.nome}?`;
+    openModal('modalRenovar');
+}
+window.openModalRenovar = openModalRenovar;
+
+export function openModalClienteEdit(id) {
+    const cli = db.clientes.find(c => c.id == id);
+    document.getElementById('cli_edit_id').value = cli.id; 
+    document.getElementById('cli_nome').value = cli.nome; 
+    document.getElementById('cli_whatsapp').value = cli.whatsapp; 
+    document.getElementById('cli_plano_id').value = cli.plano_id; 
+    document.getElementById('cli_app_id').value = cli.app_id; 
+    document.getElementById('cli_vencimento').value = cli.vencimento; 
+    document.getElementById('cli_credenciais').value = cli.credenciais || "";
+    document.getElementById('modalClienteTitle').innerText = "Editar Cliente"; 
+    openModal('modalCliente');
+}
+window.openModalClienteEdit = openModalClienteEdit;
 
 export function renderPlanos() {
     const list = document.getElementById('planos-list'); if (!list) return;
-    list.innerHTML = db.planos.map(p => {
-        const valorLucro = p.valor - p.custo;
-        const margemPorcentagem = p.valor > 0 ? Math.round((valorLucro / p.valor) * 100) : 0;
-        return `
-        <div class="card p-4 rounded-xl relative shadow-xl border border-white/5 bg-gray-900/40">
-            <div class="absolute top-2 right-2 flex gap-2 z-20">
-                <button onclick="openModalPlanoEdit(${p.id})" class="text-gray-500 hover:text-white transition"><i class="fas fa-edit"></i></button>
-                <button onclick="deletePlano(${p.id})" class="text-gray-700 hover:text-red-500 transition"><i class="fas fa-trash"></i></button>
+    list.innerHTML = db.planos.map(p => `
+        <div class="card p-4 rounded-xl relative shadow-xl border border-white/5 bg-gray-900/40 text-xs">
+            <div class="absolute top-2 right-2 flex gap-2">
+                <button onclick="openModalPlanoEdit(${p.id})" class="text-gray-500"><i class="fas fa-edit"></i></button>
+                <button onclick="deletePlano(${p.id})" class="text-gray-700"><i class="fas fa-trash"></i></button>
             </div>
-            <span class="absolute bottom-12 right-4 bg-green-500/10 text-green-400 border border-green-500/20 text-[8px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider">+${margemPorcentagem}% Margem</span>
-            <h4 class="font-bold text-white text-sm uppercase">${p.nome}</h4>
-            <p class="text-[9px] text-gray-500 font-black">${p.dias} DIAS</p>
-            <div class="mt-2 text-[10px] flex justify-between border-t border-gray-800 pt-2 w-full">
+            <h4 class="font-bold text-white uppercase">${p.nome}</h4>
+            <p class="text-[9px] text-gray-500 font-black mt-0.5">${p.dias} DIAS</p>
+            <div class="mt-2 flex justify-between border-t border-gray-800 pt-2">
                 <span>Preço: R$ ${p.valor.toFixed(2)}</span>
-                <span class="text-purple-400 font-bold">Lucro: R$ ${valorLucro.toFixed(2)}</span>
-            </div>
-        </div>`;
-    }).join('');
-    
-    if (document.getElementById('cli_plano_id')) {
-        document.getElementById('cli_plano_id').innerHTML = db.planos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
-    }
-    if (document.getElementById('filter-plano')) {
-        document.getElementById('filter-plano').innerHTML = `<option value="">Planos</option>` + 
-            db.planos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
-    }
-}
-
-window.copyAllAppInfo = function(nome, url, pin) {
-    const textoParaCopiar = `*Aplicativo:* ${nome}\n*DNS/URL:* ${url || 'N/A'}\n*PIN:* ${pin || 'N/A'}`;
-    const el = document.createElement('textarea');
-    el.value = textoParaCopiar;
-    document.body.appendChild(el);
-    el.select();
-    document.execCommand('copy');
-    document.body.removeChild(el);
-    showNotify("Copiado!", `Dados do ${nome} copied com sucesso!`);
-};
-
-export function renderApps() {
-    const list = document.getElementById('apps-list'); 
-    if (!list) return;
-    
-    list.innerHTML = db.apps.map(a => `
-        <div onclick="window.copyAllAppInfo('${a.nome}', '${a.url || ''}', '${a.pin || ''}')" class="card p-4 rounded-xl relative shadow-xl border border-white/5 bg-gray-900/40 cursor-pointer hover:border-purple-500/30 transition-all active:scale-95 duration-100">
-            <div class="absolute top-3 right-3 flex gap-2.5 z-20" onclick="event.stopPropagation();">
-                <button onclick="openModalAppEdit(${a.id})" class="text-gray-500 hover:text-white transition"><i class="fas fa-edit"></i></button>
-                <button onclick="deleteApp(${a.id})" class="text-gray-700 hover:text-red-500 transition"><i class="fas fa-trash"></i></button>
-            </div>
-            <h4 class="font-black text-purple-400 text-sm uppercase tracking-tight">${a.nome}</h4>
-            <p class="text-[10px] text-gray-400 mt-1 truncate uppercase"><span class="text-gray-600 font-bold">DNS:</span> ${a.url || 'N/A'}</p>
-            <div class="mt-3 text-[9px] font-mono flex justify-between border-t border-white/5 pt-2.5 text-gray-500">
-                <span>PIN: <strong class="text-white font-bold">${a.pin || 'N/A'}</strong></span>
-                <span class="text-purple-400 uppercase font-black tracking-wider"><i class="fas fa-copy text-[8px] mr-1"></i> Copiar Tudo</span>
+                <span class="text-purple-400 font-bold">Lucro: R$ ${(p.valor - p.custo).toFixed(2)}</span>
             </div>
         </div>`).join('');
-    
-    if (document.getElementById('cli_app_id')) {
-        document.getElementById('cli_app_id').innerHTML = db.apps.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
-    }
-    if (document.getElementById('filter-app')) {
-        document.getElementById('filter-app').innerHTML = `<option value="">Apps</option>` + 
-            db.apps.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
-    }
+}
+
+export function renderApps() {
+    const list = document.getElementById('apps-list'); if (!list) return;
+    list.innerHTML = db.apps.map(a => `
+        <div onclick="window.copyAllAppInfo('${a.nome}', '${a.url || ''}', '${a.pin || ''}')" class="card p-3 rounded-xl border border-white/5 bg-gray-900/40 cursor-pointer text-xs">
+            <div class="flex justify-between items-center">
+                <h4 class="font-black text-purple-400 uppercase">${a.nome}</h4>
+                <div class="flex gap-2" onclick="event.stopPropagation();">
+                    <button onclick="openModalAppEdit(${a.id})" class="text-gray-500"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteApp(${a.id})" class="text-gray-700"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        </div>`).join('');
 }
 
 export function renderFaturas() {
     const pBody = document.getElementById('table-faturas-pendentes-body');
     const hBody = document.getElementById('table-faturas-body');
     if (!pBody || !hBody) return;
-
     const hoje = new Date().toISOString().split('T')[0];
-    const clientes = db.clientes || [];
-    const faturas = db.faturas || [];
-
-    const pendentes = clientes
-        .filter(c => c.vencimento <= hoje)
-        .sort((a, b) => new Date(b.vencimento) - new Date(a.vencimento));
+    const pendentes = (db.clientes || []).filter(c => c.vencimento <= hoje);
 
     pBody.innerHTML = pendentes.map(cli => {
         const plano = db.planos.find(p => p.id == cli.plano_id) || { nome: 'N/A', valor: 0 };
-        return `<tr class="border-t border-gray-800 text-[10px] hover:bg-white/5">
-    <td class="p-4 font-bold text-red-400">${cli.vencimento.split('-').reverse().join('/')}</td>
-    <td class="p-4 text-white uppercase font-bold">${cli.nome}</td>
-    <td class="p-4 text-gray-400 uppercase">${plano.nome}</td>
-    <td class="p-4 text-white">R$ ${plano.valor.toFixed(2)}</td>
-    <td class="p-4 text-right">
-        <button onclick="openModalRenovar(${cli.id})" class="px-3 py-1 bg-green-600/20 text-green-500 border border-green-500/30 rounded text-[9px] font-black hover:bg-green-600 hover:text-white transition">RECEBER AGORA</button>
-    </td>
-</tr>`;
-    }).join('') || '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Nenhuma fatura em aberto.</td></tr>';
-
-    let totalLucro = 0;
-    hBody.innerHTML = faturas.map(f => {
-        totalLucro += (f.lucro || 0);
-        return `<tr class="border-t border-gray-800 text-[10px]">
-    <td class="p-4 text-gray-500">${f.data_pgto}</td>
-    <td class="p-4 font-bold text-white uppercase">${f.cliente}</td>
-    <td class="p-4 text-green-500 font-bold">R$ ${(f.valor || 0).toFixed(2)}</td>
-    <td class="p-4 text-purple-400 font-bold">R$ ${(f.lucro || 0).toFixed(2)}</td>
-    <td class="p-4 text-right">
-        <button onclick="deleteFatura(${f.id})" class="text-red-500 hover:text-red-400 transition"><i class="fas fa-undo"></i></button>
-    </td>
-</tr>`;
-    }).join('') || '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Sem histórico de pagamentos.</td></tr>';
-
-    if (document.getElementById('fatura-total-lucro')) {
-        document.getElementById('fatura-total-lucro').innerText = `R$ ${totalLucro.toFixed(2)}`;
-    }
+        return `<tr class="border-t border-gray-800 text-xs">
+            <td class="p-3 font-bold text-red-400">${cli.vencimento.split('-').reverse().join('/')}</td>
+            <td class="p-3 text-white uppercase font-bold">${cli.nome}</td>
+            <td class="p-3 text-gray-400 uppercase">${plano.nome}</td>
+            <td class="p-3 text-white">R$ ${plano.valor.toFixed(2)}</td>
+            <td class="p-3 text-right"><button onclick="openModalRenovar(${cli.id})" class="px-2 py-0.5 bg-green-600/20 text-green-500 border border-green-500/20 rounded font-black text-[9px]">RECEBER</button></td>
+        </tr>`;
+    }).join('') || '<tr><td colspan="5" class="p-3 text-center text-gray-500">Nenhuma fatura em aberto.</td></tr>';
 }
 
 export function renderConfig() {
     const config = db.config || {};
-    const elAviso = document.getElementById('cfg_aviso_dias');
-    const elBoasVindas = document.getElementById('cfg_msg_boas_vindas');
-    const elRenovacao = document.getElementById('cfg_msg_renovacao');
-    const elSucesso = document.getElementById('cfg_msg_sucesso');
-    const elSuspensa = document.getElementById('cfg_msg_suspensa');
-    const elOscilacao = document.getElementById('cfg_msg_oscilacao');
-    const elManutencao = document.getElementById('cfg_msg_manutencao');
-
-    if(elAviso) elAviso.value = config.aviso_dias || 3;
-    if(elBoasVindas) elBoasVindas.value = config.msg_boas_vindas || "";
-    if(elRenovacao) elRenovacao.value = config.msg_renovacao || "";
-    if(elSucesso) elSucesso.value = config.msg_sucesso || "";
-    if(elSuspensa) elSuspensa.value = config.msg_suspensa || "";
-    if(elOscilacao) elOscilacao.value = config.msg_oscilacao || "";
-    if(elManutencao) elManutencao.value = config.msg_manutencao || "";
+    if(document.getElementById('cfg_aviso_dias')) document.getElementById('cfg_aviso_dias').value = config.aviso_dias || 3;
+    if(document.getElementById('cfg_msg_boas_vindas')) document.getElementById('cfg_msg_boas_vindas').value = config.msg_boas_vindas || "";
+    if(document.getElementById('cfg_msg_renovacao')) document.getElementById('cfg_msg_renovacao').value = config.msg_renovacao || "";
+    if(document.getElementById('cfg_msg_sucesso')) document.getElementById('cfg_msg_sucesso').value = config.msg_sucesso || "";
+    if(document.getElementById('cfg_msg_suspensa')) document.getElementById('cfg_msg_suspensa').value = config.msg_suspensa || "";
+    if(document.getElementById('cfg_msg_oscilacao')) document.getElementById('cfg_msg_oscilacao').value = config.msg_oscilacao || "";
+    if(document.getElementById('cfg_msg_manutencao')) document.getElementById('cfg_msg_manutencao').value = config.msg_manutencao || "";
 }
 
-export function updateConfig() {
-    db.config = {
-        aviso_dias: document.getElementById('cfg_aviso_dias') ? parseInt(document.getElementById('cfg_aviso_dias').value) : 3,
-        msg_boas_vindas: document.getElementById('cfg_msg_boas_vindas') ? document.getElementById('cfg_msg_boas_vindas').value : "",
-        msg_renovacao: document.getElementById('cfg_msg_renovacao') ? document.getElementById('cfg_msg_renovacao').value : "",
-        msg_sucesso: document.getElementById('cfg_msg_sucesso') ? document.getElementById('cfg_msg_sucesso').value : "",
-        msg_suspensa: document.getElementById('cfg_msg_suspensa') ? document.getElementById('cfg_msg_suspensa').value : "",
-        msg_oscilacao: document.getElementById('cfg_msg_oscilacao') ? document.getElementById('cfg_msg_oscilacao').value : "",
-        msg_manutencao: document.getElementById('cfg_msg_manutencao') ? document.getElementById('cfg_msg_manutencao').value : ""
-    };
-    save(); showNotify('Sucesso', 'Configurações salvas!');
-}
-
-// ====== AJUSTADO EXPORT OBRIGATÓRIO EXIGIDO PELO ADMIN.JS ======
 export function showNotify(titulo, message, tipo = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
-
-    let bgIcon = 'bg-green-500/20 text-green-400 border-green-500/30';
-    let icon = 'fas fa-check-circle';
-    
-    if (tipo === 'error' || tipo === 'danger') {
-        bgIcon = 'bg-red-500/20 text-red-400 border-red-500/30';
-        icon = 'fas fa-times-circle';
-    } else if (tipo === 'warning') {
-        bgIcon = 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30';
-        icon = 'fas fa-exclamation-triangle';
-    } else if (tipo === 'info') {
-        bgIcon = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-        icon = 'fas fa-info-circle';
-    }
-
     const toast = document.createElement('div');
-    toast.className = "pointer-events-auto w-full bg-[#16162d]/95 backdrop-blur-md border border-white/5 p-4 rounded-xl shadow-2xl flex items-start gap-3 transform translate-x-20 opacity-0 transition-all duration-300";
-    
-    toast.innerHTML = `
-        <div class="h-8 w-8 rounded-lg border flex items-center justify-center shrink-0 ${bgIcon}">
-            <i class="${icon} text-sm"></i>
-        </div>
-        <div class="flex-1">
-            <h4 class="text-xs font-bold text-white uppercase tracking-wider">${titulo}</h4>
-            <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">${message}</p>
-        </div>
-    `;
-
+    toast.className = "pointer-events-auto w-full bg-[#16162d]/95 backdrop-blur-md border border-white/5 p-3 rounded-xl shadow-2xl flex items-start gap-3 transform translate-x-20 opacity-0 transition-all duration-300 text-xs";
+    toast.innerHTML = `<div><h4 class="font-bold text-white uppercase tracking-wider">${titulo}</h4><p class="text-gray-400 mt-0.5">${message}</p></div>`;
     container.appendChild(toast);
     setTimeout(() => { toast.classList.remove('translate-x-20', 'opacity-0'); }, 10);
-    setTimeout(() => {
-        toast.classList.add('translate-x-20', 'opacity-0');
-        setTimeout(() => { toast.remove(); }, 300);
-    }, 4000);
+    setTimeout(() => { toast.classList.add('translate-x-20', 'opacity-0'); setTimeout(() => { toast.remove(); }, 300); }, 4000);
 }
-
 window.showNotify = showNotify;
 
 export function toggleFiltrosGaveta(open) {
@@ -582,114 +427,42 @@ export function toggleFiltrosGaveta(open) {
     const fundo = document.getElementById('fundo-gaveta');
     if (!gaveta || !fundo) return;
     if (open) {
-        gaveta.classList.remove('hidden');
-        fundo.classList.remove('hidden');
-        setTimeout(() => {
-            gaveta.classList.remove('translate-y-full');
-            gaveta.classList.add('translate-y-0');
-        }, 10);
+        gaveta.classList.remove('hidden', 'translate-y-full');
     } else {
-        gaveta.classList.remove('translate-y-0');
-        gaveta.classList.add('translate-y-full');
-        fundo.classList.add('hidden');
-        setTimeout(() => {
-            if (window.innerWidth < 1024) gaveta.classList.add('hidden');
-        }, 300);
+        gaveta.classList.add('translate-y-full', 'hidden');
     }
 }
-
 window.toggleFiltrosGaveta = toggleFiltrosGaveta;
 
-window.alternarAbasAuth = function(irParaCadastro) {
-    const wrapLogin = document.getElementById('wrapper-login');
-    const wrapRegister = document.getElementById('wrapper-register');
-    if (!wrapLogin || !wrapRegister) return;
-    if (irParaCadastro) {
-        wrapLogin.classList.add('hidden');
-        wrapRegister.classList.remove('hidden');
-    } else {
-        wrapRegister.classList.add('hidden');
-        wrapLogin.classList.remove('hidden');
-    }
-};
-
-// ====== COMPONENTE ASSÍNCRONO DE ENVIOS (BARRA SUTIL FLUTUANTE) ======
 window.dispararNotificacaoEmMassa = async function() {
     const selecionados = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
     if (selecionados.length === 0) return;
-
     const miniBadge = document.getElementById('badgeProgressoFlutuante');
-    const textoMini = document.getElementById('progresso-texto-mini');
-    const barraMini = document.getElementById('progresso-barra-mini');
-    const pctMini = document.getElementById('progresso-porcentagem-mini');
-
     if (miniBadge) miniBadge.classList.remove('hidden');
-    const total = selecionados.length;
 
-    for (let i = 0; i < total; i++) {
-        const idCliente = selecionados[i];
-        const clienteObj = db.clientes.find(c => c.id == idCliente) || { nome: "Cliente" };
-        
-        requestAnimationFrame(() => {
-            if (textoMini) textoMini.innerText = `Enviando: ${clienteObj.nome.toUpperCase()} (${i + 1}/${total})`;
-            const pct = Math.round(((i + 1) / total) * 100);
-            if (barraMini) barraMini.style.width = `${pct}%`;
-            if (pctMini) pctMini.innerText = `${pct}%`;
-        });
-
-        if (typeof sendManualWA === "function") {
-            sendManualWA(idCliente, 'renew');
-        }
-        await new Promise(resolve => setTimeout(resolve, 3000));
+    for (let i = 0; i < selecionados.length; i++) {
+        if (typeof sendManualWA === "function") sendManualWA(selecionados[i], 'renew');
+        await new Promise(r => setTimeout(r, 3000));
     }
-
     if (miniBadge) miniBadge.classList.add('hidden');
-    showNotify("Concluído", "Fila de cobranças em massa enviada com sucesso!", "success");
-    document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = false);
-    const checkMestre = document.getElementById('select-all-clients');
-    if (checkMestre) checkMestre.checked = false;
-    window.atualizarBarraAcoes();
+    showNotify("Concluído", "Fila de cobranças disparada!");
 };
 
-// ====== TRANSMISSÃO DE ALERTAS CORRIGIDA (TEMPLATES DINÂMICOS) ======
 window.dispararAlertaGeral = async function(tipoAlerta) {
-    const hoje = new Date();
     const ativos = (db.clientes || []).filter(cli => {
-        const diff = Math.ceil((new Date(cli.vencimento) - hoje) / (1000 * 60 * 60 * 24));
-        return diff >= -20; 
+        const diff = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
+        return diff >= -20;
     });
-
-    if (ativos.length === 0) {
-        showNotify("Aviso", "Nenhum cliente elegível na fila ativa.", "warning");
-        return;
-    }
-
-    if (!confirm(`Deseja transmitir o alerta de ${tipoAlerta.toUpperCase()} para todos os ${ativos.length} clientes ativos?`)) return;
+    if (ativos.length === 0) return;
+    if (!confirm(`Transmitir alerta de ${tipoAlerta.toUpperCase()} para ${ativos.length} clientes?`)) return;
 
     const miniBadge = document.getElementById('badgeProgressoFlutuante');
-    const textoMini = document.getElementById('progresso-texto-mini');
-    const barraMini = document.getElementById('progresso-barra-mini');
-    const pctMini = document.getElementById('progresso-porcentagem-mini');
-
     if (miniBadge) miniBadge.classList.remove('hidden');
-    const total = ativos.length;
 
-    for (let i = 0; i < total; i++) {
-        const cli = ativos[i];
-        
-        requestAnimationFrame(() => {
-            if (textoMini) textoMini.innerText = `${tipoAlerta === 'oscilacao' ? 'Instabilidade' : 'Manutenção'}: ${cli.nome.toUpperCase()} (${i + 1}/${total})`;
-            const pct = Math.round(((i + 1) / total) * 100);
-            if (barraMini) barraMini.style.width = `${pct}%`;
-            if (pctMini) pctMini.innerText = `${pct}%`;
-        });
-
-        if (typeof sendManualWA === "function") {
-            sendManualWA(cli.id, tipoAlerta);
-        }
-        await new Promise(resolve => setTimeout(resolve, 3000));
+    for (let i = 0; i < ativos.length; i++) {
+        if (typeof sendManualWA === "function") sendManualWA(ativos[i].id, tipoAlerta);
+        await new Promise(r => setTimeout(r, 3000));
     }
-
     if (miniBadge) miniBadge.classList.add('hidden');
-    showNotify("Transmissão Concluída", "O alerta geral do servidor foi enviado para as carteiras!", "success");
+    showNotify("Concluído", "Alerta geral transmitido!");
 };
