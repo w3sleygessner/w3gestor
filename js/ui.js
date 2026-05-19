@@ -152,6 +152,8 @@ export function renderChartEvolucao() {
     financeChart = new ApexCharts(el, options);
     financeChart.render();
 }
+
+// ====== FUNÇÃO RENDER_CLIENTES (UNIFICADA, CORRIGIDA E SEM DUPLICADOS) ======
 export function renderClientes() {
     const tableBody = document.getElementById('table-clientes-body'); 
     const mobileContainer = document.getElementById('lista-clientes-mobile');
@@ -170,8 +172,10 @@ export function renderClientes() {
         setTimeout(() => window.atualizarBarraAcoes(), 50);
     }
 
-    // SE A CONTA NÃO TIVER CLIENTES: Esconde gaveta/botões e limpa as listas
-    if (!db.clientes || db.clientes.length === 0) {
+    const clientes = db.clientes || [];
+
+    // SE A CONTA NÃO TIVER CLIENTES: Esconde gaveta/botões e impede exibição do card de filtros bugado
+    if (clientes.length === 0) {
         if (gavetaFiltros) gavetaFiltros.classList.add('hidden');
         if (btnFiltrosMobile) btnFiltrosMobile.classList.add('hidden');
         
@@ -179,7 +183,7 @@ export function renderClientes() {
         mobileContainer.innerHTML = '<div class="p-6 text-center text-gray-500 text-xs uppercase font-bold bg-[#16162d] rounded-2xl border border-white/5">Nenhum cliente cadastrado ainda.</div>';
         return;
     } else {
-        // Se houver pelo menos 1 cliente, remove a trava hidden das abas
+        // Se houver pelo menos 1 cliente, mostra as estruturas normais de filtros de forma segura
         if (gavetaFiltros && window.innerWidth >= 1024) gavetaFiltros.classList.remove('hidden');
         if (btnFiltrosMobile) btnFiltrosMobile.classList.remove('hidden');
     }
@@ -195,7 +199,7 @@ export function renderClientes() {
     const pF = (elPlano && elPlano.value) ? elPlano.value : "";
     const sF = (elStatus && elStatus.value) ? elStatus.value : "";
     
-    // MODIFICAÇÃO PEDIDA: Agora iF é true apenas se a checkbox for Explicitamente Marcada!
+    // CORREÇÃO PEDIDA: Só filtra inadimplentes caso o usuário ative explicitamente a checkbox!
     const iF = elInad ? elInad.checked : false;
     
     const hoje = new Date(); 
@@ -203,7 +207,7 @@ export function renderClientes() {
 
     const clientesFiltrados = [];
 
-    // Loop de Filtragem e Renderização na Tabela (PC)
+    // Loop de Filtragem e Ordenação de Clientes
     db.clientes.sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento)).forEach(cli => {
         const p = db.planos.find(x => x.id == cli.plano_id) || { nome: 'N/A' };
         const app = db.apps.find(x => x.id == cli.app_id) || { nome: 'N/A' };
@@ -216,14 +220,12 @@ export function renderClientes() {
         if (aF && (!cli.app_id || cli.app_id.toString() !== aF.toString())) return;
         if (pF && (!cli.plano_id || cli.plano_id.toString() !== pF.toString())) return;
         
-        // Aplicação do filtro dinâmico de Inadimplência baseado na marcação
         if (iF && !isInadimplente) return; 
 
         if (sF === 'warning' && !isWarning) return;
         if (sF === 'overdue' && !isOverdue) return;
         if (sF === 'inadimplente' && !isInadimplente) return;
 
-        // Guarda no array para uso na versão mobile logo abaixo
         clientesFiltrados.push(cli);
 
         let rCls = '';
@@ -259,7 +261,7 @@ export function renderClientes() {
         </tr>`;
     });
 
-    // 📱 LOOP DE RENDERIZAÇÃO DOS CARDS COMPACTOS (MOBILE)
+    // Renderização Mobile de Cards Compactos Otimizada
     if (clientesFiltrados.length === 0) {
         mobileContainer.innerHTML = `<div class="text-center p-6 text-gray-500 text-xs uppercase font-bold bg-[#16162d] rounded-2xl border border-white/5">Nenhum cliente corresponde aos filtros</div>`;
     } else {
@@ -319,63 +321,6 @@ export function renderClientes() {
     }
 }
 
-    // RENDERIZAÇÃO DOS CARDS EM AMBIENTE MOBILE (DENTRO DA FUNÇÃO!)
-    const mobileContainer = document.getElementById('lista-clientes-mobile');
-    if (mobileContainer) {
-        mobileContainer.innerHTML = ''; 
-
-        if (clientesFiltrados.length === 0) {
-            mobileContainer.innerHTML = `<div class="text-center p-6 text-gray-500 text-xs uppercase font-bold">Nenhum cliente encontrado</div>`;
-        } else {
-            clientesFiltrados.forEach(cli => {
-                const p = db.planos.find(x => x.id == cli.plano_id) || { nome: 'Sem Plano' };
-                const app = db.apps.find(x => x.id == cli.app_id) || { nome: 'Sem App' };
-                
-                const isOverdue = cli.vencimento < hojeS;
-                const statusBorder = isOverdue ? 'border-red-500/30' : 'border-green-500/30';
-                const badgeColor = isOverdue ? 'bg-red-600/20 text-red-400 border border-red-500/30' : 'bg-green-600/20 text-green-400 border border-green-500/30';
-
-                mobileContainer.innerHTML += `
-                    <div class="card p-4 rounded-2xl border ${statusBorder} bg-[#16162d] flex flex-col gap-3.5 shadow-xl mx-1 mb-3">
-                        <div class="flex items-center justify-between gap-2 w-full">
-                            <div class="truncate flex-1">
-                                <h4 class="font-black text-white text-sm uppercase tracking-tight truncate">${cli.nome}</h4>
-                                <p class="text-[10px] text-gray-400 mt-0.5 uppercase truncate">${p.nome} • <span class="text-purple-400 font-bold">${app.nome}</span></p>
-                            </div>
-                            <span class="px-2.5 py-1 rounded-xl text-[10px] font-mono font-black uppercase tracking-tighter shrink-0 ${badgeColor}">
-                                ${cli.vencimento.split('-').reverse().join('/')}
-                            </span>
-                        </div>
-
-                        <div class="flex items-center justify-between border-t border-white/5 pt-3 gap-2 w-full">
-                            <div class="flex flex-col">
-                                <span class="text-[9px] text-gray-500 uppercase font-black tracking-wider">WhatsApp</span>
-                                <span class="text-xs text-gray-300 font-mono font-bold">${cli.whatsapp}</span>
-                            </div>
-                            <div class="flex gap-4 bg-black/30 px-3.5 py-2 rounded-xl border border-white/5 shrink-0">
-                                <button onclick="sendManualWA(${cli.id}, 'renew')" title="Aviso" class="text-purple-400 text-sm active:scale-75 transition"><i class="fas fa-redo"></i></button>
-                                <button onclick="sendManualWA(${cli.id}, 'welcome')" title="Boas-vindas" class="text-green-400 text-sm active:scale-75 transition"><i class="fas fa-star"></i></button>
-                                <button onclick="sendManualWA(${cli.id}, 'suspended')" title="Suspender" class="text-red-400 text-sm active:scale-75 transition"><i class="fas fa-ban"></i></button>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center justify-between gap-1.5 border-t border-white/5 pt-3 mt-0.5 w-full">
-                            <div class="flex gap-1">
-                                <button onclick="copyFullAccess(${cli.id})" title="Copiar Acesso" class="w-9 h-9 flex items-center justify-center text-purple-400 bg-purple-500/10 rounded-xl text-xs active:scale-90 transition"><i class="fas fa-copy"></i></button>
-                                <button onclick="openModalEdit(${cli.id})" title="Editar" class="w-9 h-9 flex items-center justify-center text-gray-400 bg-white/5 rounded-xl text-xs active:scale-90 transition"><i class="fas fa-edit"></i></button>
-                                <button onclick="deleteCliente(${cli.id})" title="Excluir" class="w-9 h-9 flex items-center justify-center text-red-400 bg-red-500/10 rounded-xl text-xs active:scale-90 transition"><i class="fas fa-trash"></i></button>
-                            </div>
-                            <div class="flex gap-1 flex-1 justify-end">
-                                <button onclick="addThreeDays(${cli.id})" class="h-9 px-3 bg-purple-600/20 text-purple-400 border border-purple-500/20 rounded-xl text-[11px] font-black active:scale-95 transition">+3 DIAS</button>
-                                <button onclick="openModalRenovar(${cli.id})" class="h-9 px-5 bg-green-600 text-white rounded-xl text-[11px] font-black shadow-lg shadow-green-500/10 text-center active:scale-95 transition">PAGO</button>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-    }
-} // <--- FIM REAL DA FUNÇÃO
 export function addThreeDays(id) {
     const idx = db.clientes.findIndex(c => c.id == id);
     if (idx !== -1) {
@@ -387,7 +332,6 @@ export function addThreeDays(id) {
         showNotify('+3 Dias', 'Vencimento adiado em 3 dias.');
     }
 }
-
 
 export function renderPlanos() {
     const list = document.getElementById('planos-list'); if (!list) return;
@@ -415,7 +359,7 @@ export function renderPlanos() {
     }
 }
 
-// ====== NOVA FUNÇÃO: COPIA TODOS OS DADOS DO APP FORMATADOS ======
+// ====== FUNÇÃO: COPIA TODOS OS DADOS DO APP FORMATADOS ======
 window.copyAllAppInfo = function(nome, url, pin) {
     const textoParaCopiar = `*Aplicativo:* ${nome}\n*DNS/URL:* ${url || 'N/A'}\n*PIN:* ${pin || 'N/A'}`;
     
@@ -429,148 +373,11 @@ window.copyAllAppInfo = function(nome, url, pin) {
     showNotify("Copiado!", `Dados do ${nome} copiados com sucesso!`);
 };
 
-export function renderClientes() {
-    const tBody = document.getElementById('table-clientes-body');
-    const mList = document.getElementById('lista-clientes-mobile');
-    const gavetaFiltros = document.getElementById('gaveta-filtros');
-    const btnFiltrosMobile = document.querySelector('button[onclick="toggleFiltrosGaveta(true)"]');
-    
-    if (!tBody || !mList) return;
-
-    const clientes = db.clientes || [];
-
-    // RESOLVE O BUG 3: Se não houver clientes na conta, esconde completamente o card/botão de filtros no mobile
-    if (clientes.length === 0) {
-        if (gavetaFiltros) gavetaFiltros.classList.add('hidden', 'lg:hidden');
-        if (btnFiltrosMobile) btnFiltrosMobile.classList.add('hidden');
-        
-        tBody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-500 italic">Nenhum cliente cadastrado ainda.</td></tr>';
-        mList.innerHTML = '<div class="p-8 text-center text-gray-500 italic bg-gray-900/20 rounded-2xl border border-white/5">Nenhum cliente cadastrado ainda.</div>';
-        return;
-    } else {
-        // Se houver clientes, garante que as estruturas normais de filtros fiquem visíveis
-        if (gavetaFiltros) gavetaFiltros.classList.remove('hidden');
-        if (btnFiltrosMobile) btnFiltrosMobile.classList.remove('hidden');
-    }
-
-    const queryName = document.getElementById('filter-name')?.value.toLowerCase() || "";
-    const filterApp = document.getElementById('filter-app')?.value || "";
-    const filterPlano = document.getElementById('filter-plano')?.value || "";
-    const filterStatus = document.getElementById('filter-status')?.value || "";
-    const filterInadimplentes = document.getElementById('filter-inadimplentes')?.checked || false;
-
-    const hoje = new Date().toISOString().split('T')[0];
-    const tresDiasPraFrente = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const vinteDiasAtras = new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    const filtrados = clientes.filter(c => {
-        if (queryName && !c.nome.toLowerCase().includes(queryName)) return false;
-        if (filterApp && c.app_id != filterApp) return false;
-        if (filterPlano && c.plano_id != filterPlano) return false;
-        
-        if (filterInadimplentes && c.vencimento > vinteDiasAtras) return false;
-
-        if (filterStatus === 'warning' && (c.vencimento < hoje || c.vencimento > tresDiasPraFrente)) return false;
-        if (filterStatus === 'overdue' && c.vencimento >= hoje) return false;
-        if (filterStatus === 'inadimplente' && c.vencimento > vinteDiasAtras) return false;
-
-        return true;
-    });
-
-    // Renderização Desktop
-    tBody.innerHTML = filtrados.map(c => {
-        const plano = db.planos.find(p => p.id == c.plano_id) || { nome: 'N/A' };
-        const app = db.apps.find(a => a.id == c.app_id) || { nome: 'N/A' };
-        
-        let statusBadge = '<span class="px-2 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded text-[9px] font-bold uppercase tracking-wider">Ativo</span>';
-        if (c.vencimento < vinteDiasAtras) {
-            statusBadge = '<span class="px-2 py-0.5 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded text-[9px] font-bold uppercase tracking-wider">Inadimplente</span>';
-        } else if (c.vencimento < hoje) {
-            statusBadge = '<span class="px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded text-[9px] font-bold uppercase tracking-wider">Atrasado</span>';
-        } else if (c.vencimento <= tresDiasPraFrente) {
-            statusBadge = '<span class="px-2 py-0.5 bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 rounded text-[9px] font-bold uppercase tracking-wider">Vence logo</span>';
-        }
-
-        return `<tr class="border-t border-white/5 text-xs hover:bg-white/5 transition-colors align-middle">
-            <td class="p-3 text-center">
-                <input type="checkbox" value="${c.id}" onclick="window.atualizarBarraAcoes()" class="client-checkbox w-4 h-4 rounded border-white/10 bg-white/5 text-purple-600 focus:ring-purple-500/50 cursor-pointer transition">
-            </td>
-            <td class="p-3">
-                <div class="font-black text-white uppercase tracking-tight truncate max-w-[160px]">${c.nome}</div>
-                <div class="mt-0.5">${statusBadge}</div>
-            </td>
-            <td class="p-3">
-                <div class="text-purple-400 font-bold uppercase text-[10px]">${plano.nome}</div>
-                <div class="text-gray-500 text-[10px] uppercase font-medium mt-0.5">${app.nome}</div>
-            </td>
-            <td class="p-3 text-center font-mono font-bold text-white">${c.vencimento.split('-').reverse().join('/')}</td>
-            <td class="p-3 text-center">
-                <a href="https://wa.me/${c.whatsapp.replace(/\D/g,'')}" target="_blank" class="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-green-600/10 hover:bg-green-600/20 border border-green-500/20 text-green-400 text-xs transition active:scale-95"><i class="fab fa-whatsapp"></i></a>
-            </td>
-            <td class="p-3 text-right">
-                <div class="inline-flex gap-1.5">
-                    <button onclick="openModalNotifyMenu(${c.id})" class="h-8 px-2.5 bg-purple-600/10 hover:bg-purple-600/20 text-purple-400 border border-purple-500/20 rounded-xl text-[10px] font-bold uppercase tracking-wider transition active:scale-95"><i class="fas fa-bell mr-1"></i> Avisar</button>
-                    <button onclick="openModalClienteEdit(${c.id})" class="w-8 h-8 flex items-center justify-center bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl text-xs border border-white/5 transition active:scale-95"><i class="fas fa-edit"></i></button>
-                    <button onclick="deleteCliente(${c.id})" class="w-8 h-8 flex items-center justify-center bg-red-600/5 hover:bg-red-600/20 text-red-500/70 hover:text-red-400 rounded-xl text-xs border border-red-500/10 transition active:scale-95"><i class="fas fa-trash"></i></button>
-                </div>
-            </td>
-        </tr>`;
-    }).join('') || '<tr><td colspan="6" class="p-4 text-center text-gray-500 italic">Nenhum cliente corresponde aos filtros selecionados.</td></tr>';
-
-    // Renderização Mobile
-    mList.innerHTML = filtrados.map(c => {
-        const plano = db.planos.find(p => p.id == c.plano_id) || { nome: 'N/A' };
-        const app = db.apps.find(a => a.id == c.app_id) || { nome: 'N/A' };
-        
-        let cardBorder = 'border-white/5 bg-gray-900/20';
-        let statusText = '<span class="text-green-400 font-bold uppercase text-[9px] bg-green-500/10 px-2 py-0.5 rounded border border-green-500/10">Ativo</span>';
-        
-        if (c.vencimento < vinteDiasAtras) {
-            cardBorder = 'border-purple-500/20 bg-purple-950/5';
-            statusText = '<span class="text-purple-400 font-bold uppercase text-[9px] bg-purple-500/20 px-2 py-0.5 rounded border border-purple-500/20">Inadimplente</span>';
-        } else if (c.vencimento < hoje) {
-            cardBorder = 'border-red-500/20 bg-red-950/5';
-            statusText = '<span class="text-red-400 font-bold uppercase text-[9px] bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Atrasado</span>';
-        } else if (c.vencimento <= tresDiasPraFrente) {
-            cardBorder = 'border-yellow-500/20 bg-yellow-950/5';
-            statusText = '<span class="text-yellow-400 font-bold uppercase text-[9px] bg-yellow-500/10 px-2 py-0.5 rounded border border-yellow-500/10">Vence logo</span>';
-        }
-
-        return `<div class="card p-4 rounded-2xl border ${cardBorder} mb-3 flex flex-col relative shadow-lg">
-            <div class="flex items-start justify-between gap-2">
-                <div class="flex items-center gap-2.5 min-w-0">
-                    <input type="checkbox" value="${c.id}" onclick="window.atualizarBarraAcoes()" class="client-checkbox w-4 h-4 rounded border-white/10 bg-white/5 text-purple-600 focus:ring-purple-500/50 cursor-pointer transition shrink-0">
-                    <div class="min-w-0">
-                        <h4 class="font-black text-white uppercase text-xs tracking-tight truncate">${c.nome}</h4>
-                        <div class="flex items-center gap-2 mt-1.5">${statusText}</div>
-                    </div>
-                </div>
-                <div class="text-right shrink-0">
-                    <span class="text-[9px] text-gray-500 uppercase block font-bold tracking-wider">Vencimento</span>
-                    <strong class="text-xs font-mono text-white block mt-0.5">${c.vencimento.split('-').reverse().join('/')}</strong>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-2 my-3.5 bg-black/20 p-2.5 rounded-xl border border-white/5 text-[10px]">
-                <div><span class="text-gray-500 font-bold uppercase text-[8px] block tracking-wide">Plano</span> <strong class="text-purple-400 font-black uppercase">${plano.nome}</strong></div>
-                <div><span class="text-gray-500 font-bold uppercase text-[8px] block tracking-wide">Aplicativo</span> <strong class="text-gray-300 font-bold uppercase">${app.nome}</strong></div>
-            </div>
-
-            <div class="flex gap-2 w-full mt-1">
-                <button onclick="openModalNotifyMenu(${c.id})" class="flex-1 py-2 bg-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider text-center shadow-md active:scale-95 transition"><i class="fas fa-bell mr-1"></i> Cobrar</button>
-                <a href="https://wa.me/${c.whatsapp.replace(/\D/g,'')}" target="_blank" class="w-10 h-9 flex items-center justify-center bg-green-600/10 hover:bg-green-600/20 text-green-400 border border-green-500/20 rounded-xl transition active:scale-95"><i class="fab fa-whatsapp text-sm"></i></a>
-                <button onclick="openModalClienteEdit(${c.id})" class="w-10 h-9 flex items-center justify-center bg-white/5 text-gray-400 rounded-xl border border-white/5 transition active:scale-95"><i class="fas fa-edit text-xs"></i></button>
-                <button onclick="deleteCliente(${c.id})" class="w-10 h-9 flex items-center justify-center bg-red-600/5 text-red-500/70 rounded-xl border border-red-500/10 transition active:scale-95"><i class="fas fa-trash text-xs"></i></button>
-            </div>
-        </div>`;
-    }).join('') || '<div class="p-4 text-center text-gray-500 italic bg-gray-900/20 rounded-xl border border-white/5 text-xs">Nenhum cliente corresponde aos filtros selecionados.</div>';
-}
-
 export function renderApps() {
     const list = document.getElementById('apps-list'); 
     if (!list) return;
     
-    // ATUALIZAÇÃO DO CARD: Agora chama window.copyAllAppInfo passando nome, url e pin
+    // Cards de Apps premium em grid com gatilho de cópia integrada ao clicar
     list.innerHTML = db.apps.map(a => `
         <div onclick="window.copyAllAppInfo('${a.nome}', '${a.url || ''}', '${a.pin || ''}')" class="card p-4 rounded-xl relative shadow-xl border border-white/5 bg-gray-900/40 cursor-pointer hover:border-purple-500/30 transition-all active:scale-95 duration-100">
             <div class="absolute top-3 right-3 flex gap-2.5 z-20" onclick="event.stopPropagation();">
@@ -592,6 +399,52 @@ export function renderApps() {
     if (document.getElementById('filter-app')) {
         document.getElementById('filter-app').innerHTML = `<option value="">Apps</option>` + 
             db.apps.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
+    }
+}
+
+export function renderFaturas() {
+    const pBody = document.getElementById('table-faturas-pendentes-body');
+    const hBody = document.getElementById('table-faturas-body');
+    if (!pBody || !hBody) return;
+
+    const hoje = new Date().toISOString().split('T')[0];
+    const clientes = db.clientes || [];
+    const faturas = db.faturas || [];
+
+    // ORDENAÇÃO: Ordena do último que estiver em aberto para o mais antigo
+    const pendentes = clientes
+        .filter(c => c.vencimento <= hoje)
+        .sort((a, b) => new Date(b.vencimento) - new Date(a.vencimento));
+
+    pBody.innerHTML = pendentes.map(cli => {
+        const plano = db.planos.find(p => p.id == cli.plano_id) || { nome: 'N/A', valor: 0 };
+        return `<tr class="border-t border-gray-800 text-[10px] hover:bg-white/5">
+    <td class="p-4 font-bold text-red-400">${cli.vencimento.split('-').reverse().join('/')}</td>
+    <td class="p-4 text-white uppercase font-bold">${cli.nome}</td>
+    <td class="p-4 text-gray-400 uppercase">${plano.nome}</td>
+    <td class="p-4 text-white">R$ ${plano.valor.toFixed(2)}</td>
+    <td class="p-4 text-right">
+        <button onclick="openModalRenovar(${cli.id})" class="px-3 py-1 bg-green-600/20 text-green-500 border border-green-500/30 rounded text-[9px] font-black hover:bg-green-600 hover:text-white transition">RECEBER AGORA</button>
+    </td>
+</tr>`;
+    }).join('') || '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Nenhuma fatura em aberto.</td></tr>';
+
+    let totalLucro = 0;
+    hBody.innerHTML = faturas.map(f => {
+        totalLucro += (f.lucro || 0);
+        return `<tr class="border-t border-gray-800 text-[10px]">
+    <td class="p-4 text-gray-500">${f.data_pgto}</td>
+    <td class="p-4 font-bold text-white uppercase">${f.cliente}</td>
+    <td class="p-4 text-green-500 font-bold">R$ ${(f.valor || 0).toFixed(2)}</td>
+    <td class="p-4 text-purple-400 font-bold">R$ ${(f.lucro || 0).toFixed(2)}</td>
+    <td class="p-4 text-right">
+        <button onclick="deleteFatura(${f.id})" class="text-red-500 hover:text-red-400 transition"><i class="fas fa-undo"></i></button>
+    </td>
+</tr>`;
+    }).join('') || '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Sem histórico de pagamentos.</td></tr>';
+
+    if (document.getElementById('fatura-total-lucro')) {
+        document.getElementById('fatura-total-lucro').innerText = `R$ ${totalLucro.toFixed(2)}`;
     }
 }
 
@@ -785,7 +638,7 @@ export function copyFullAccess(id) {
     showNotify('Copiado!', 'Dados copiados.');
 }
 
-// INTERFACE DE NOTIFICAÇÃO CORRIGIDA (SEM ERRO DE SINTAXE)
+// INTERFACE DE NOTIFICAÇÃO
 export function showNotify(titulo, message, tipo = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -829,10 +682,9 @@ export function showNotify(titulo, message, tipo = 'success') {
     }, 4000);
 }
 
-// 2. Tornamos ela global aqui embaixo para os botões antigos funcionarem
 window.showNotify = showNotify;
 
-// ====== FUNÇÃO DA GAVETA MOBILE ULTRA FLUIDA E CORRIGIDA ======
+// ====== FUNÇÃO DA GAVETA MOBILE ULTRA FLUIDA ======
 export function toggleFiltrosGaveta(open) {
     const gaveta = document.getElementById('gaveta-filtros');
     const fundo = document.getElementById('fundo-gaveta');
@@ -840,24 +692,18 @@ export function toggleFiltrosGaveta(open) {
     if (!gaveta || !fundo) return;
 
     if (open) {
-        // 1. Remove o hidden para o navegador renderizar a div no mobile
         gaveta.classList.remove('hidden');
         fundo.classList.remove('hidden');
-        
-        // 2. Pequeno delay de 10ms para o Tailwind aplicar a animação de subida suave
         setTimeout(() => {
             gaveta.classList.remove('translate-y-full');
             gaveta.classList.add('translate-y-0');
         }, 10);
     } else {
-        // 1. Aplica a animação de descida para fora da tela
         gaveta.classList.remove('translate-y-0');
         gaveta.classList.add('translate-y-full');
         fundo.classList.add('hidden');
         
-        // 2. Espera os 300ms da animação acabar e aplica o hidden real (display: none)
         setTimeout(() => {
-            // Garante que no desktop ela continue visível por causa do layout do PC
             if (window.innerWidth < 1024) {
                 gaveta.classList.add('hidden');
             }
@@ -865,5 +711,4 @@ export function toggleFiltrosGaveta(open) {
     }
 }
 
-// Tornamos a função global para o HTML enxergar o clique
 window.toggleFiltrosGaveta = toggleFiltrosGaveta;
