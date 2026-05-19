@@ -24,7 +24,6 @@ export function controlarSidebarGeral() {
 }
 window.controlarSidebarGeral = controlarSidebarGeral;
 
-// --- RENDERIZAÇÃO E DASHBOARD ---
 export function initApp() {
     renderPlanos(); renderApps(); renderClientes(); renderFaturas(); updateDashboard(); renderConfig();
 }
@@ -34,7 +33,6 @@ export function updateDashboard() {
     const faturas = db.faturas || [];
     const hoje = new Date().toISOString().split('T')[0];
     
-    // Cálculo de Lucro Líquido Real (Valor - Custo)
     const previsaoLucro = clientes.reduce((acc, cli) => {
         const diffDias = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
         if (diffDias < -20) return acc;
@@ -51,7 +49,6 @@ export function updateDashboard() {
 
 export function renderClientes() {
     const tableBody = document.getElementById('table-clientes-body');
-    const mobileContainer = document.getElementById('lista-clientes-mobile');
     if (!tableBody) return;
     tableBody.innerHTML = '';
     
@@ -86,7 +83,6 @@ export function openModalClienteEdit(id) {
 }
 window.openModalClienteEdit = openModalClienteEdit;
 
-// --- NOTIFICAÇÕES E ALERTAS ---
 export function showNotify(titulo, message, tipo = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -98,8 +94,16 @@ export function showNotify(titulo, message, tipo = 'success') {
 }
 window.showNotify = showNotify;
 
-// Exportar Alertas Gerais para o escopo global
 window.dispararAlertaGeral = async function(tipoAlerta) {
-    // ... lógica de envio ...
-    showNotify("Transmissão", `Alerta de ${tipoAlerta} disparado!`);
+    const ativos = (db.clientes || []).filter(cli => {
+        const diff = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
+        return diff >= -20;
+    });
+    if (ativos.length === 0) return;
+    if (!confirm(`Transmitir alerta para ${ativos.length} clientes?`)) return;
+    for (let i = 0; i < ativos.length; i++) {
+        sendManualWA(ativos[i].id, tipoAlerta);
+        await new Promise(r => setTimeout(r, 3000));
+    }
+    showNotify("Concluído", "Alerta geral transmitido!");
 };
