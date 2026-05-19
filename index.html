@@ -296,11 +296,11 @@
             </div>
         </aside>
 
-<main class="flex-1 lg:ml-64">
+<main class="flex-1 lg:ml-64 transition-all duration-300" id="main-content">
             <header class="bg-[#16162d]/90 backdrop-blur-md sticky top-0 z-40 border-b border-gray-800 p-4 flex items-center justify-between w-full">
-                <div class="flex items-center gap-2">
-                    <button onclick="toggleSidebar()" class="hidden text-white p-2 -ml-2 hover:bg-white/5 rounded-xl transition active:scale-95">
-                        <i class="fas fa-bars text-xl"></i>
+                <div class="flex items-center gap-3">
+                    <button onclick="window.controlarSidebarGeral()" class="text-gray-400 p-2 -ml-2 hover:bg-white/5 rounded-xl transition active:scale-95 flex items-center justify-center">
+                        <i class="fas fa-bars text-lg"></i>
                     </button>
                     <div class="flex items-center select-none lg:hidden">
                         <span class="text-white font-black text-xl tracking-tighter">w3</span>
@@ -321,11 +321,11 @@
                 Você está usando o Plano Free (Limite de 3 clientes). <a href="https://wa.me/5511999999999" target="_blank" class="underline ml-2 hover:text-purple-900">Fazer Upgrade VIP</a>
             </div>
 
-            <div id="tab-dashboard" class="p-4 sm:p-6 space-y-6">
+            <div id="tab-dashboard" class="p-4 sm:p-6 space-y-5">
                 
                 <div class="card p-4 rounded-2xl border border-white/5 bg-[#16162d] w-full">
                     <h4 class="font-black text-white text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
-                        <i class="fas fa-broadcast-tower text-purple-400 animate-pulse"></i> Central de Transmissão de Alertas Gerais
+                        <i class="fas fa-broadcast-tower text-purple-400"></i> Central de Transmissão de Alertas Gerais
                     </h4>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                         <button onclick="window.dispararAlertaGeral('oscilacao')" class="w-full bg-yellow-600/10 hover:bg-yellow-600/20 text-yellow-500 border border-yellow-500/20 px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition active:scale-95 flex items-center justify-center gap-2 duration-100">
@@ -351,7 +351,7 @@
                         <h3 id="stat-lucro" class="text-2xl font-bold text-purple-400">R$ 0,00</h3>
                     </div>
                     <div class="card p-4 rounded-2xl text-center border-b-2 border-blue-500/50 bg-[#16162d]">
-                        <p class="text-gray-500 text-[10px] uppercase font-bold mb-1">Previsão Mês</p>
+                        <p class="text-gray-500 text-[10px] uppercase font-bold mb-1">Lucro Líquido Est.</p>
                         <h3 id="stat-previsao" class="text-2xl font-bold text-blue-400">R$ 0,00</h3>
                     </div>
                     <div class="card p-4 rounded-2xl text-center border-b-2 border-red-500/50 bg-[#16162d]">
@@ -362,7 +362,7 @@
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     <div class="card p-5 rounded-2xl bg-[#16162d] lg:col-span-2">
-                        <h4 class="font-bold mb-4 text-purple-400 text-xs uppercase tracking-widest"><i class="fas fa-chart-line mr-2"></i> Histórico de Evolução</h4>
+                        <h4 class="font-bold mb-4 text-purple-400 text-xs uppercase tracking-widest"><i class="fas fa-chart-line mr-2"></i> Histórico de Entradas</h4>
                         <div id="chart-financeiro"></div>
                     </div>
                     <div class="card p-5 rounded-2xl bg-[#16162d]">
@@ -373,7 +373,7 @@
 
                 <div class="card p-5 rounded-2xl bg-[#16162d] w-full">
                     <h4 class="font-bold mb-4 text-red-400 text-xs uppercase tracking-widest"><i class="fas fa-clock mr-2"></i> Próximos Vencimentos Críticos</h4>
-                    <div id="alerts-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[400px] overflow-y-auto pr-1"></div>
+                    <div id="alerts-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[300px] overflow-y-auto pr-1"></div>
                 </div>
             </div>
 
@@ -824,23 +824,22 @@
             <span class="text-[8px] sm:text-[9px] font-bold uppercase tracking-tighter">Ajustes</span>
         </button>
     </div>
-<div id="modalProgressoEnvio" class="fixed inset-0 z-[250] hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-        <div class="card w-full max-w-sm rounded-2xl p-6 relative z-10 text-center shadow-2xl bg-[#16162d] border border-white/5">
-            <div class="h-12 w-12 bg-purple-500/10 text-purple-400 rounded-full flex items-center justify-center mx-auto mb-4 text-xl border border-purple-500/20"><i class="fas fa-paper-plane animate-pulse"></i></div>
-            <h3 class="text-base font-black text-white mb-1 uppercase tracking-tight">Disparando Mensagens</h3>
-            <p id="progresso-texto" class="text-gray-400 text-xs mb-4">Processando fila de envios...</p>
-            
-            <div class="w-full h-3 bg-black/40 rounded-full border border-white/5 overflow-hidden p-0.5">
-                <div id="progresso-barra-interna" class="w-0 h-full bg-gradient-to-r from-purple-600 to-indigo-500 rounded-full transition-all duration-300"></div>
+<div id="badgeProgressoFlutuante" class="fixed bottom-20 lg:bottom-6 right-6 z-[250] hidden bg-[#16162d] border border-purple-500/30 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3.5 max-w-sm w-80 animate-fade-in">
+        <div class="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-xs shrink-0"><i class="fas fa-paper-plane animate-bounce"></i></div>
+        <div class="flex-1 min-w-0">
+            <p id="progresso-texto-mini" class="text-[10px] font-black text-white uppercase tracking-wide truncate">Fila de Disparo Ativa</p>
+            <div class="w-full h-1.5 bg-black/40 rounded-full mt-1.5 overflow-hidden">
+                <div id="progresso-barra-mini" class="w-0 h-full bg-purple-500 rounded-full transition-all duration-300"></div>
             </div>
-            <div id="progresso-porcentagem" class="text-[10px] font-mono font-bold text-purple-400 mt-2">0% Concluído</div>
         </div>
+        <span id="progresso-porcentagem-mini" class="text-[10px] font-mono font-bold text-gray-400 shrink-0">0%</span>
     </div>
     <div id="toast-container" class="fixed top-5 right-5 z-[200] flex flex-col gap-3 pointer-events-none max-w-sm w-full"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="module" src="js/main.js"></script>
+    
 </body>
 
 </html>
