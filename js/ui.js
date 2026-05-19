@@ -5,6 +5,8 @@ export let isRegisterMode = false;
 let financeChart;
 let appsDonutChart;
 
+// --- NAVEGAÇÃO E MODAIS ---
+
 window.exportarParaTexto = function() {
     const dadosStr = btoa(unescape(encodeURIComponent(JSON.stringify(window.db))));
     const textarea = document.createElement('textarea');
@@ -19,12 +21,14 @@ window.exportarParaTexto = function() {
 window.importarDeTexto = function() {
     const codigo = prompt("Cole o código de backup gerado pelo w3Gestor aqui:");
     if (!codigo) return;
+
     try {
         const dadosDecodificados = JSON.parse(decodeURIComponent(escape(atob(codigo))));
         if (confirm("Isso vai mesclar com seus dados atuais. Continuar?")) {
             if(dadosDecodificados.clientes) window.db.clientes = [...window.db.clientes, ...dadosDecodificados.clientes];
             if(dadosDecodificados.planos) window.db.planos = dadosDecodificados.planos;
             if(dadosDecodificados.apps) window.db.apps = dadosDecodificados.apps;
+            
             window.save();
             location.reload();
         }
@@ -82,6 +86,7 @@ export function switchTab(tab) {
 export function toggleSidebar() { 
     const sidebar = document.getElementById('sidebar');
     if (!sidebar) return;
+    
     if (sidebar.classList.contains('-translate-x-full')) {
         sidebar.classList.remove('-translate-x-full');
     } else {
@@ -93,8 +98,10 @@ export function openModal(id) { const el = document.getElementById(id); if (el) 
 export function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
 export function checkCustomDays(v) { const el = document.getElementById('plan_dias_custom'); if (el) el.classList.toggle('hidden', v !== 'custom'); }
 
+// --- DASHBOARD E GRÁFICOS ---
 export function initApp() {
     renderPlanos(); renderApps(); renderClientes(); renderFaturas(); updateDashboard(); renderConfig();
+
     const inputWhatsapp = document.getElementById('cli_whatsapp');
     if (inputWhatsapp) {
         inputWhatsapp.addEventListener('input', (e) => {
@@ -104,7 +111,6 @@ export function initApp() {
     }
 }
 
-// ====== DASHBOARD PREMIUM COM PREVISÃO E GRÁFICO DE APPS ======
 export function updateDashboard() {
     const faturas = db.faturas || [];
     const clientes = db.clientes || [];
@@ -115,7 +121,7 @@ export function updateDashboard() {
     const hj = new Date().toISOString().split('T')[0];
     const otr = clientes.filter(c => c.vencimento <= hj).length;
 
-    // IMPLEMENTAÇÃO A: Cálculo real da Previsão de Faturamento Estimado do Mês
+    // Cálculo Real de Faturamento Estimado (Previsão do Mês)
     const previsaoFaturamento = clientes.reduce((acc, cli) => {
         const plano = db.planos.find(p => p.id == cli.plano_id) || { valor: 0 };
         return acc + (plano.valor || 0);
@@ -127,7 +133,6 @@ export function updateDashboard() {
     if (document.getElementById('stat-previsao')) document.getElementById('stat-previsao').innerText = `R$ ${previsaoFaturamento.toFixed(2)}`;
     if (document.getElementById('stat-atrasados')) document.getElementById('stat-atrasados').innerText = otr;
 
-    // PRÓXIMOS VENCIMENTOS REESTRUTURADOS EM CARD GRID PARA RESPONSIVIDADE LINDA
     const list = document.getElementById('alerts-list');
     if (list) {
         list.innerHTML = '';
@@ -135,23 +140,21 @@ export function updateDashboard() {
             const diff = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
             if (diff <= config.aviso_dias) {
                 list.innerHTML += `
-                <div class="flex items-center justify-between p-3 bg-white/[0.02] rounded-xl border border-white/5 shadow-inner">
-                    <div>
-                        <p class="text-xs text-white font-black uppercase tracking-tight truncate max-w-[140px]">${cli.nome}</p>
-                        <span class="mt-1 inline-block ${diff <= 0 ? 'text-red-500 bg-red-500/10' : 'text-yellow-500 bg-yellow-500/10'} border border-current rounded-md text-[8px] uppercase font-black px-1.5 py-0.5">${diff <= 0 ? 'Atrasado' : 'Vence em ' + diff + ' dias'}</span>
-                    </div>
-                    <div class="flex gap-1.5">
-                        <button onclick="openModalRenovar(${cli.id})" title="Dar Baixa" class="w-7 h-7 flex items-center justify-center bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg text-xs active:scale-75 transition"><i class="fas fa-check-circle"></i></button>
-                        <button onclick="sendManualWA(${cli.id}, 'renew')" title="Cobrar WhatsApp" class="w-7 h-7 flex items-center justify-center bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg text-xs active:scale-75 transition"><i class="fab fa-whatsapp"></i></button>
+                <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
+                    <p class="text-xs text-white font-bold tracking-tight">${cli.nome} <br>
+                    <span class="${diff <= 0 ? 'text-red-500' : 'text-yellow-500'} text-[9px] uppercase font-black">${diff <= 0 ? 'Atrasado' : 'Em ' + diff + ' d'}</span></p>
+                    <div class="flex gap-2">
+                        <button onclick="openModalRenovar(${cli.id})" class="text-green-500"><i class="fas fa-check-circle"></i></button>
+                        <button onclick="sendManualWA(${cli.id}, 'renew')" class="text-purple-400"><i class="fab fa-whatsapp"></i></button>
                     </div>
                 </div>`;
             }
         });
         if (list.innerHTML === '') {
-            list.innerHTML = `<div class="p-4 text-center text-gray-500 text-xs italic w-full col-span-full">Nenhum vencimento crítico nos próximos dias.</div>`;
+            list.innerHTML = `<div class="p-3 text-center text-gray-500 text-xs italic col-span-full">Sem vencimentos críticos.</div>`;
         }
         renderChartEvolucao();
-        renderChartAppsDonut(); // Aciona o novo gráfico de rosca
+        renderChartAppsDonut();
     }
 }
 
@@ -160,11 +163,15 @@ export function renderChartEvolucao() {
     if (!el || !window.ApexCharts) return;
     const faturas = db.faturas || [];
     const dadosRecentes = faturas.slice(0, 7).reverse();
+    
+    // Transformado em gráfico de linha fluida para mostrar picos reais de entradas de caixa
     const options = {
-        series: [{ name: 'Lucro', data: dadosRecentes.map(f => f.lucro || 0) }],
-        chart: { type: 'bar', height: 200, toolbar: { show: false }, background: 'transparent' },
+        series: [{ name: 'Faturamento Diário', data: dadosRecentes.map(f => f.lucro || 0) }],
+        chart: { type: 'area', height: 200, toolbar: { show: false }, background: 'transparent', sparkline: { enabled: false } },
         theme: { mode: 'dark' },
+        stroke: { curve: 'smooth', width: 3 },
         colors: ['#a855f7'],
+        fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05 } },
         xaxis: { categories: dadosRecentes.map(f => f.data_pgto ? f.data_pgto.slice(0, 5) : "") }
     };
     if (financeChart) financeChart.destroy();
@@ -172,7 +179,6 @@ export function renderChartEvolucao() {
     financeChart.render();
 }
 
-// ====== IMPLEMENTAÇÃO B: NOVO GRÁFICO DE ROSCA DE SERVIDORES MAIS VENDIDOS ======
 export function renderChartAppsDonut() {
     const el = document.querySelector("#chart-apps-donut");
     if (!el || !window.ApexCharts) return;
@@ -180,7 +186,6 @@ export function renderChartAppsDonut() {
     const clientes = db.clientes || [];
     const apps = db.apps || [];
 
-    // Mapeia e conta os registros vinculados
     const contagem = {};
     apps.forEach(a => { contagem[a.nome] = 0; });
     clientes.forEach(c => {
@@ -193,7 +198,7 @@ export function renderChartAppsDonut() {
 
     const options = {
         series: seriesData.length > 0 ? seriesData : [0],
-        labels: labelsData.length > 0 ? labelsData : ["Sem Apps"],
+        labels: labelsData.length > 0 ? labelsData : ["Sem Clientes"],
         chart: { type: 'donut', height: 200, background: 'transparent' },
         theme: { mode: 'dark' },
         colors: ['#a855f7', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
@@ -217,7 +222,6 @@ export function renderClientes() {
 
     tableBody.innerHTML = '';
     mobileContainer.innerHTML = '';
-    
     const checkMestre = document.getElementById('select-all-clients');
     if (checkMestre) checkMestre.checked = false;
     
@@ -275,14 +279,13 @@ export function renderClientes() {
         if (nF && !cli.nome.toLowerCase().includes(nF)) return;
         if (aF && (!cli.app_id || cli.app_id.toString() !== aF.toString())) return;
         if (pF && (!cli.plano_id || cli.plano_id.toString() !== pF.toString())) return;
-        if (iF && !isInadimplente) return; 
+        if (iF && !isInadimplente) return;
 
         if (sF === 'warning' && !isWarning) return;
         if (sF === 'overdue' && !isOverdue) return;
         if (sF === 'inadimplente' && !isInadimplente) return;
         if (sF === 'hoje' && cli.vencimento !== hojeS) return;
         if (sF === 'semana' && (cli.vencimento < hojeS || cli.vencimento > fimSemanaS)) return;
-        
         if (sF === 'mes') {
             const dateParts = cli.vencimento.split('-');
             if (parseInt(dateParts[1]) !== (mesAtual + 1) || parseInt(dateParts[0]) !== anoAtual) return;
@@ -365,12 +368,10 @@ export function renderClientes() {
                             <strong class="text-xs font-mono text-white block mt-0.5">${cli.vencimento.split('-').reverse().join('/')}</strong>
                         </div>
                     </div>
-                    
                     <div class="grid grid-cols-2 gap-2 my-1 bg-black/20 p-2.5 rounded-xl border border-white/5 text-[10px]">
                         <div><span class="text-gray-500 font-bold uppercase text-[8px] block tracking-wide">Plano</span> <strong class="text-purple-400 font-black uppercase">${p.nome}</strong></div>
                         <div><span class="text-gray-500 font-bold uppercase text-[8px] block tracking-wide">Aplicativo</span> <strong class="text-gray-300 font-bold uppercase">${app.nome}</strong></div>
                     </div>
-
                     <div class="flex gap-2 w-full mt-1">
                         <button onclick="openModalNotifyMenu(${cli.id})" class="flex-1 py-2 bg-purple-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider text-center shadow-md active:scale-95 transition"><i class="fas fa-bell mr-1"></i> Cobrar</button>
                         <a href="https://wa.me/${cli.whatsapp.replace(/\D/g,'')}" target="_blank" class="w-10 h-9 flex items-center justify-center bg-green-600/10 hover:bg-green-600/20 text-green-400 border border-green-500/20 rounded-xl transition active:scale-95"><i class="fab fa-whatsapp text-sm"></i></a>
@@ -382,24 +383,11 @@ export function renderClientes() {
     }
 }
 
-export function addThreeDays(id) {
-    const idx = db.clientes.findIndex(c => c.id == id);
-    if (idx !== -1) {
-        let d = new Date(db.clientes[idx].vencimento);
-        d.setDate(d.getDate() + 3);
-        db.clientes[idx].vencimento = d.toISOString().split('T')[0];
-        save();
-        renderClientes();
-        showNotify('+3 Dias', 'Vencimento adiado em 3 dias.');
-    }
-}
-
 export function renderPlanos() {
     const list = document.getElementById('planos-list'); if (!list) return;
     list.innerHTML = db.planos.map(p => {
         const valorLucro = p.valor - p.custo;
         const margemPorcentagem = p.valor > 0 ? Math.round((valorLucro / p.valor) * 100) : 0;
-
         return `
         <div class="card p-4 rounded-xl relative shadow-xl border border-white/5 bg-gray-900/40">
             <div class="absolute top-2 right-2 flex gap-2 z-20">
@@ -407,7 +395,6 @@ export function renderPlanos() {
                 <button onclick="deletePlano(${p.id})" class="text-gray-700 hover:text-red-500 transition"><i class="fas fa-trash"></i></button>
             </div>
             <span class="absolute bottom-12 right-4 bg-green-500/10 text-green-400 border border-green-500/20 text-[8px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider">+${margemPorcentagem}% Margem</span>
-
             <h4 class="font-bold text-white text-sm uppercase">${p.nome}</h4>
             <p class="text-[9px] text-gray-500 font-black">${p.dias} DIAS</p>
             <div class="mt-2 text-[10px] flex justify-between border-t border-gray-800 pt-2 w-full">
@@ -699,6 +686,45 @@ export function copyFullAccess(id) {
     showNotify('Copiado!', 'Dados copiados.');
 }
 
+export function showNotify(titulo, message, tipo = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    let bgIcon = 'bg-green-500/20 text-green-400 border-green-500/30';
+    let icon = 'fas fa-check-circle';
+    
+    if (tipo === 'error' || tipo === 'danger') {
+        bgIcon = 'bg-red-500/20 text-red-400 border-red-500/30';
+        icon = 'fas fa-times-circle';
+    } else if (tipo === 'warning') {
+        bgIcon = 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30';
+        icon = 'fas fa-exclamation-triangle';
+    } else if (tipo === 'info') {
+        bgIcon = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+        icon = 'fas fa-info-circle';
+    }
+
+    const toast = document.createElement('div');
+    toast.className = "pointer-events-auto w-full bg-[#16162d]/95 backdrop-blur-md border border-white/5 p-4 rounded-xl shadow-2xl flex items-start gap-3 transform translate-x-20 opacity-0 transition-all duration-300";
+    
+    toast.innerHTML = `
+        <div class="h-8 w-8 rounded-lg border flex items-center justify-center shrink-0 ${bgIcon}">
+            <i class="${icon} text-sm"></i>
+        </div>
+        <div class="flex-1">
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider">${titulo}</h4>
+            <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">${message}</p>
+        </div>
+    `;
+
+    container.appendChild(toast);
+    setTimeout(() => { toast.classList.remove('translate-x-20', 'opacity-0'); }, 10);
+    setTimeout(() => {
+        toast.classList.add('translate-x-20', 'opacity-0');
+        setTimeout(() => { toast.remove(); }, 300);
+    }, 4000);
+}
+
 window.showNotify = showNotify;
 
 export function toggleFiltrosGaveta(open) {
@@ -737,7 +763,7 @@ window.alternarAbasAuth = function(irParaCadastro) {
     }
 };
 
-// ====== IMPLEMENTAÇÃO C: LOGICA DE PROGRESSO GRÁFICO PARA NOTIFICAÇÕES EM MASSA ======
+// ====== NOTIFICAÇÃO EM MASSA GRÁFICA ======
 window.dispararNotificacaoEmMassa = async function() {
     const selecionados = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
     if (selecionados.length === 0) return;
@@ -773,21 +799,23 @@ window.dispararNotificacaoEmMassa = async function() {
     window.atualizarBarraAcoes();
 };
 
-// ====== IMPLEMENTAÇÃO D: DISPARO DE ALERTAS DE MANUTENÇÃO / OSCILAÇÃO GERAL PARA FILA ATIVA ======
+// ====== DISPARO DE MENSAGENS DE MANUTENÇÃO / OSCILAÇÃO GERAL ======
 window.dispararAlertaGeral = async function(tipoAlerta) {
-    // Pega apenas os clientes ativos (ignora inadimplentes com mais de 20 dias de atraso por segurança)
     const hoje = new Date();
+    const hojeS = hoje.toISOString().split('T')[0];
+    
+    // Filtra apenas clientes que não estão inadimplentes com mais de 20 dias de atraso
     const ativos = (db.clientes || []).filter(cli => {
         const diff = Math.ceil((new Date(cli.vencimento) - hoje) / (1000 * 60 * 60 * 24));
         return diff >= -20;
     });
 
     if (ativos.length === 0) {
-        showNotify("Aviso", "Não existem clientes ativos cadastrados para receber alertas.", "warning");
+        showNotify("Aviso", "Não existem clientes ativos cadastrados para receber alertas no momento.", "warning");
         return;
     }
 
-    if (!confirm(`Deseja disparar o alerta de ${tipoAlerta.toUpperCase()} para todos os ${ativos.length} clientes ativos na fila?`)) return;
+    if (!confirm(`Deseja disparar o alerta de ${tipoAlerta.toUpperCase()} para todos os ${ativos.length} clientes ativos?`)) return;
 
     const modalProgresso = document.getElementById('modalProgressoEnvio');
     const textoProgresso = document.getElementById('progresso-texto');
@@ -805,7 +833,6 @@ window.dispararAlertaGeral = async function(tipoAlerta) {
         if (barraProgresso) barraProgresso.style.width = `${pct}%`;
         if (txtPorcentagem) txtPorcentagem.innerText = `${pct}% Concluído`;
 
-        // Executa o disparo manual apontando o template correto de instabilidade
         if (typeof sendManualWA === "function") {
             sendManualWA(cli.id, tipoAlerta);
         }
