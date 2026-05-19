@@ -19,6 +19,10 @@ const MEU_EMAIL_ADMIN = "w3sleygessner@gmail.com"; // <-- SEU EMAIL AQUI
 
 onAuthStateChanged(auth, (currentUser) => {
     if (currentUser) {
+onAuthStateChanged(auth, (currentUser) => {
+    if (currentUser) {
+        
+        // --- FORÇAR ENTRADA VIP DE EMERGÊNCIA (APAGUE DEPOIS DE TESTAR) ---
         console.log("w3Gestor: Forçando entrada do painel...");
         const aC = document.getElementById('auth-container');
         const eC = document.getElementById('expired-container');
@@ -27,6 +31,10 @@ onAuthStateChanged(auth, (currentUser) => {
         if (eC) eC.classList.add('hidden');
         if (apC) apC.classList.remove('hidden');
         esconderSplashScreen();
+        // -----------------------------------------------------------------
+
+        const userDisplay = document.getElementById('user-display');
+        if (userDisplay) userDisplay.innerText = currentUser.email;
         document.getElementById('user-display').innerText = currentUser.email;
 
         const userRef = ref(db_firebase, 'usuarios/' + currentUser.uid);
