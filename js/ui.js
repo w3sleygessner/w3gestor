@@ -349,34 +349,45 @@ export function openModalClienteEdit(id) {
 }
 window.openModalClienteEdit = openModalClienteEdit;
 
+// --- (Substitui estas partes no teu js/ui.js) ---
+
 export function renderPlanos() {
     const list = document.getElementById('planos-list'); if (!list) return;
-    list.innerHTML = db.planos.map(p => `
-        <div class="card p-4 rounded-xl relative shadow-xl border border-white/5 bg-gray-900/40 text-xs">
-            <div class="absolute top-2 right-2 flex gap-2">
-                <button onclick="openModalPlanoEdit(${p.id})" class="text-gray-500"><i class="fas fa-edit"></i></button>
-                <button onclick="deletePlano(${p.id})" class="text-gray-700"><i class="fas fa-trash"></i></button>
+    list.innerHTML = db.planos.map(p => {
+        const valorLucro = p.valor - p.custo;
+        const margemPorcentagem = p.valor > 0 ? Math.round((valorLucro / p.valor) * 100) : 0;
+        return `
+        <div class="card p-4 rounded-xl relative shadow-xl border border-white/5 bg-gray-900/40">
+            <div class="absolute top-2 right-2 flex gap-2 z-20">
+                <button onclick="openModalPlanoEdit(${p.id})" class="text-gray-500 hover:text-white"><i class="fas fa-edit"></i></button>
+                <button onclick="deletePlano(${p.id})" class="text-gray-700 hover:text-red-500"><i class="fas fa-trash"></i></button>
             </div>
-            <h4 class="font-bold text-white uppercase">${p.nome}</h4>
-            <p class="text-[9px] text-gray-500 font-black mt-0.5">${p.dias} DIAS</p>
-            <div class="mt-2 flex justify-between border-t border-gray-800 pt-2">
+            <span class="absolute bottom-12 right-4 bg-green-500/10 text-green-400 border border-green-500/20 text-[8px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider">+${margemPorcentagem}% Margem</span>
+            <h4 class="font-bold text-white text-sm uppercase">${p.nome}</h4>
+            <p class="text-[9px] text-gray-500 font-black">${p.dias} DIAS</p>
+            <div class="mt-2 text-[10px] flex justify-between border-t border-gray-800 pt-2 w-full">
                 <span>Preço: R$ ${p.valor.toFixed(2)}</span>
-                <span class="text-purple-400 font-bold">Lucro: R$ ${(p.valor - p.custo).toFixed(2)}</span>
+                <span class="text-purple-400 font-bold">Lucro: R$ ${valorLucro.toFixed(2)}</span>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
 }
 
 export function renderApps() {
     const list = document.getElementById('apps-list'); if (!list) return;
+    // RESTAURADO: Opção de cópia e dados no card
     list.innerHTML = db.apps.map(a => `
-        <div onclick="window.copyAllAppInfo('${a.nome}', '${a.url || ''}', '${a.pin || ''}')" class="card p-3 rounded-xl border border-white/5 bg-gray-900/40 cursor-pointer text-xs">
-            <div class="flex justify-between items-center">
-                <h4 class="font-black text-purple-400 uppercase">${a.nome}</h4>
-                <div class="flex gap-2" onclick="event.stopPropagation();">
+        <div onclick="window.copyAllAppInfo('${a.nome}', '${a.url || ''}', '${a.pin || ''}')" class="card p-4 rounded-xl border border-white/5 bg-gray-900/40 cursor-pointer hover:border-purple-500/30 transition">
+            <div class="flex justify-between items-center mb-2" onclick="event.stopPropagation();">
+                <h4 class="font-black text-purple-400 text-sm uppercase">${a.nome}</h4>
+                <div class="flex gap-2">
                     <button onclick="openModalAppEdit(${a.id})" class="text-gray-500"><i class="fas fa-edit"></i></button>
                     <button onclick="deleteApp(${a.id})" class="text-gray-700"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
+            <p class="text-[10px] text-gray-400">DNS: ${a.url || 'N/A'}</p>
+            <p class="text-[10px] text-gray-400">PIN: ${a.pin || 'N/A'}</p>
+            <div class="mt-3 text-[9px] text-purple-400 font-bold uppercase"><i class="fas fa-copy mr-1"></i> Clicar para copiar dados</div>
         </div>`).join('');
 }
 
