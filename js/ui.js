@@ -5,7 +5,21 @@ export let isRegisterMode = false;
 let financeChart;
 let appsDonutChart;
 
-// --- NAVEGAÇÃO E MODAIS ---
+// ====== NOVO: FUNÇÃO PARA RECOLHER / EXPANDIR SIDEBAR NO DESKTOP ======
+window.controlarSidebarGeral = function() {
+    const sidebar = document.getElementById('sidebar');
+    const mainContent = document.getElementById('main-content');
+    if (!sidebar || !mainContent) return;
+
+    if (window.innerWidth >= 1024) {
+        // Controle no Desktop
+        sidebar.classList.toggle('lg:hidden');
+        mainContent.classList.toggle('lg:ml-64');
+    } else {
+        // Controle no Mobile
+        sidebar.classList.toggle('-translate-x-full');
+    }
+};
 
 window.exportarParaTexto = function() {
     const dadosStr = btoa(unescape(encodeURIComponent(JSON.stringify(window.db))));
@@ -21,14 +35,12 @@ window.exportarParaTexto = function() {
 window.importarDeTexto = function() {
     const codigo = prompt("Cole o código de backup gerado pelo w3Gestor aqui:");
     if (!codigo) return;
-
     try {
         const dadosDecodificados = JSON.parse(decodeURIComponent(escape(atob(codigo))));
         if (confirm("Isso vai mesclar com seus dados atuais. Continuar?")) {
             if(dadosDecodificados.clientes) window.db.clientes = [...window.db.clientes, ...dadosDecodificados.clientes];
             if(dadosDecodificados.planos) window.db.planos = dadosDecodificados.planos;
             if(dadosDecodificados.apps) window.db.apps = dadosDecodificados.apps;
-            
             window.save();
             location.reload();
         }
@@ -71,12 +83,6 @@ export function switchTab(tab) {
     if (tab === 'configuracoes') renderConfig();
     if (tab === 'dashboard') updateDashboard();
 
-    if (tab === 'admin') {
-        import('./admin.js').then(moduloAdmin => {
-            moduloAdmin.carregarAssinantes();
-        }).catch(err => console.error("Erro ao carregar o arquivo admin.js:", err));
-    }
-
     const sidebar = document.getElementById('sidebar');
     if (sidebar && !sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) {
         sidebar.classList.add('-translate-x-full');
@@ -86,7 +92,6 @@ export function switchTab(tab) {
 export function toggleSidebar() { 
     const sidebar = document.getElementById('sidebar');
     if (!sidebar) return;
-    
     if (sidebar.classList.contains('-translate-x-full')) {
         sidebar.classList.remove('-translate-x-full');
     } else {
@@ -98,10 +103,8 @@ export function openModal(id) { const el = document.getElementById(id); if (el) 
 export function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
 export function checkCustomDays(v) { const el = document.getElementById('plan_dias_custom'); if (el) el.classList.toggle('hidden', v !== 'custom'); }
 
-// --- DASHBOARD E GRÁFICOS ---
 export function initApp() {
     renderPlanos(); renderApps(); renderClientes(); renderFaturas(); updateDashboard(); renderConfig();
-
     const inputWhatsapp = document.getElementById('cli_whatsapp');
     if (inputWhatsapp) {
         inputWhatsapp.addEventListener('input', (e) => {
@@ -121,16 +124,20 @@ export function updateDashboard() {
     const hj = new Date().toISOString().split('T')[0];
     const otr = clientes.filter(c => c.vencimento <= hj).length;
 
-    // Cálculo Real de Faturamento Estimado (Previsão do Mês)
-    const previsaoFaturamento = clientes.reduce((acc, cli) => {
-        const plano = db.planos.find(p => p.id == cli.plano_id) || { valor: 0 };
-        return acc + (plano.valor || 0);
+    // CORREÇÃO EXIGIDA: Filtra e remove inadimplentes (+20 dias) e faz o cálculo líquido real (Valor - Custo)
+    const previsaoLucroLiquido = clientes.reduce((acc, cli) => {
+        const diffDias = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
+        if (diffDias < -20) return acc; // Ignora inadimplente
+        
+        const plano = db.planos.find(p => p.id == cli.plano_id) || { valor: 0, custo: 0 };
+        const liquidoCli = (plano.valor || 0) - (plano.custo || 0);
+        return acc + liquidoCli;
     }, 0);
 
     if (document.getElementById('stat-total')) document.getElementById('stat-total').innerText = clientes.length;
     if (document.getElementById('stat-bruto')) document.getElementById('stat-bruto').innerText = `R$ ${b.toFixed(2)}`;
     if (document.getElementById('stat-lucro')) document.getElementById('stat-lucro').innerText = `R$ ${l.toFixed(2)}`;
-    if (document.getElementById('stat-previsao')) document.getElementById('stat-previsao').innerText = `R$ ${previsaoFaturamento.toFixed(2)}`;
+    if (document.getElementById('stat-previsao')) document.getElementById('stat-previsao').innerText = `R$ ${previsaoLucroLiquido.toFixed(2)}`;
     if (document.getElementById('stat-atrasados')) document.getElementById('stat-atrasados').innerText = otr;
 
     const list = document.getElementById('alerts-list');
@@ -140,18 +147,20 @@ export function updateDashboard() {
             const diff = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
             if (diff <= config.aviso_dias) {
                 list.innerHTML += `
-                <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
-                    <p class="text-xs text-white font-bold tracking-tight">${cli.nome} <br>
-                    <span class="${diff <= 0 ? 'text-red-500' : 'text-yellow-500'} text-[9px] uppercase font-black">${diff <= 0 ? 'Atrasado' : 'Em ' + diff + ' d'}</span></p>
-                    <div class="flex gap-2">
-                        <button onclick="openModalRenovar(${cli.id})" class="text-green-500"><i class="fas fa-check-circle"></i></button>
-                        <button onclick="sendManualWA(${cli.id}, 'renew')" class="text-purple-400"><i class="fab fa-whatsapp"></i></button>
+                <div class="flex items-center justify-between p-3 bg-white/[0.02] border border-white/5 shadow-inner rounded-xl">
+                    <div>
+                        <p class="text-xs text-white font-black uppercase tracking-tight truncate max-w-[130px]">${cli.nome}</p>
+                        <span class="mt-1 inline-block ${diff <= 0 ? 'text-red-400 bg-red-500/10' : 'text-yellow-500 bg-yellow-500/10'} border border-current rounded-md text-[8px] font-black px-1.5 py-0.5 uppercase">${diff <= 0 ? 'Atrasado' : 'Vence em ' + diff + ' d'}</span>
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button onclick="openModalRenovar(${cli.id})" class="w-7 h-7 flex items-center justify-center bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg text-xs active:scale-75 transition"><i class="fas fa-check-circle"></i></button>
+                        <button onclick="sendManualWA(${cli.id}, 'renew')" class="w-7 h-7 flex items-center justify-center bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg text-xs active:scale-75 transition"><i class="fab fa-whatsapp"></i></button>
                     </div>
                 </div>`;
             }
         });
         if (list.innerHTML === '') {
-            list.innerHTML = `<div class="p-3 text-center text-gray-500 text-xs italic col-span-full">Sem vencimentos críticos.</div>`;
+            list.innerHTML = `<div class="p-4 text-center text-gray-500 text-xs italic w-full col-span-full">Nenhum vencimento crítico.</div>`;
         }
         renderChartEvolucao();
         renderChartAppsDonut();
@@ -164,10 +173,9 @@ export function renderChartEvolucao() {
     const faturas = db.faturas || [];
     const dadosRecentes = faturas.slice(0, 7).reverse();
     
-    // Transformado em gráfico de linha fluida para mostrar picos reais de entradas de caixa
     const options = {
         series: [{ name: 'Faturamento Diário', data: dadosRecentes.map(f => f.lucro || 0) }],
-        chart: { type: 'area', height: 200, toolbar: { show: false }, background: 'transparent', sparkline: { enabled: false } },
+        chart: { type: 'area', height: 200, toolbar: { show: false }, background: 'transparent' },
         theme: { mode: 'dark' },
         stroke: { curve: 'smooth', width: 3 },
         colors: ['#a855f7'],
@@ -686,45 +694,6 @@ export function copyFullAccess(id) {
     showNotify('Copiado!', 'Dados copiados.');
 }
 
-export function showNotify(titulo, message, tipo = 'success') {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-
-    let bgIcon = 'bg-green-500/20 text-green-400 border-green-500/30';
-    let icon = 'fas fa-check-circle';
-    
-    if (tipo === 'error' || tipo === 'danger') {
-        bgIcon = 'bg-red-500/20 text-red-400 border-red-500/30';
-        icon = 'fas fa-times-circle';
-    } else if (tipo === 'warning') {
-        bgIcon = 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30';
-        icon = 'fas fa-exclamation-triangle';
-    } else if (tipo === 'info') {
-        bgIcon = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
-        icon = 'fas fa-info-circle';
-    }
-
-    const toast = document.createElement('div');
-    toast.className = "pointer-events-auto w-full bg-[#16162d]/95 backdrop-blur-md border border-white/5 p-4 rounded-xl shadow-2xl flex items-start gap-3 transform translate-x-20 opacity-0 transition-all duration-300";
-    
-    toast.innerHTML = `
-        <div class="h-8 w-8 rounded-lg border flex items-center justify-center shrink-0 ${bgIcon}">
-            <i class="${icon} text-sm"></i>
-        </div>
-        <div class="flex-1">
-            <h4 class="text-xs font-bold text-white uppercase tracking-wider">${titulo}</h4>
-            <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">${message}</p>
-        </div>
-    `;
-
-    container.appendChild(toast);
-    setTimeout(() => { toast.classList.remove('translate-x-20', 'opacity-0'); }, 10);
-    setTimeout(() => {
-        toast.classList.add('translate-x-20', 'opacity-0');
-        setTimeout(() => { toast.remove(); }, 300);
-    }, 4000);
-}
-
 window.showNotify = showNotify;
 
 export function toggleFiltrosGaveta(open) {
@@ -763,27 +732,30 @@ window.alternarAbasAuth = function(irParaCadastro) {
     }
 };
 
-// ====== NOTIFICAÇÃO EM MASSA GRÁFICA ======
+// ====== COMPONENTE ASSÍNCRONO DE ENVIOS (BARRA SUTIL FLUTUANTE) ======
 window.dispararNotificacaoEmMassa = async function() {
     const selecionados = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
     if (selecionados.length === 0) return;
 
-    const modalProgresso = document.getElementById('modalProgressoEnvio');
-    const textoProgresso = document.getElementById('progresso-texto');
-    const barraProgresso = document.getElementById('progresso-barra-interna');
-    const txtPorcentagem = document.getElementById('progresso-porcentagem');
+    const miniBadge = document.getElementById('badgeProgressoFlutuante');
+    const textoMini = document.getElementById('progresso-texto-mini');
+    const barraMini = document.getElementById('progresso-barra-mini');
+    const pctMini = document.getElementById('progresso-porcentagem-mini');
 
-    if (modalProgresso) modalProgresso.classList.remove('hidden');
+    if (miniBadge) miniBadge.classList.remove('hidden');
     const total = selecionados.length;
 
     for (let i = 0; i < total; i++) {
         const idCliente = selecionados[i];
         const clienteObj = db.clientes.find(c => c.id == idCliente) || { nome: "Cliente" };
         
-        if (textoProgresso) textoProgresso.innerText = `Enviando para: ${clienteObj.nome.toUpperCase()} (${i + 1} de ${total})`;
-        const pct = Math.round(((i + 1) / total) * 100);
-        if (barraProgresso) barraProgresso.style.width = `${pct}%`;
-        if (txtPorcentagem) txtPorcentagem.innerText = `${pct}% Concluído`;
+        // Evita travar frames injetando alterações assincronamente por hardware
+        requestAnimationFrame(() => {
+            if (textoMini) textoMini.innerText = `Enviando: ${clienteObj.nome.toUpperCase()} (${i + 1}/${total})`;
+            const pct = Math.round(((i + 1) / total) * 100);
+            if (barraMini) barraMini.style.width = `${pct}%`;
+            if (pctMini) pctMini.innerText = `${pct}%`;
+        });
 
         if (typeof sendManualWA === "function") {
             sendManualWA(idCliente, 'renew');
@@ -791,54 +763,54 @@ window.dispararNotificacaoEmMassa = async function() {
         await new Promise(resolve => setTimeout(resolve, 3000));
     }
 
-    if (modalProgresso) modalProgresso.classList.add('hidden');
-    showNotify("Concluído", "Todos os disparos em massa foram processados com sucesso!", "success");
+    if (miniBadge) miniBadge.classList.add('hidden');
+    showNotify("Concluído", "Fila de cobranças em massa enviada com sucesso!", "success");
     document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = false);
     const checkMestre = document.getElementById('select-all-clients');
     if (checkMestre) checkMestre.checked = false;
     window.atualizarBarraAcoes();
 };
 
-// ====== DISPARO DE MENSAGENS DE MANUTENÇÃO / OSCILAÇÃO GERAL ======
+// ====== ENVIOS DE MANUTENÇÃO E INSTABILIDADE CORRIGIDOS ======
 window.dispararAlertaGeral = async function(tipoAlerta) {
     const hoje = new Date();
-    const hojeS = hoje.toISOString().split('T')[0];
-    
-    // Filtra apenas clientes que não estão inadimplentes com mais de 20 dias de atraso
     const ativos = (db.clientes || []).filter(cli => {
         const diff = Math.ceil((new Date(cli.vencimento) - hoje) / (1000 * 60 * 60 * 24));
-        return diff >= -20;
+        return diff >= -20; // Filtro estrito: remove inadimplentes severos
     });
 
     if (ativos.length === 0) {
-        showNotify("Aviso", "Não existem clientes ativos cadastrados para receber alertas no momento.", "warning");
+        showNotify("Aviso", "Nenhum cliente elegível na fila ativa.", "warning");
         return;
     }
 
-    if (!confirm(`Deseja disparar o alerta de ${tipoAlerta.toUpperCase()} para todos os ${ativos.length} clientes ativos?`)) return;
+    if (!confirm(`Deseja transmitir o alerta de ${tipoAlerta.toUpperCase()} para todos os ${ativos.length} clientes ativos?`)) return;
 
-    const modalProgresso = document.getElementById('modalProgressoEnvio');
-    const textoProgresso = document.getElementById('progresso-texto');
-    const barraProgresso = document.getElementById('progresso-barra-interna');
-    const txtPorcentagem = document.getElementById('progresso-porcentagem');
+    const miniBadge = document.getElementById('badgeProgressoFlutuante');
+    const textoMini = document.getElementById('progresso-texto-mini');
+    const barraMini = document.getElementById('progresso-barra-mini');
+    const pctMini = document.getElementById('progresso-porcentagem-mini');
 
-    if (modalProgresso) modalProgresso.classList.remove('hidden');
+    if (miniBadge) miniBadge.classList.remove('hidden');
     const total = ativos.length;
 
     for (let i = 0; i < total; i++) {
         const cli = ativos[i];
-        if (textoProgresso) textoProgresso.innerText = `Alertando: ${cli.nome.toUpperCase()} (${i + 1} de ${total})`;
         
-        const pct = Math.round(((i + 1) / total) * 100);
-        if (barraProgresso) barraProgresso.style.width = `${pct}%`;
-        if (txtPorcentagem) txtPorcentagem.innerText = `${pct}% Concluído`;
+        requestAnimationFrame(() => {
+            if (textoMini) textoMini.innerText = `${tipoAlerta === 'oscilacao' ? 'Instabilidade' : 'Manutenção'}: ${cli.nome.toUpperCase()} (${i + 1}/${total})`;
+            const pct = Math.round(((i + 1) / total) * 100);
+            if (barraMini) barraMini.style.width = `${pct}%`;
+            if (pctMini) pctMini.innerText = `${pct}%`;
+        });
 
         if (typeof sendManualWA === "function") {
+            // CORREÇÃO CIRÚRGICA: Passa o parâmetro dinâmico exato cadastrado (oscilacao / manutencao)
             sendManualWA(cli.id, tipoAlerta);
         }
         await new Promise(resolve => setTimeout(resolve, 3000));
     }
 
-    if (modalProgresso) modalProgresso.classList.add('hidden');
-    showNotify("Transmissão Concluída", "O alerta geral do servidor foi processado com sucesso!", "success");
+    if (miniBadge) miniBadge.classList.add('hidden');
+    showNotify("Transmissão Concluída", "O alerta geral do servidor foi enviado para as carteiras!", "success");
 };
