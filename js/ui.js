@@ -164,7 +164,7 @@ export function renderChartEvolucao() {
     const dadosRecentes = faturas.slice(0, 7).reverse();
     const options = {
         series: [{ name: 'Faturamento Diário', data: dadosRecentes.map(f => f.lucro || 0) }],
-        chart: { type: 'area', height: 140, toolbar: { show: false }, background: 'transparent' },
+        chart: { type: 'area', height: '100%', toolbar: { show: false }, background: 'transparent' },
         theme: { mode: 'dark' },
         stroke: { curve: 'smooth', width: 2.5 },
         colors: ['#a855f7'],
@@ -190,7 +190,7 @@ export function renderChartAppsDonut() {
     const options = {
         series: Object.values(contagem).length > 0 ? Object.values(contagem) : [0],
         labels: Object.keys(contagem).length > 0 ? Object.keys(contagem) : ["Sem Clientes"],
-        chart: { type: 'donut', height: 140, background: 'transparent' },
+       chart: { type: 'donut', height: '100%', background: 'transparent' },
         theme: { mode: 'dark' },
         colors: ['#a855f7', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
         stroke: { show: false },
