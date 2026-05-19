@@ -14,7 +14,6 @@ window.save = save;
 
 const MEU_EMAIL_ADMIN = "w3sleygessner@gmail.com";
 
-// 👤 FUNÇÃO QUE ESTAVA EM FALTA: Oculta a splash screen com fade suave de forma segura
 function esconderSplashScreen() {
     const splash = document.getElementById('splash-screen');
     if (splash) {
@@ -24,7 +23,6 @@ function esconderSplashScreen() {
     }
 }
 
-// ⏱️ TRAVA DE SEGURANÇA: Se em até 4 segundos o Firebase não responder, remove o loader para não congelar a tela
 setTimeout(() => {
     const splash = document.getElementById('splash-screen');
     if (splash) {
@@ -33,12 +31,10 @@ setTimeout(() => {
     }
 }, 4000);
 
-// ====== OBSERVADOR DE SESSÃO DO FIREBASE AUTH ======
 onAuthStateChanged(auth, (currentUser) => {
     if (currentUser) {
         console.log("w3Gestor: Usuário autenticado. Montando ambiente...");
         
-        // Remove a dependência estrita do elemento antigo do cabeçalho para evitar quebras
         const userDisplay = document.getElementById('user-display');
         if (userDisplay) userDisplay.innerText = currentUser.email;
 
@@ -46,7 +42,6 @@ onAuthStateChanged(auth, (currentUser) => {
         onValue(userRef, (snapshot) => {
             try {
                 const data = snapshot.val() || {};
-                
                 if (!data.email) data.email = currentUser.email;
 
                 let accountInfo = data?.account;
@@ -61,7 +56,9 @@ onAuthStateChanged(auth, (currentUser) => {
                     msg_boas_vindas: "Olá {cliente}, seja bem-vindo! Seu acesso ao app {app} está ativo até {vencimento}.",
                     msg_renovacao: "Olá {cliente}, seu plano {plano} vence em {dias} dias ({vencimento}). Vamos renovar?",
                     msg_sucesso: "Obrigado pelo pagamento, {cliente}! Seu acesso foi renovado com sucesso.",
-                    msg_suspensa: "Olá {cliente}, seu acesso venceu em {vencimento} e foi suspenso. Para reativar, entre em contato."
+                    msg_suspensa: "Olá {cliente}, seu acesso venceu em {vencimento} e foi suspenso. Para reativar, entre em contato.",
+                    msg_oscilacao: "⚠️ *Aviso de Instabilidade*\n\nOlá {cliente}, identificamos uma instabilidade no servidor do app {app}. Nossa equipa já está a atuar para normalizar.",
+                    msg_manutencao: "🔧 *Aviso de Manutenção*\n\nOlá {cliente}, o servidor do app {app} entrará em manutenção programada em breve para melhorias de estabilidade."
                 };
 
                 const freeBanner = document.getElementById('free-plan-banner');
@@ -73,7 +70,6 @@ onAuthStateChanged(auth, (currentUser) => {
                     }
                 }
 
-                // Trava de Tempo do Plano expirado
                 if (currentUser.email !== MEU_EMAIL_ADMIN && Date.now() > accountInfo.expiresAt) {
                     document.getElementById('app-container').classList.add('hidden');
                     document.getElementById('auth-container').classList.add('hidden');
@@ -132,7 +128,6 @@ window.alterarSenha = async function(e) {
     e.preventDefault();
     const inputSenha = document.getElementById('change_password_input');
     if (!inputSenha) return;
-
     try {
         await updatePassword(auth.currentUser, inputSenha.value);
         UI.showNotify("Sucesso", "Senha alterada com sucesso!");
@@ -152,7 +147,6 @@ window.alterarSenhaForcada = async function(e) {
     e.preventDefault();
     const inputSenha = document.getElementById('force_password_input');
     if (!inputSenha) return;
-
     try {
         await updatePassword(auth.currentUser, inputSenha.value);
         await update(ref(db_firebase, `usuarios/${auth.currentUser.uid}/account`), { forcePasswordChange: false });
