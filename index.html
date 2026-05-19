@@ -413,12 +413,15 @@
                         <select id="filter-plano" onchange="renderClientes()" class="w-full lg:w-auto bg-black/40 lg:bg-black/20 text-white rounded-xl lg:rounded outline-none border border-white/5 p-3 lg:py-1.5 lg:px-3 text-xs focus:border-purple-500/50">
                             <option value="">Todos os Planos</option>
                         </select>
-                        <select id="filter-status" onchange="renderClientes()" class="w-full lg:w-auto bg-black/40 lg:bg-black/20 text-white rounded-xl lg:rounded outline-none border border-white/5 p-3 lg:py-1.5 lg:px-3 text-xs focus:border-purple-500/50">
-                            <option value="">Qualquer Status</option>
-                            <option value="warning">Vencendo (3 dias)</option>
-                            <option value="overdue">Atrasados</option>
-                            <option value="inadimplente">Inadimplentes (+20d)</option>
-                        </select>
+<select id="filter-status" onchange="renderClientes()" class="w-full lg:w-auto bg-black/40 lg:bg-black/20 text-white rounded-xl lg:rounded outline-none border border-white/5 p-3 lg:py-1.5 lg:px-3 text-xs focus:border-purple-500/50">
+    <option value="">Qualquer Status</option>
+    <option value="warning">Vencendo (3 dias)</option>
+    <option value="overdue">Atrasados</option>
+    <option value="inadimplente">Inadimplentes (+20d)</option>
+    <option value="hoje">Vencendo Hoje</option>
+    <option value="semana">Vencendo Esta Semana</option>
+    <option value="mes">Vencendo Este Mês</option>
+</select>
                         <div class="flex items-center justify-between lg:justify-start gap-3 p-3 lg:py-1.5 lg:px-4 bg-black/40 lg:bg-black/20 rounded-xl lg:rounded border border-white/5">
                             <span class="text-[10px] lg:text-[8px] text-gray-400 font-bold uppercase tracking-wider">Exibir Inadimplentes</span>
                             <input type="checkbox" id="filter-inadimplentes" onchange="renderClientes()" class="w-4 h-4 rounded border-white/10 bg-white/5 text-purple-600 focus:ring-purple-500/50">
@@ -813,7 +816,18 @@
             <span class="text-[8px] sm:text-[9px] font-bold uppercase tracking-tighter">Ajustes</span>
         </button>
     </div>
-
+<div id="modalProgressoEnvio" class="fixed inset-0 z-[250] hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="card w-full max-w-sm rounded-2xl p-6 relative z-10 text-center shadow-2xl bg-[#16162d] border border-white/5">
+            <div class="h-12 w-12 bg-purple-500/10 text-purple-400 rounded-full flex items-center justify-center mx-auto mb-4 text-xl border border-purple-500/20"><i class="fas fa-paper-plane animate-pulse"></i></div>
+            <h3 class="text-base font-black text-white mb-1 uppercase tracking-tight">Disparando Mensagens</h3>
+            <p id="progresso-texto" class="text-gray-400 text-xs mb-4">Processando fila de envios...</p>
+            
+            <div class="w-full h-3 bg-black/40 rounded-full border border-white/5 overflow-hidden p-0.5">
+                <div id="progresso-barra-interna" class="w-0 h-full bg-gradient-to-r from-purple-600 to-indigo-500 rounded-full transition-all duration-300"></div>
+            </div>
+            <div id="progresso-porcentagem" class="text-[10px] font-mono font-bold text-purple-400 mt-2">0% Concluído</div>
+        </div>
+    </div>
     <div id="toast-container" class="fixed top-5 right-5 z-[200] flex flex-col gap-3 pointer-events-none max-w-sm w-full"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
