@@ -99,6 +99,14 @@ export function checkCustomDays(v) { const el = document.getElementById('plan_di
 // --- DASHBOARD E GRÁFICOS ---
 export function initApp() {
     renderPlanos(); renderApps(); renderClientes(); renderFaturas(); updateDashboard(); renderConfig();
+
+    const inputWhatsapp = document.getElementById('cli_whatsapp');
+    if (inputWhatsapp) {
+        inputWhatsapp.addEventListener('input', (e) => {
+            let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,5})(\d{0,4})/);
+            e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
+        });
+    }
 }
 
 export function updateDashboard() {
@@ -153,7 +161,7 @@ export function renderChartEvolucao() {
     financeChart.render();
 }
 
-// ====== FUNÇÃO RENDER_CLIENTES (UNIFICADA, CORRIGIDA E SEM DUPLICADOS) ======
+// ====== FUNÇÃO RENDER_CLIENTES ======
 export function renderClientes() {
     const tableBody = document.getElementById('table-clientes-body'); 
     const mobileContainer = document.getElementById('lista-clientes-mobile');
@@ -174,16 +182,13 @@ export function renderClientes() {
 
     const clientes = db.clientes || [];
 
-    // SE A CONTA NÃO TIVER CLIENTES: Esconde gaveta/botões e impede exibição do card de filtros bugado
     if (clientes.length === 0) {
         if (gavetaFiltros) gavetaFiltros.classList.add('hidden');
         if (btnFiltrosMobile) btnFiltrosMobile.classList.add('hidden');
-        
         tableBody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-500 italic">Nenhum cliente cadastrado ainda.</td></tr>';
         mobileContainer.innerHTML = '<div class="p-6 text-center text-gray-500 text-xs uppercase font-bold bg-[#16162d] rounded-2xl border border-white/5">Nenhum cliente cadastrado ainda.</div>';
         return;
     } else {
-        // Se houver pelo menos 1 cliente, mostra as estruturas normais de filtros de forma segura
         if (gavetaFiltros && window.innerWidth >= 1024) gavetaFiltros.classList.remove('hidden');
         if (btnFiltrosMobile) btnFiltrosMobile.classList.remove('hidden');
     }
@@ -198,16 +203,22 @@ export function renderClientes() {
     const aF = (elApp && elApp.value) ? elApp.value : "";
     const pF = (elPlano && elPlano.value) ? elPlano.value : "";
     const sF = (elStatus && elStatus.value) ? elStatus.value : "";
-    
-    // CORREÇÃO PEDIDA: Só filtra inadimplentes caso o usuário ative explicitamente a checkbox!
     const iF = elInad ? elInad.checked : false;
     
     const hoje = new Date(); 
     const hojeS = hoje.toISOString().split('T')[0];
 
+    const inicioSemana = new Date(hoje);
+    inicioSemana.setDate(hoje.getDate() - hoje.getDay());
+    const fimSemana = new Date(inicioSemana);
+    fimSemana.setDate(inicioSemana.getDate() + 6);
+    const fimSemanaS = fimSemana.toISOString().split('T')[0];
+
+    const mesAtual = hoje.getMonth();
+    const anoAtual = hoje.getFullYear();
+
     const clientesFiltrados = [];
 
-    // Loop de Filtragem e Ordenação de Clientes
     db.clientes.sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento)).forEach(cli => {
         const p = db.planos.find(x => x.id == cli.plano_id) || { nome: 'N/A' };
         const app = db.apps.find(x => x.id == cli.app_id) || { nome: 'N/A' };
@@ -219,12 +230,18 @@ export function renderClientes() {
         if (nF && !cli.nome.toLowerCase().includes(nF)) return;
         if (aF && (!cli.app_id || cli.app_id.toString() !== aF.toString())) return;
         if (pF && (!cli.plano_id || cli.plano_id.toString() !== pF.toString())) return;
-        
         if (iF && !isInadimplente) return; 
 
         if (sF === 'warning' && !isWarning) return;
         if (sF === 'overdue' && !isOverdue) return;
         if (sF === 'inadimplente' && !isInadimplente) return;
+        if (sF === 'hoje' && cli.vencimento !== hojeS) return;
+        if (sF === 'semana' && (cli.vencimento < hojeS || cli.vencimento > fimSemanaS)) return;
+        
+        if (sF === 'mes') {
+            const dateParts = cli.vencimento.split('-');
+            if (parseInt(dateParts[1]) !== (mesAtual + 1) || parseInt(dateParts[0]) !== anoAtual) return;
+        }
 
         clientesFiltrados.push(cli);
 
@@ -261,7 +278,6 @@ export function renderClientes() {
         </tr>`;
     });
 
-    // Renderização Mobile de Cards Compactos Otimizada
     if (clientesFiltrados.length === 0) {
         mobileContainer.innerHTML = `<div class="text-center p-6 text-gray-500 text-xs uppercase font-bold bg-[#16162d] rounded-2xl border border-white/5">Nenhum cliente corresponde aos filtros</div>`;
     } else {
@@ -335,24 +351,30 @@ export function addThreeDays(id) {
 
 export function renderPlanos() {
     const list = document.getElementById('planos-list'); if (!list) return;
-    list.innerHTML = db.planos.map(p => `
+    list.innerHTML = db.planos.map(p => {
+        const valorLucro = p.valor - p.custo;
+        const margemPorcentagem = p.valor > 0 ? Math.round((valorLucro / p.valor) * 100) : 0;
+
+        return `
         <div class="card p-4 rounded-xl relative shadow-xl border border-white/5 bg-gray-900/40">
-            <div class="absolute top-2 right-2 flex gap-2">
+            <div class="absolute top-2 right-2 flex gap-2 z-20">
                 <button onclick="openModalPlanoEdit(${p.id})" class="text-gray-500 hover:text-white transition"><i class="fas fa-edit"></i></button>
                 <button onclick="deletePlano(${p.id})" class="text-gray-700 hover:text-red-500 transition"><i class="fas fa-trash"></i></button>
             </div>
+            <span class="absolute bottom-12 right-4 bg-green-500/10 text-green-400 border border-green-500/20 text-[8px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider">+${margemPorcentagem}% Margem</span>
+
             <h4 class="font-bold text-white text-sm uppercase">${p.nome}</h4>
             <p class="text-[9px] text-gray-500 font-black">${p.dias} DIAS</p>
-            <div class="mt-2 text-[10px] flex justify-between border-t border-gray-800 pt-2">
+            <div class="mt-2 text-[10px] flex justify-between border-t border-gray-800 pt-2 w-full">
                 <span>Preço: R$ ${p.valor.toFixed(2)}</span>
-                <span class="text-purple-400 font-bold">Lucro: R$ ${(p.valor - p.custo).toFixed(2)}</span>
+                <span class="text-purple-400 font-bold">Lucro: R$ ${valorLucro.toFixed(2)}</span>
             </div>
-        </div>`).join('');
+        </div>`;
+    }).join('');
     
     if (document.getElementById('cli_plano_id')) {
         document.getElementById('cli_plano_id').innerHTML = db.planos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
     }
-
     if (document.getElementById('filter-plano')) {
         document.getElementById('filter-plano').innerHTML = `<option value="">Planos</option>` + 
             db.planos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
@@ -377,7 +399,6 @@ export function renderApps() {
     const list = document.getElementById('apps-list'); 
     if (!list) return;
     
-    // Cards de Apps premium em grid com gatilho de cópia integrada ao clicar
     list.innerHTML = db.apps.map(a => `
         <div onclick="window.copyAllAppInfo('${a.nome}', '${a.url || ''}', '${a.pin || ''}')" class="card p-4 rounded-xl relative shadow-xl border border-white/5 bg-gray-900/40 cursor-pointer hover:border-purple-500/30 transition-all active:scale-95 duration-100">
             <div class="absolute top-3 right-3 flex gap-2.5 z-20" onclick="event.stopPropagation();">
@@ -411,7 +432,6 @@ export function renderFaturas() {
     const clientes = db.clientes || [];
     const faturas = db.faturas || [];
 
-    // ORDENAÇÃO: Ordena do último que estiver em aberto para o mais antigo
     const pendentes = clientes
         .filter(c => c.vencimento <= hoje)
         .sort((a, b) => new Date(b.vencimento) - new Date(a.vencimento));
@@ -713,7 +733,6 @@ export function toggleFiltrosGaveta(open) {
 
 window.toggleFiltrosGaveta = toggleFiltrosGaveta;
 
-// ====== ADICIONE NO FINAL DO SEU JS/UI.JS ======
 window.alternarAbasAuth = function(irParaCadastro) {
     const wrapLogin = document.getElementById('wrapper-login');
     const wrapRegister = document.getElementById('wrapper-register');
@@ -727,4 +746,45 @@ window.alternarAbasAuth = function(irParaCadastro) {
         wrapRegister.classList.add('hidden');
         wrapLogin.classList.remove('hidden');
     }
+};
+
+// ====== FUNÇÃO DE NOTIFICAÇÃO EM MASSA COM BARRA GRÁFICA ======
+window.dispararNotificacaoEmMassa = async function() {
+    const selecionados = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
+    if (selecionados.length === 0) return;
+
+    const modalProgresso = document.getElementById('modalProgressoEnvio');
+    const textoProgresso = document.getElementById('progresso-texto');
+    const barraProgresso = document.getElementById('progresso-barra-interna');
+    const txtPorcentagem = document.getElementById('progresso-porcentagem');
+
+    if (modalProgresso) modalProgresso.classList.remove('hidden');
+
+    const total = selecionados.length;
+
+    for (let i = 0; i < total; i++) {
+        const idCliente = selecionados[i];
+        const clienteObj = db.clientes.find(c => c.id == idCliente) || { nome: "Cliente" };
+        
+        if (textoProgresso) textoProgresso.innerText = `Enviando para: ${clienteObj.nome.toUpperCase()} (${i + 1} de ${total})`;
+        
+        const pct = Math.round(((i + 1) / total) * 100);
+        if (barraProgresso) barraProgresso.style.width = `${pct}%`;
+        if (txtPorcentagem) txtPorcentagem.innerText = `${pct}% Concluído`;
+
+        if (typeof sendManualWA === "function") {
+            sendManualWA(idCliente, 'renew');
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+
+    if (modalProgresso) modalProgresso.classList.add('hidden');
+    showNotify("Concluído", "Todos os disparos em massa foram processados com sucesso!", "success");
+    
+    document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = false);
+    const checkMestre = document.getElementById('select-all-clients');
+    if (checkMestre) checkMestre.checked = false;
+
+    window.atualizarBarraAcoes();
 };
