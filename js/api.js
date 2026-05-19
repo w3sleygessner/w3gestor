@@ -7,18 +7,17 @@ export function sendManualWA(cliId, type) {
     const app = db.apps.find(a => a.id == cli.app_id) || {};
     const plano = db.planos.find(p => p.id == cli.plano_id) || {};
 
-    // Mapeamento dinâmico das mensagens
     let template = db.config.msg_renovacao;
     if (type === 'welcome') template = db.config.msg_boas_vindas;
     if (type === 'success') template = db.config.msg_sucesso;
     if (type === 'suspended') template = db.config.msg_suspensa;
     
-    // Tratamento exato para Oscilação e Manutenção com Textos Pré-Cadastrados de emergência
+    // Agora o sistema puxa o template correto configurado para cada alerta
     if (type === 'oscilacao') {
-        template = db.config.msg_oscilacao || "⚠️ *Aviso de Instabilidade*\n\nOlá {cliente}, identificamos uma oscilação no servidor do app {app}. A nossa equipa técnica já está a atuar para normalizar o sinal o mais rápido possível.";
+        template = db.config.msg_oscilacao || "⚠️ *Aviso de Instabilidade*\nOlá {cliente}, identificamos uma oscilação no servidor do app {app}. A nossa equipe já está atuando para normalizar o sinal.";
     }
     if (type === 'manutencao') {
-        template = db.config.msg_manutencao || "🔧 *Aviso de Manutenção*\n\nOlá {cliente}, informamos que o servidor do app {app} entrará em manutenção programada em breve para melhorias de estabilidade e segurança.";
+        template = db.config.msg_manutencao || "🔧 *Aviso de Manutenção*\nOlá {cliente}, informamos que o servidor do app {app} entrará em manutenção programada para melhorias.";
     }
 
     let msg = template || "";
