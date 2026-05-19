@@ -5,18 +5,16 @@ export let isRegisterMode = false;
 let financeChart;
 let appsDonutChart;
 
-// ====== NOVO: FUNÇÃO PARA RECOLHER / EXPANDIR SIDEBAR NO DESKTOP ======
+// ====== FUNÇÃO PARA RECOLHER / EXPANDIR SIDEBAR NO DESKTOP ======
 window.controlarSidebarGeral = function() {
     const sidebar = document.getElementById('sidebar');
     const mainContent = document.getElementById('main-content');
     if (!sidebar || !mainContent) return;
 
     if (window.innerWidth >= 1024) {
-        // Controle no Desktop
         sidebar.classList.toggle('lg:hidden');
         mainContent.classList.toggle('lg:ml-64');
     } else {
-        // Controle no Mobile
         sidebar.classList.toggle('-translate-x-full');
     }
 };
@@ -124,10 +122,10 @@ export function updateDashboard() {
     const hj = new Date().toISOString().split('T')[0];
     const otr = clientes.filter(c => c.vencimento <= hj).length;
 
-    // CORREÇÃO EXIGIDA: Filtra e remove inadimplentes (+20 dias) e faz o cálculo líquido real (Valor - Custo)
+    // PREVISÃO DO MÊS CORRIGIDA: Filtra inadimplentes severos (>20d) e calcula Lucro Líquido Real (Preço - Custo)
     const previsaoLucroLiquido = clientes.reduce((acc, cli) => {
         const diffDias = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
-        if (diffDias < -20) return acc; // Ignora inadimplente
+        if (diffDias < -20) return acc;
         
         const plano = db.planos.find(p => p.id == cli.plano_id) || { valor: 0, custo: 0 };
         const liquidoCli = (plano.valor || 0) - (plano.custo || 0);
@@ -143,6 +141,7 @@ export function updateDashboard() {
     const list = document.getElementById('alerts-list');
     if (list) {
         list.innerHTML = '';
+        // CRÍTICOS REESTRUTURADOS: Mostra uma lista compacta e limpa em grid no dashboard
         clientes.forEach(cli => {
             const diff = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
             if (diff <= config.aviso_dias) {
@@ -429,7 +428,7 @@ window.copyAllAppInfo = function(nome, url, pin) {
     el.select();
     document.execCommand('copy');
     document.body.removeChild(el);
-    showNotify("Copiado!", `Dados do ${nome} copiados com sucesso!`);
+    showNotify("Copiado!", `Dados do ${nome} copied com sucesso!`);
 };
 
 export function renderApps() {
@@ -480,7 +479,7 @@ export function renderFaturas() {
     <td class="p-4 text-gray-400 uppercase">${plano.nome}</td>
     <td class="p-4 text-white">R$ ${plano.valor.toFixed(2)}</td>
     <td class="p-4 text-right">
-        <button onclick="openModalRenovar(${cli.id})" class="px-3 py-1 bg-green-600/20 text-green-400 border border-green-500/30 rounded text-[9px] font-black hover:bg-green-600 hover:text-white transition">RECEBER AGORA</button>
+        <button onclick="openModalRenovar(${cli.id})" class="px-3 py-1 bg-green-600/20 text-green-500 border border-green-500/30 rounded text-[9px] font-black hover:bg-green-600 hover:text-white transition">RECEBER AGORA</button>
     </td>
 </tr>`;
     }).join('') || '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Nenhuma fatura em aberto.</td></tr>';
@@ -536,162 +535,44 @@ export function updateConfig() {
     save(); showNotify('Sucesso', 'Configurações salvas!');
 }
 
-export function openModalAdd() { 
-    if (db.account && db.account.type !== 'vip' && db.clientes.length >= 3) {
-        openModal('modalLimiteClientes'); 
-        return; 
+// ====== AJUSTADO EXPORT OBRIGATÓRIO EXIGIDO PELO ADMIN.JS ======
+export function showNotify(titulo, message, tipo = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    let bgIcon = 'bg-green-500/20 text-green-400 border-green-500/30';
+    let icon = 'fas fa-check-circle';
+    
+    if (tipo === 'error' || tipo === 'danger') {
+        bgIcon = 'bg-red-500/20 text-red-400 border-red-500/30';
+        icon = 'fas fa-times-circle';
+    } else if (tipo === 'warning') {
+        bgIcon = 'bg-yellow-500/20 text-yellow-500 border-yellow-500/30';
+        icon = 'fas fa-exclamation-triangle';
+    } else if (tipo === 'info') {
+        bgIcon = 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+        icon = 'fas fa-info-circle';
     }
-    document.getElementById('formCliente').reset(); 
-    document.getElementById('cli_edit_id').value = ""; 
-    document.getElementById('modalClienteTitle').innerText = "Novo Cliente"; 
-    renderPlanos(); 
-    renderApps(); 
-    openModal('modalCliente'); 
-}
 
-export function openModalEdit(id) {
-    const cli = db.clientes.find(c => c.id == id);
-    document.getElementById('cli_edit_id').value = cli.id; document.getElementById('cli_nome').value = cli.nome; document.getElementById('cli_whatsapp').value = cli.whatsapp; document.getElementById('cli_plano_id').value = cli.plano_id; document.getElementById('cli_app_id').value = cli.app_id; document.getElementById('cli_vencimento').value = cli.vencimento; document.getElementById('cli_credenciais').value = cli.credenciais || "";
-    document.getElementById('modalClienteTitle').innerText = "Editar Cliente"; openModal('modalCliente');
-}
+    const toast = document.createElement('div');
+    toast.className = "pointer-events-auto w-full bg-[#16162d]/95 backdrop-blur-md border border-white/5 p-4 rounded-xl shadow-2xl flex items-start gap-3 transform translate-x-20 opacity-0 transition-all duration-300";
+    
+    toast.innerHTML = `
+        <div class="h-8 w-8 rounded-lg border flex items-center justify-center shrink-0 ${bgIcon}">
+            <i class="${icon} text-sm"></i>
+        </div>
+        <div class="flex-1">
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider">${titulo}</h4>
+            <p class="text-[11px] text-gray-400 mt-0.5 leading-relaxed">${message}</p>
+        </div>
+    `;
 
-export function deleteCliente(id) {
-    Swal.fire({
-        title: 'Excluir Cliente?',
-        text: "Tem certeza que deseja apagar este cliente? Esta ação não pode ser desfeita.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#374151',
-        confirmButtonText: 'Sim, apagar!',
-        cancelButtonText: 'Cancelar',
-        background: '#16162d',
-        color: '#ffffff',
-        iconColor: '#ef4444'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            db.clientes = db.clientes.filter(c => c.id != id);
-            save();
-            renderClientes();
-            updateDashboard();
-            showNotify('Removido', 'O cliente foi excluído com sucesso.', 'success');
-        }
-    });
-}
-
-export function openModalAppAdd() { document.getElementById('formApp').reset(); document.getElementById('app_edit_id').value = ""; document.getElementById('modalAppTitle').innerText = "Novo App"; openModal('modalApp'); }
-
-export function openModalAppEdit(id) {
-    const a = db.apps.find(x => x.id == id);
-    document.getElementById('app_edit_id').value = a.id; document.getElementById('app_nome').value = a.nome; document.getElementById('app_url').value = a.url || ""; document.getElementById('app_host').value = a.host || ""; document.getElementById('app_pin').value = a.pin || ""; document.getElementById('app_links').value = a.links || "";
-    document.getElementById('modalAppTitle').innerText = "Editar App"; openModal('modalApp');
-}
-
-export function deleteApp(id) {
-    Swal.fire({
-        title: 'Excluir Esta Aplicação?',
-        text: "Os clientes que usam este app perderão as credenciais e dados de acesso vinculados.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#374151',
-        confirmButtonText: 'Sim, remover!',
-        cancelButtonText: 'Cancelar',
-        background: '#16162d',
-        color: '#ffffff',
-        iconColor: '#ef4444'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            db.apps = db.apps.filter(a => a.id != id);
-            save();
-            renderApps();
-            showNotify('App Removido', 'A aplicação foi excluída com sucesso.', 'success');
-        }
-    });
-}
-
-export function openModalPlanoAdd() { document.getElementById('formPlano').reset(); document.getElementById('plan_edit_id').value = ""; document.getElementById('modalPlanoTitle').innerText = "Novo Plano"; openModal('modalPlano'); }
-
-export function openModalPlanoEdit(id) {
-    const p = db.planos.find(pl => pl.id == id);
-    document.getElementById('plan_edit_id').value = p.id; document.getElementById('plan_nome').value = p.nome; document.getElementById('plan_valor').value = p.valor; document.getElementById('plan_custo').value = p.custo;
-    document.getElementById('plan_dias_select').value = [30, 60, 90].includes(p.dias) ? p.dias : 'custom';
-    if (p.dias != 30 && p.dias != 60 && p.dias != 90) document.getElementById('plan_dias_custom').value = p.dias;
-    checkCustomDays(document.getElementById('plan_dias_select').value); document.getElementById('modalPlanoTitle').innerText = "Editar Plano"; openModal('modalPlano');
-}
-
-export function deletePlano(id) {
-    Swal.fire({
-        title: 'Excluir Este Plano?',
-        text: "Os clientes vinculados a este plano perderão a referência de preço.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#374151',
-        confirmButtonText: 'Sim, remover!',
-        cancelButtonText: 'Cancelar',
-        background: '#16162d',
-        color: '#ffffff',
-        iconColor: '#ef4444'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            db.planos = db.planos.filter(p => p.id != id);
-            save();
-            renderPlanos();
-            showNotify('Plano Removido', 'O plano foi excluído com sucesso.', 'success');
-        }
-    });
-}
-
-export function openModalRenovar(id) {
-    const cli = db.clientes.find(c => c.id == id);
-    const p = db.planos.find(pl => pl.id == cli.plano_id) || { valor: 0 };
-    document.getElementById('renovar-cli-id').value = id;
-    document.getElementById('renovar-info').innerText = `Marcar R$ ${p.valor.toFixed(2)} pagos por ${cli.nome}?`;
-    openModal('modalRenovar');
-}
-
-export function confirmarRenovacao() {
-    const id = document.getElementById('renovar-cli-id').value;
-    const cliIdx = db.clientes.findIndex(c => c.id == id);
-    const cli = db.clientes[cliIdx];
-    const p = db.planos.find(pl => pl.id == cli.plano_id);
-    let base = new Date(); const vAtual = new Date(cli.vencimento);
-    if (vAtual > base) base = vAtual;
-    base.setDate(base.getDate() + parseInt(p.dias));
-    db.clientes[cliIdx].vencimento = base.toISOString().split('T')[0];
-    db.faturas.unshift({ id: Date.now(), cliId: cli.id, data_pgto: new Date().toLocaleDateString(), cliente: cli.nome, valor: p.valor, lucro: p.valor - p.custo, dias_somados: p.dias });
-    save(); closeModal('modalRenovar'); renderClientes(); renderFaturas(); updateDashboard(); showNotify('Pago!', 'Vencimento updated.');
-    setTimeout(() => sendManualWA(id, 'success'), 500);
-}
-
-export function deleteFatura(fid) {
-    if (!confirm("Estornar pagamento? O vencimento voltará ao anterior.")) return;
-    const f = db.faturas.find(x => x.id == fid);
-    const cIdx = db.clientes.findIndex(c => c.id == f.cliId);
-    if (cIdx !== -1) {
-        let d = new Date(db.clientes[cIdx].vencimento);
-        d.setDate(d.getDate() - parseInt(f.dias_somados));
-        db.clientes[cIdx].vencimento = d.toISOString().split('T')[0];
-    }
-    db.faturas = db.faturas.filter(x => x.id != fid); save(); renderFaturas(); updateDashboard(); showNotify('Estornado', 'Vencimento corrigido.');
-}
-
-export function processCredentials(text) {
-    if (!text) return { clean: "", user: "", pass: "" };
-    const uM = text.match(/(?:Usuário|Usuario|User):\s*([^\n\r\s✅✨⭐👤]+)/i);
-    const sM = text.match(/(?:Senha|Pass):\s*([^\n\r\s🔑🔒]+)/i);
-    let lines = text.split('\n').filter(l => !l.includes('superc.space') && !l.includes('Assinar') && !l.includes('Vencimento:') && !l.includes('🗓️'));
-    return { clean: lines.join('\n').trim(), user: uM ? uM[1].trim() : "", pass: sM ? sM[1].trim() : "" };
-}
-
-export function copyFullAccess(id) {
-    const cli = db.clientes.find(c => c.id == id); if (!cli) return;
-    const app = db.apps.find(a => a.id == cli.app_id) || { nome: 'N/A' };
-    const plano = db.planos.find(p => p.id == cli.plano_id) || { nome: 'N/A' };
-    const txt = `👤 Usuário: ${cli.usuario || 'N/A'}\n🔑 Senha: ${cli.senha || 'N/A'}\n📱 App: ${app.nome}\n🌐 Host/DNS: ${app.url || app.host || 'N/A'}\n🗓️ Vencimento: ${cli.vencimento.split('-').reverse().join('/')}\n📦 Plano: ${plano.nome}`;
-    const el = document.createElement('textarea'); el.value = txt; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
-    showNotify('Copiado!', 'Dados copiados.');
+    container.appendChild(toast);
+    setTimeout(() => { toast.classList.remove('translate-x-20', 'opacity-0'); }, 10);
+    setTimeout(() => {
+        toast.classList.add('translate-x-20', 'opacity-0');
+        setTimeout(() => { toast.remove(); }, 300);
+    }, 4000);
 }
 
 window.showNotify = showNotify;
@@ -749,7 +630,6 @@ window.dispararNotificacaoEmMassa = async function() {
         const idCliente = selecionados[i];
         const clienteObj = db.clientes.find(c => c.id == idCliente) || { nome: "Cliente" };
         
-        // Evita travar frames injetando alterações assincronamente por hardware
         requestAnimationFrame(() => {
             if (textoMini) textoMini.innerText = `Enviando: ${clienteObj.nome.toUpperCase()} (${i + 1}/${total})`;
             const pct = Math.round(((i + 1) / total) * 100);
@@ -771,12 +651,12 @@ window.dispararNotificacaoEmMassa = async function() {
     window.atualizarBarraAcoes();
 };
 
-// ====== ENVIOS DE MANUTENÇÃO E INSTABILIDADE CORRIGIDOS ======
+// ====== TRANSMISSÃO DE ALERTAS CORRIGIDA (TEMPLATES DINÂMICOS) ======
 window.dispararAlertaGeral = async function(tipoAlerta) {
     const hoje = new Date();
     const ativos = (db.clientes || []).filter(cli => {
         const diff = Math.ceil((new Date(cli.vencimento) - hoje) / (1000 * 60 * 60 * 24));
-        return diff >= -20; // Filtro estrito: remove inadimplentes severos
+        return diff >= -20; 
     });
 
     if (ativos.length === 0) {
@@ -805,7 +685,6 @@ window.dispararAlertaGeral = async function(tipoAlerta) {
         });
 
         if (typeof sendManualWA === "function") {
-            // CORREÇÃO CIRÚRGICA: Passa o parâmetro dinâmico exato cadastrado (oscilacao / manutencao)
             sendManualWA(cli.id, tipoAlerta);
         }
         await new Promise(resolve => setTimeout(resolve, 3000));
