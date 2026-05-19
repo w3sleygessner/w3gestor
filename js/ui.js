@@ -304,6 +304,48 @@ export function addThreeDays(id) {
     }
 }
 
+
+export function renderPlanos() {
+    const list = document.getElementById('planos-list'); if (!list) return;
+    list.innerHTML = db.planos.map(p => `
+        <div class="card p-4 rounded-xl relative shadow-xl border border-white/5 bg-gray-900/40">
+            <div class="absolute top-2 right-2 flex gap-2">
+                <button onclick="openModalPlanoEdit(${p.id})" class="text-gray-500 hover:text-white transition"><i class="fas fa-edit"></i></button>
+                <button onclick="deletePlano(${p.id})" class="text-gray-700 hover:text-red-500 transition"><i class="fas fa-trash"></i></button>
+            </div>
+            <h4 class="font-bold text-white text-sm uppercase">${p.nome}</h4>
+            <p class="text-[9px] text-gray-500 font-black">${p.dias} DIAS</p>
+            <div class="mt-2 text-[10px] flex justify-between border-t border-gray-800 pt-2">
+                <span>Preço: R$ ${p.valor.toFixed(2)}</span>
+                <span class="text-purple-400 font-bold">Lucro: R$ ${(p.valor - p.custo).toFixed(2)}</span>
+            </div>
+        </div>`).join('');
+    
+    if (document.getElementById('cli_plano_id')) {
+        document.getElementById('cli_plano_id').innerHTML = db.planos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+    }
+
+    if (document.getElementById('filter-plano')) {
+        document.getElementById('filter-plano').innerHTML = `<option value="">Planos</option>` + 
+            db.planos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
+    }
+}
+
+// ====== EVENTO PARA COPIAR O DNS DO CARD DE APLICATIVOS AO CLICAR EM QUALQUER LUGAR DELES ======
+window.copyDnsApp = function(url, nomeApp) {
+    if (!url || url === 'N/A') {
+        showNotify("Aviso", "Este aplicativo não possui URL/DNS cadastrada.", "warning");
+        return;
+    }
+    const el = document.createElement('textarea');
+    el.value = url;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    showNotify("Copiado!", `DNS do ${nomeApp} copiado com sucesso!`);
+};
+
 export function renderFaturas() {
     const pBody = document.getElementById('table-faturas-pendentes-body');
     const hBody = document.getElementById('table-faturas-body');
@@ -313,7 +355,11 @@ export function renderFaturas() {
     const clientes = db.clientes || [];
     const faturas = db.faturas || [];
 
-    const pendentes = clientes.filter(c => c.vencimento <= hoje);
+    // ORDENAÇÃO EXIGIDA: Organiza do último que estiver em aberto (data mais distante no topo)
+    const pendentes = clientes
+        .filter(c => c.vencimento <= hoje)
+        .sort((a, b) => new Date(b.vencimento) - new Date(a.vencimento));
+
     pBody.innerHTML = pendentes.map(cli => {
         const plano = db.planos.find(p => p.id == cli.plano_id) || { nome: 'N/A', valor: 0 };
         return `<tr class="border-t border-gray-800 text-[10px] hover:bg-white/5">
@@ -346,40 +392,22 @@ export function renderFaturas() {
     }
 }
 
-export function renderPlanos() {
-    const list = document.getElementById('planos-list'); if (!list) return;
-    list.innerHTML = db.planos.map(p => `
-        <div class="card p-4 rounded-xl relative shadow-xl border border-white/5 bg-gray-900/40">
-            <div class="absolute top-2 right-2 flex gap-2">
-                <button onclick="openModalPlanoEdit(${p.id})" class="text-gray-500 hover:text-white transition"><i class="fas fa-edit"></i></button>
-                <button onclick="deletePlano(${p.id})" class="text-gray-700 hover:text-red-500 transition"><i class="fas fa-trash"></i></button>
-            </div>
-            <h4 class="font-bold text-white text-sm uppercase">${p.nome}</h4>
-            <p class="text-[9px] text-gray-500 font-black">${p.dias} DIAS</p>
-            <div class="mt-2 text-[10px] flex justify-between border-t border-gray-800 pt-2">
-                <span>Preço: R$ ${p.valor.toFixed(2)}</span>
-                <span class="text-purple-400 font-bold">Lucro: R$ ${(p.valor - p.custo).toFixed(2)}</span>
-            </div>
-        </div>`).join('');
-    
-    if (document.getElementById('cli_plano_id')) {
-        document.getElementById('cli_plano_id').innerHTML = db.planos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
-    }
-
-    if (document.getElementById('filter-plano')) {
-        document.getElementById('filter-plano').innerHTML = `<option value="">Planos</option>` + 
-            db.planos.map(p => `<option value="${p.id}">${p.nome}</option>`).join('');
-    }
-}
-
 export function renderApps() {
-    const list = document.getElementById('apps-list'); if (!list) return;
+    const list = document.getElementById('apps-list'); 
+    if (!list) return;
+    
+    // RECONSTRUÇÃO: Cards de Apps premium e clicáveis idênticos aos de planos, com gatilho de cópia rápida
     list.innerHTML = db.apps.map(a => `
-        <div class="card p-3 flex justify-between items-center shadow border border-white/5 rounded-xl bg-gray-900/40">
-            <div><p class="font-bold text-xs uppercase text-purple-400">${a.nome}</p></div>
-            <div class="flex gap-3">
+        <div onclick="window.copyDnsApp('${a.url || 'N/A'}', '${a.nome}')" class="card p-4 rounded-xl relative shadow-xl border border-white/5 bg-gray-900/40 cursor-pointer hover:border-purple-500/30 transition-all active:scale-95 duration-100">
+            <div class="absolute top-3 right-3 flex gap-2.5 z-20" onclick="event.stopPropagation();">
                 <button onclick="openModalAppEdit(${a.id})" class="text-gray-500 hover:text-white transition"><i class="fas fa-edit"></i></button>
                 <button onclick="deleteApp(${a.id})" class="text-gray-700 hover:text-red-500 transition"><i class="fas fa-trash"></i></button>
+            </div>
+            <h4 class="font-black text-purple-400 text-sm uppercase tracking-tight">${a.nome}</h4>
+            <p class="text-[10px] text-gray-400 mt-1 truncate uppercase"><span class="text-gray-600 font-bold">DNS:</span> ${a.url || 'N/A'}</p>
+            <div class="mt-3 text-[9px] font-mono flex justify-between border-t border-white/5 pt-2.5 text-gray-500">
+                <span>PIN: <strong class="text-white font-bold">${a.pin || 'N/A'}</strong></span>
+                <span class="text-purple-400 uppercase font-black tracking-wider"><i class="fas fa-copy text-[8px] mr-1"></i> Clique para Copiar</span>
             </div>
         </div>`).join('');
     
@@ -392,6 +420,7 @@ export function renderApps() {
             db.apps.map(a => `<option value="${a.id}">${a.nome}</option>`).join('');
     }
 }
+
 
 export function renderConfig() {
     const config = db.config || {};
