@@ -311,6 +311,26 @@
         </div>
     </div>
     
+    <div class="flex items-center">
+        <button onclick="window.logout()" title="Sair do Sistema" 
+            class="lg:hidden flex items-center justify-center w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all active:scale-90 duration-100">
+            <i class="fas fa-sign-out-alt text-sm"></i>
+        </button>
+    </div>
+
+</header>    
+    <div class="flex items-center gap-2">
+        <button onclick="toggleSidebar()" class="hidden text-white p-2 -ml-2 hover:bg-white/5 rounded-xl transition active:scale-95">
+            <i class="fas fa-bars text-xl"></i>
+        </button>
+        
+        <div class="flex items-center select-none lg:hidden">
+            <span class="text-white font-black text-xl tracking-tighter">w3</span>
+            <span class="text-white font-light text-xl tracking-tight">Gestor</span>
+            <span class="text-purple-500 font-black text-xl ml-0.5">.</span>
+        </div>
+    </div>
+    
     <div class="flex items-center gap-2">
         <div class="flex items-center space-x-2 text-[#00d998] text-xs font-bold bg-[#00d998]/5 px-3 py-1.5 rounded-full border border-[#00d998]/10 max-w-[140px] sm:max-w-none truncate">
             <i class="fab fa-whatsapp shrink-0"></i>
@@ -564,10 +584,19 @@
                         <div class="card p-5 rounded-2xl shadow-xl border border-white/5 bg-[#16162d] w-full">
                             <h4 class="font-bold text-green-400 uppercase text-xs tracking-widest mb-4"><i class="fas fa-comment-alt mr-2"></i> Textos das Notificações</h4>
                             <div class="space-y-4">
+                                <div>
+
                                 <div><label class="text-[9px] text-gray-500 uppercase font-black tracking-wider mb-1.5 block">Mensagem de Boas-vindas</label><textarea id="cfg_msg_boas_vindas" rows="2" class="w-full bg-black/20 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500/40 transition resize-none placeholder-gray-600" placeholder="Olá! Seja bem-vindo..."></textarea></div>
                                 <div><label class="text-[9px] text-gray-500 uppercase font-black tracking-wider mb-1.5 block">Aviso de Cobrança / Renovação</label><textarea id="cfg_msg_renovacao" rows="2" class="w-full bg-black/20 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500/40 transition resize-none placeholder-gray-600" placeholder="Atenção, sua assinatura vence em breve..."></textarea></div>
                                 <div><label class="text-[9px] text-gray-500 uppercase font-black tracking-wider mb-1.5 block">Confirmação de Pagamento Recebido</label><textarea id="cfg_msg_sucesso" rows="2" class="w-full bg-black/20 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500/40 transition resize-none placeholder-gray-600" placeholder="Obrigado! Seu pagamento foi confirmado..."></textarea></div>
-                            </div>
+                               <label class="text-[9px] text-yellow-500 uppercase font-black tracking-wider mb-1.5 block">Alerta: Instabilidade / Oscilação no Sinal</label>
+    <textarea id="cfg_msg_oscilacao" rows="2" class="w-full bg-black/20 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-yellow-500/40 transition resize-none placeholder-gray-600" placeholder="Aviso: Identificamos uma oscilação no servidor..."></textarea>
+</div>
+<div>
+    <label class="text-[9px] text-red-500 uppercase font-black tracking-wider mb-1.5 block">Alerta: Manutenção Agendada / Geral</label>
+    <textarea id="cfg_msg_manutencao" rows="2" class="w-full bg-black/20 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-red-500/40 transition resize-none placeholder-gray-600" placeholder="Aviso: Nosso servidor passará por uma manutenção rápida..."></textarea>
+</div>
+                                </div>
                         </div>
                     </div>
                 </div>
