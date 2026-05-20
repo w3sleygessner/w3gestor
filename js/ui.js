@@ -11,6 +11,30 @@ function formatarDataBR_ISO(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// ==========================================
+// FUNÇÃO DO MODAL DE CONFIRMAÇÃO
+// ==========================================
+window.meuConfirm = function(titulo, mensagem, acaoSim) {
+    const modal = document.getElementById('modalConfirm');
+    if (!modal) {
+        if (window.confirm(mensagem)) acaoSim();
+        return;
+    }
+    
+    document.getElementById('confirm-title').innerText = titulo;
+    document.getElementById('confirm-msg').innerText = mensagem;
+    modal.classList.remove('hidden');
+
+    document.getElementById('btn-ok').onclick = () => {
+        modal.classList.add('hidden');
+        if (typeof acaoSim === 'function') acaoSim();
+    };
+    
+    document.getElementById('btn-cancel').onclick = () => {
+        modal.classList.add('hidden');
+    };
+};
+
 export function openModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
 export function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
 export function checkCustomDays(v) { const el = document.getElementById('plan_dias_custom'); if (el) el.classList.toggle('hidden', v !== 'custom'); }
@@ -376,8 +400,6 @@ export function renderClientes() {
     const mesAtual = hoje.getMonth();
     const anoAtual = hoje.getFullYear();
 
-    const clientesFiltrados = [];
-
     db.clientes.sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento)).forEach(cli => {
         const p = db.planos.find(x => x.id == cli.plano_id) || { nome: 'N/A' };
         const app = db.apps.find(x => x.id == cli.app_id) || { nome: 'N/A' };
@@ -386,7 +408,6 @@ export function renderClientes() {
         const isInadimplente = diff < -20;
         const isWarning = diff >= 0 && diff <= 3;
 
-        // Se o checkbox Inadimplente estiver desmarcado e o cliente for inadimplente, oculta.
         if (!iF && isInadimplente) return;
         if (nF && !cli.nome.toLowerCase().includes(nF)) return;
         if (aF && cli.app_id != aF) return;
@@ -402,12 +423,9 @@ export function renderClientes() {
             if (parseInt(dateParts[1]) !== (mesAtual + 1) || parseInt(dateParts[0]) !== anoAtual) return;
         }
 
-        clientesFiltrados.push(cli);
-
         let rCls = isInadimplente ? 'row-inadimplente' : (isOverdue ? 'row-overdue' : (isWarning ? 'row-warning' : ''));
 
-        // Substituição do botão "PAGO" por "GERAR FATURA"
-       tableBody.innerHTML += `<tr class="border-t border-gray-800/50 text-xs hover:bg-white/5 ${rCls}">
+        tableBody.innerHTML += `<tr class="border-t border-gray-800/50 text-xs hover:bg-white/5 ${rCls}">
             <td class="p-2.5 text-center w-10"><input type="checkbox" class="client-checkbox" value="${cli.id}" onchange="window.atualizarBarraAcoes()"></td>
             <td class="p-2.5 font-bold text-white uppercase">${cli.nome}</td>
             <td class="p-2.5 uppercase text-[10px] text-gray-400">${p.nome}<br><span class="text-purple-400 font-bold">${app.nome}</span></td>
@@ -433,7 +451,6 @@ export function renderClientes() {
         let cardBorder = isInadimplente ? 'border-purple-500/20 bg-purple-950/5' : (isOverdue ? 'border-red-500/20 bg-red-950/5' : 'border-white/5 bg-[#16162d]');
         let statusBadge = isInadimplente ? '<span class="text-purple-400">Inadimplente</span>' : (isOverdue ? '<span class="text-red-400">Atrasado</span>' : '<span class="text-green-400">Ativo</span>');
 
-        // Substituição do botão "PAGO" por "GERAR FATURA"
         mobileContainer.innerHTML += `
         <div class="card p-3 rounded-xl border ${cardBorder} mb-2 text-xs">
             <div class="flex justify-between items-start mb-2">
@@ -567,7 +584,6 @@ export function renderFaturas() {
     
     if (!pBody && !pMobile) return;
     
-    const hoje = new Date().toISOString().split('T')[0];
     const pendentes = (db.invoices_pending || []).sort((a,b) => new Date(a.vencimento) - new Date(b.vencimento));
 
     // --- COBRANÇAS EM ABERTO ---
@@ -579,7 +595,7 @@ export function renderFaturas() {
                 <td class="p-3 text-gray-400 uppercase">${inv.plano}</td>
                 <td class="p-3 text-white font-bold">R$ ${(inv.valor||0).toFixed(2)}</td>
                 <td class="p-3 text-right flex justify-end gap-2 whitespace-nowrap">
-                    <button onclick="openModalRenovar(${inv.id})" title="Receber" class="px-2 py-1.5 bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-white transition border border-green-500/20 rounded font-black text-[9px]"><i class="fas fa-check"></i></button>
+                    <button onclick="openModalRenovar(${inv.id})" title="Receber" class="px-2 py-1.5 bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-white transition border border-green-500/20 rounded font-black text-[9px]"><i class="fas fa-check mr-1"></i> PAGO</button>
                     <button onclick="window.excluirCobrancaPendente(${inv.id})" title="Excluir" class="px-2 py-1.5 bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white transition border border-red-500/20 rounded font-black text-[9px]"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`;
@@ -594,7 +610,7 @@ export function renderFaturas() {
                     <div class="text-right"><p class="text-xs font-black text-yellow-500">${inv.vencimento.split('-').reverse().join('/')}</p><p class="text-sm font-bold">R$ ${(inv.valor||0).toFixed(2)}</p></div>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="openModalRenovar(${inv.id})" class="flex-1 py-2 bg-green-600/20 text-green-500 rounded-xl font-bold text-[10px]">RECEBER</button>
+                    <button onclick="openModalRenovar(${inv.id})" class="flex-1 py-2 bg-green-600/20 text-green-500 rounded-xl font-bold text-[10px]"><i class="fas fa-check mr-1"></i> PAGO</button>
                     <button onclick="window.excluirCobrancaPendente(${inv.id})" class="px-4 py-2 bg-red-600/20 text-red-500 rounded-xl font-bold text-[10px]"><i class="fas fa-trash"></i></button>
                 </div>
             </div>`;
@@ -611,9 +627,9 @@ export function renderFaturas() {
             <td class="p-3 text-green-500 font-bold">R$ ${(f.valor || 0).toFixed(2)}</td>
             <td class="p-3 text-purple-400 font-bold">R$ ${(f.lucro || 0).toFixed(2)}</td>
             <td class="p-3 text-right flex justify-end gap-2 whitespace-nowrap">
-                <button onclick="window.openModalEditFatura(${f.id})" class="text-blue-400 hover:text-white transition bg-blue-500/10 p-2 rounded"><i class="fas fa-edit"></i></button>
-                <button onclick="deleteFatura(${f.id})" class="text-orange-500 hover:text-white transition bg-orange-500/10 p-2 rounded"><i class="fas fa-undo"></i></button>
-                <button onclick="window.excluirFaturaHistorico(${f.id})" class="text-red-500 hover:text-white transition bg-red-500/10 p-2 rounded"><i class="fas fa-trash"></i></button>
+                <button onclick="window.openModalEditFatura(${f.id})" title="Editar" class="text-blue-400 hover:text-white transition bg-blue-500/10 p-1.5 rounded"><i class="fas fa-edit mr-1"></i> Editar</button>
+                <button onclick="deleteFatura(${f.id})" title="Estornar" class="text-orange-500 hover:text-white transition bg-orange-500/10 p-1.5 rounded"><i class="fas fa-undo mr-1"></i> Estornar</button>
+                <button onclick="window.excluirFaturaHistorico(${f.id})" title="Excluir" class="text-red-500 hover:text-white transition bg-red-500/10 p-1.5 rounded"><i class="fas fa-trash mr-1"></i> Excluir</button>
             </td>
         </tr>`;
     }).join('') || '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Sem histórico.</td></tr>';
@@ -685,10 +701,10 @@ export function openModalClienteEdit(id) {
 }
 
 export function deleteCliente(id) {
-    if (confirm("Apagar este cliente?")) {
+    window.meuConfirm("Apagar Cliente", "Tem certeza que deseja apagar este cliente?", () => {
         db.clientes = db.clientes.filter(c => c.id != id);
         save(); renderClientes(); updateDashboard(); showNotify('Removido', 'Cliente apagado.');
-    }
+    });
 }
 
 export function openModalPlanoAdd() { document.getElementById('formPlano').reset(); document.getElementById('plan_edit_id').value = ""; document.getElementById('modalPlanoTitle').innerText = "Novo Plano"; openModal('modalPlano'); }
@@ -706,10 +722,10 @@ export function openModalPlanoEdit(id) {
 }
 
 export function deletePlano(id) {
-    if (confirm("Apagar este plano?")) {
+    window.meuConfirm("Apagar Plano", "Tem certeza que deseja apagar este plano?", () => {
         db.planos = db.planos.filter(p => p.id != id);
         save(); renderPlanos(); showNotify('Removido', 'Plano apagado.');
-    }
+    });
 }
 
 export function openModalAppAdd() { document.getElementById('formApp').reset(); document.getElementById('app_edit_id').value = ""; document.getElementById('modalAppTitle').innerText = "Novo App"; openModal('modalApp'); }
@@ -726,15 +742,11 @@ export function openModalAppEdit(id) {
 }
 
 export function deleteApp(id) {
-    if (confirm("Apagar esta aplicação?")) {
+    window.meuConfirm("Apagar App", "Tem certeza que deseja apagar esta aplicação?", () => {
         db.apps = db.apps.filter(a => a.id != id);
         save(); renderApps(); showNotify('Removido', 'Aplicação apagada.');
-    }
+    });
 }
-
-// ===============================================
-// SISTEMA DE PAGAMENTO E ESTORNO BLINDADO E EXATO
-// ===============================================
 
 export function openModalRenovar(id) {
     const inv = db.invoices_pending.find(i => i.id == id);
@@ -755,7 +767,6 @@ export function confirmarRenovacao() {
     const cli = db.clientes[cliIdx];
     const p = db.planos.find(pl => pl.id == cli.plano_id) || { valor: inv.valor, custo: 0, dias: 30 };
     
-    // GUARDA A FOTOGRAFIA EXATA DE ANTES DE RENOVAR PARA ESTORNO
     const vencimento_original_antes_de_pagar = cli.vencimento;
 
     let base = new Date(); 
@@ -766,13 +777,12 @@ export function confirmarRenovacao() {
     
     base.setDate(base.getDate() + parseInt(p.dias));
     
-    // Calcula a nova data para enviar no WhatsApp e salva
     const novoAno = base.getFullYear();
     const novoMes = String(base.getMonth() + 1).padStart(2, '0');
     const novoDia = String(base.getDate()).padStart(2, '0');
     const novaDataFormatadaBR = `${novoDia}/${novoMes}/${novoAno}`;
     
-    db.clientes[cliIdx].vencimento = `${novoAno}-${novoMes}-${novoDia}`;
+    db.clientes[cliIdx].vencimento = formatarDataBR_ISO(base);
     
     db.faturas.unshift({ 
         id: Date.now(), 
@@ -782,72 +792,70 @@ export function confirmarRenovacao() {
         valor: p.valor, 
         lucro: p.valor - p.custo, 
         dias_somados: p.dias,
-        vencimento_original: vencimento_original_antes_de_pagar // SALVO NA FATURA!
+        vencimento_original: vencimento_original_antes_de_pagar 
     });
     
     db.invoices_pending = db.invoices_pending.filter(i => i.id != id);
 
-    save(); 
-    closeModal('modalRenovar'); 
-    renderClientes(); 
-    renderFaturas(); 
-    updateDashboard(); 
-    showNotify('Pago!', 'Vencimento atualizado.');
-
-    // Adiciona o Delay para perguntar se quer enviar comprovante
+    save(); closeModal('modalRenovar'); renderClientes(); renderFaturas(); updateDashboard(); showNotify('Pago!', 'Vencimento atualizado.');
+    
+    // Pergunta de Notificação pós-pagamento
     setTimeout(() => {
         window.meuConfirm("Enviar Comprovante?", "Deseja notificar o cliente pelo WhatsApp com a nova data, usuário e senha?", () => {
-            const numZap = cli.whatsapp.replace(/\D/g, ''); // Limpa caracteres do número
+            const numZap = cli.whatsapp.replace(/\D/g, ''); 
             const texto = `✅ *Pagamento Confirmado!*\n\nOlá, *${cli.nome}*!\nSua assinatura foi renovada com sucesso.\n\n📅 *Novo Vencimento:* ${novaDataFormatadaBR}\n\n👤 *Usuário:* ${cli.usuario || 'Não informado'}\n🔑 *Senha:* ${cli.senha || 'Não informada'}\n\nObrigado pela preferência! 🚀`;
             
             const urlZap = `https://wa.me/55${numZap}?text=${encodeURIComponent(texto)}`;
             window.open(urlZap, '_blank');
         });
-    }, 400); // 400ms para a tela dar tempo de atualizar antes do pop-up
+    }, 400);
 }
 
 export function deleteFatura(fid) {
-    if (!confirm("Estornar pagamento? O vencimento voltará ao estado exato antes do pagamento e a fatura volta para o aberto.")) return;
-    const f = db.faturas.find(x => x.id == fid);
-    if (!f) return;
-    const cIdx = db.clientes.findIndex(c => c.id == f.cliId);
-    
-    if (cIdx !== -1) {
-        if (f.vencimento_original) {
-            db.clientes[cIdx].vencimento = f.vencimento_original;
-        } else {
-            let [y, m, d] = db.clientes[cIdx].vencimento.split('-').map(Number);
-            let dObj = new Date(y, m - 1, d, 12, 0, 0);
-            dObj.setDate(dObj.getDate() - parseInt(f.dias_somados || 30));
-            db.clientes[cIdx].vencimento = formatarDataBR_ISO(dObj);
-        }
+    window.meuConfirm("Estornar pagamento?", "O vencimento voltará ao estado exato antes do pagamento e a fatura volta para o aberto.", () => {
+        const f = db.faturas.find(x => x.id == fid);
+        if (!f) return;
+        const cIdx = db.clientes.findIndex(c => c.id == f.cliId);
+        
+        if (cIdx !== -1) {
+            if (f.vencimento_original) {
+                db.clientes[cIdx].vencimento = f.vencimento_original;
+            } else {
+                let [y, m, d] = db.clientes[cIdx].vencimento.split('-').map(Number);
+                let dObj = new Date(y, m - 1, d, 12, 0, 0);
+                dObj.setDate(dObj.getDate() - parseInt(f.dias_somados || 30));
+                db.clientes[cIdx].vencimento = formatarDataBR_ISO(dObj);
+            }
 
-        db.invoices_pending.push({
-            id: Date.now(),
-            cliId: f.cliId,
-            cliente: f.cliente,
-            plano: f.plano || "Plano Genérico",
-            vencimento: db.clientes[cIdx].vencimento,
-            valor: f.valor,
-            data_geracao: new Date().toLocaleDateString('pt-BR')
-        });
-    }
-    db.faturas = db.faturas.filter(x => x.id != fid); 
-    save(); renderFaturas(); updateDashboard(); renderClientes(); showNotify('Estornado', 'Vencimento revertido e cliente devolvido.');
+            db.invoices_pending.push({
+                id: Date.now(),
+                cliId: f.cliId,
+                cliente: f.cliente,
+                plano: f.plano || "Plano Genérico",
+                vencimento: db.clientes[cIdx].vencimento,
+                valor: f.valor,
+                data_geracao: new Date().toLocaleDateString('pt-BR')
+            });
+        }
+        db.faturas = db.faturas.filter(x => x.id != fid); 
+        save(); renderFaturas(); updateDashboard(); renderClientes(); showNotify('Estornado', 'Vencimento revertido e cliente devolvido.');
+    });
 }
 
 window.excluirCobrancaPendente = function(invId) {
-    if(!confirm("Deseja ignorar esta cobrança e apagá-la da lista de pendentes? O cliente continuará a existir mas não registrará pagamento neste ciclo.")) return;
-    db.invoices_pending = db.invoices_pending.filter(x => x.id != invId);
-    save(); renderFaturas(); updateDashboard();
-    showNotify('Apagado', 'Cobrança removida da lista.');
+    window.meuConfirm("Ignorar Cobrança?", "Deseja ignorar esta cobrança? O cliente continuará a existir mas não registrará pagamento neste ciclo.", () => {
+        db.invoices_pending = db.invoices_pending.filter(x => x.id != invId);
+        save(); renderFaturas(); updateDashboard();
+        showNotify('Apagado', 'Cobrança removida da lista.');
+    });
 };
 
 window.excluirFaturaHistorico = function(fid) {
-    if(!confirm("Excluir permanentemente do histórico? Isso NÃO altera o vencimento do cliente.")) return;
-    db.faturas = db.faturas.filter(x => x.id != fid);
-    save(); renderFaturas(); updateDashboard();
-    showNotify('Apagado', 'Removido do histórico.');
+    window.meuConfirm("Excluir do Histórico?", "Excluir permanentemente do histórico? Isso NÃO altera o vencimento do cliente.", () => {
+        db.faturas = db.faturas.filter(x => x.id != fid);
+        save(); renderFaturas(); updateDashboard();
+        showNotify('Apagado', 'Removido do histórico.');
+    });
 };
 
 window.openModalEditFatura = function(fid) {
@@ -944,44 +952,52 @@ window.dispararAlertaGeral = async function(tipoAlerta) {
         return diff >= -20;
     });
     if (ativos.length === 0) return;
-    if (!confirm(`Transmitir alerta para ${ativos.length} clientes ativos?`)) return;
+    
+    window.meuConfirm("Alerta Geral", `Transmitir alerta para ${ativos.length} clientes ativos?`, () => {
+        const miniBadge = document.getElementById('badgeProgressoFlutuante');
+        if (miniBadge) miniBadge.classList.remove('hidden');
 
-    const miniBadge = document.getElementById('badgeProgressoFlutuante');
-    if (miniBadge) miniBadge.classList.remove('hidden');
-
-    for (let i = 0; i < ativos.length; i++) {
-        if (window.cancelarDisparo) { showNotify("Cancelado", "Transmissão interrompida.", "warning"); break; }
-        const pct = Math.round(((i + 1) / ativos.length) * 100);
-        document.getElementById('progresso-texto-mini').innerText = `Aviso: ${ativos[i].nome} (${i+1}/${ativos.length})`;
-        document.getElementById('progresso-barra-mini').style.width = `${pct}%`;
-        document.getElementById('progresso-porcentagem-mini').innerText = `${pct}%`;
-        sendManualWA(ativos[i].id, tipoAlerta);
-        await new Promise(r => setTimeout(r, 3000));
-    }
-    if (miniBadge) miniBadge.classList.add('hidden');
-    if (!window.cancelarDisparo) showNotify("Concluído", "Alerta transmitido!");
+        (async function() {
+            for (let i = 0; i < ativos.length; i++) {
+                if (window.cancelarDisparo) { showNotify("Cancelado", "Transmissão interrompida.", "warning"); break; }
+                const pct = Math.round(((i + 1) / ativos.length) * 100);
+                document.getElementById('progresso-texto-mini').innerText = `Aviso: ${ativos[i].nome} (${i+1}/${ativos.length})`;
+                document.getElementById('progresso-barra-mini').style.width = `${pct}%`;
+                document.getElementById('progresso-porcentagem-mini').innerText = `${pct}%`;
+                sendManualWA(ativos[i].id, tipoAlerta);
+                await new Promise(r => setTimeout(r, 3000));
+            }
+            if (miniBadge) miniBadge.classList.add('hidden');
+            if (!window.cancelarDisparo) showNotify("Concluído", "Alerta transmitido!");
+        })();
+    });
 };
 
 window.dispararNotificacaoEmMassa = async function() {
     window.cancelarDisparo = false;
     const selecionados = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
     if (selecionados.length === 0) return;
-    const miniBadge = document.getElementById('badgeProgressoFlutuante');
-    if (miniBadge) miniBadge.classList.remove('hidden');
+    
+    window.meuConfirm("Cobrança em Massa", `Deseja notificar os ${selecionados.length} clientes selecionados?`, () => {
+        const miniBadge = document.getElementById('badgeProgressoFlutuante');
+        if (miniBadge) miniBadge.classList.remove('hidden');
 
-    for (let i = 0; i < selecionados.length; i++) {
-        if (window.cancelarDisparo) { showNotify("Cancelado", "Cobranças interrompidas.", "warning"); break; }
-        const cli = db.clientes.find(c => c.id == selecionados[i]);
-        const pct = Math.round(((i + 1) / selecionados.length) * 100);
-        document.getElementById('progresso-texto-mini').innerText = `Enviando: ${cli.nome} (${i+1}/${selecionados.length})`;
-        document.getElementById('progresso-barra-mini').style.width = `${pct}%`;
-        document.getElementById('progresso-porcentagem-mini').innerText = `${pct}%`;
-        sendManualWA(selecionados[i], 'renew');
-        await new Promise(r => setTimeout(r, 3000));
-    }
-    if (miniBadge) miniBadge.classList.add('hidden');
-    document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = false);
-    window.atualizarBarraAcoes();
+        (async function() {
+            for (let i = 0; i < selecionados.length; i++) {
+                if (window.cancelarDisparo) { showNotify("Cancelado", "Cobranças interrompidas.", "warning"); break; }
+                const cli = db.clientes.find(c => c.id == selecionados[i]);
+                const pct = Math.round(((i + 1) / selecionados.length) * 100);
+                document.getElementById('progresso-texto-mini').innerText = `Enviando: ${cli.nome} (${i+1}/${selecionados.length})`;
+                document.getElementById('progresso-barra-mini').style.width = `${pct}%`;
+                document.getElementById('progresso-porcentagem-mini').innerText = `${pct}%`;
+                sendManualWA(selecionados[i], 'renew');
+                await new Promise(r => setTimeout(r, 3000));
+            }
+            if (miniBadge) miniBadge.classList.add('hidden');
+            document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = false);
+            window.atualizarBarraAcoes();
+        })();
+    });
 };
 
 window.switchTab = switchTab;
