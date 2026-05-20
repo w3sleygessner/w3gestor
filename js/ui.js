@@ -407,12 +407,19 @@ export function renderClientes() {
         let rCls = isInadimplente ? 'row-inadimplente' : (isOverdue ? 'row-overdue' : (isWarning ? 'row-warning' : ''));
 
         // Substituição do botão "PAGO" por "GERAR FATURA"
-        tableBody.innerHTML += `<tr class="border-t border-gray-800/50 text-xs hover:bg-white/5 ${rCls}">
+       tableBody.innerHTML += `<tr class="border-t border-gray-800/50 text-xs hover:bg-white/5 ${rCls}">
             <td class="p-2.5 text-center w-10"><input type="checkbox" class="client-checkbox" value="${cli.id}" onchange="window.atualizarBarraAcoes()"></td>
             <td class="p-2.5 font-bold text-white uppercase">${cli.nome}</td>
             <td class="p-2.5 uppercase text-[10px] text-gray-400">${p.nome}<br><span class="text-purple-400 font-bold">${app.nome}</span></td>
             <td class="p-2.5 text-center font-bold ${isOverdue ? 'text-red-500' : (isWarning ? 'text-yellow-500' : 'text-green-500')}">${cli.vencimento.split('-').reverse().join('/')}</td>
             <td class="p-2.5 text-center font-mono text-gray-400">${cli.whatsapp}</td>
+            <td class="p-2.5 text-center">
+                <div class="flex items-center justify-center gap-3">
+                    <button onclick="sendManualWA(${cli.id}, 'renew')" class="text-purple-400 hover:scale-110 transition" title="Cobrar"><i class="fas fa-redo"></i></button>
+                    <button onclick="sendManualWA(${cli.id}, 'welcome')" class="text-green-500 hover:scale-110 transition" title="Boas Vindas"><i class="fas fa-star"></i></button>
+                    <button onclick="sendManualWA(${cli.id}, 'suspended')" class="text-red-500 hover:scale-110 transition" title="Suspensão"><i class="fas fa-ban"></i></button>
+                </div>
+            </td>
             <td class="p-2.5 text-right space-x-1 whitespace-nowrap">
                 <button onclick="openModalHistory(${cli.id})" title="Histórico" class="text-blue-400 hover:bg-blue-500/20 hover:text-white p-1.5 rounded transition"><i class="fas fa-history"></i></button>
                 <button onclick="copyFullAccess(${cli.id})" title="Copiar Acesso" class="text-purple-400 hover:bg-purple-500/20 hover:text-white p-1.5 rounded transition"><i class="fas fa-copy"></i></button>
@@ -758,7 +765,14 @@ export function confirmarRenovacao() {
     if (vAtual > base) base = vAtual;
     
     base.setDate(base.getDate() + parseInt(p.dias));
-    db.clientes[cliIdx].vencimento = formatarDataBR_ISO(base);
+    
+    // Calcula a nova data para enviar no WhatsApp e salva
+    const novoAno = base.getFullYear();
+    const novoMes = String(base.getMonth() + 1).padStart(2, '0');
+    const novoDia = String(base.getDate()).padStart(2, '0');
+    const novaDataFormatadaBR = `${novoDia}/${novoMes}/${novoAno}`;
+    
+    db.clientes[cliIdx].vencimento = `${novoAno}-${novoMes}-${novoDia}`;
     
     db.faturas.unshift({ 
         id: Date.now(), 
@@ -773,7 +787,23 @@ export function confirmarRenovacao() {
     
     db.invoices_pending = db.invoices_pending.filter(i => i.id != id);
 
-    save(); closeModal('modalRenovar'); renderClientes(); renderFaturas(); updateDashboard(); showNotify('Pago!', 'Vencimento atualizado.');
+    save(); 
+    closeModal('modalRenovar'); 
+    renderClientes(); 
+    renderFaturas(); 
+    updateDashboard(); 
+    showNotify('Pago!', 'Vencimento atualizado.');
+
+    // Adiciona o Delay para perguntar se quer enviar comprovante
+    setTimeout(() => {
+        window.meuConfirm("Enviar Comprovante?", "Deseja notificar o cliente pelo WhatsApp com a nova data, usuário e senha?", () => {
+            const numZap = cli.whatsapp.replace(/\D/g, ''); // Limpa caracteres do número
+            const texto = `✅ *Pagamento Confirmado!*\n\nOlá, *${cli.nome}*!\nSua assinatura foi renovada com sucesso.\n\n📅 *Novo Vencimento:* ${novaDataFormatadaBR}\n\n👤 *Usuário:* ${cli.usuario || 'Não informado'}\n🔑 *Senha:* ${cli.senha || 'Não informada'}\n\nObrigado pela preferência! 🚀`;
+            
+            const urlZap = `https://wa.me/55${numZap}?text=${encodeURIComponent(texto)}`;
+            window.open(urlZap, '_blank');
+        });
+    }, 400); // 400ms para a tela dar tempo de atualizar antes do pop-up
 }
 
 export function deleteFatura(fid) {
