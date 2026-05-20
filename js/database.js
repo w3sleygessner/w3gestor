@@ -2,12 +2,13 @@ import { ref, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-da
 import { auth, db_firebase } from "./firebase-config.js";
 import { updateDashboard } from "./ui.js";
 
-// Objeto global de dados (Adicionado campo email)
+// Objeto global de dados
 export let db = { 
     email: "",
     clientes: [], 
     planos: [], 
     faturas: [], 
+    invoices_pending: [], // Nova área de pendentes
     apps: [], 
     config: { 
         aviso_dias: 3,
@@ -21,21 +22,22 @@ export let db = {
 
 export function setDb(data) {
     db.email = data.email || (auth.currentUser ? auth.currentUser.email : "");
-    db.clientes = data.clientes || [];
-    db.faturas = data.faturas || [];
+    db.clientes = data.clientes ? Object.values(data.clientes) : [];
+    db.faturas = data.faturas ? Object.values(data.faturas) : [];
+    db.invoices_pending = data.invoices_pending ? Object.values(data.invoices_pending) : [];
     db.config = data.config || db.config;
     db.account = data.account || db.account;
 
     if (!data.planos || data.planos.length === 0) {
         db.planos = [{ id: 1, nome: 'Mensal Gold', valor: 30.00, custo: 7.00, dias: 30 }];
     } else {
-        db.planos = data.planos;
+        db.planos = Object.values(data.planos);
     }
 
     if (!data.apps || data.apps.length === 0) {
         db.apps = [{ id: 101, nome: "XCIPTV", url: "http://adonay.top", pin: "0000" }];
     } else {
-        db.apps = data.apps;
+        db.apps = Object.values(data.apps);
     }
     
     window.db = db; 
@@ -44,7 +46,6 @@ export function setDb(data) {
 export function save() {
     const user = auth.currentUser;
     if (user) {
-        // PULO DO GATO: Garante que o e-mail atual do login esteja dentro do pacote antes de salvar
         db.email = user.email;
 
         set(ref(db_firebase, 'usuarios/' + user.uid), db)
@@ -76,7 +77,7 @@ window.importarSistema = function(event) {
         try {
             const backupValido = JSON.parse(e.target.result);
             if (!backupValido.clientes) {
-                showNotify("Erro: Arquivo JSON inválido.");
+                if(window.showNotify) window.showNotify("Erro", "Arquivo JSON inválido.");
                 return;
             }
             if (confirm(`Atenção: Deseja importar este backup?`)) {
@@ -85,7 +86,7 @@ window.importarSistema = function(event) {
                 location.reload();
             }
         } catch (err) {
-            showNotify("Erro ao ler o arquivo de backup.");
+            if(window.showNotify) window.showNotify("Erro", "Erro ao ler o arquivo de backup.");
         }
     };
     reader.readAsText(file);

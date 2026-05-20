@@ -9,6 +9,7 @@ import * as ADMIN from "./admin.js";
 Object.assign(window, UI);
 Object.assign(window, API);
 Object.assign(window, ADMIN);
+window.carregarAssinantes = ADMIN.carregarAssinantes; // Vincula a função do admin
 window.db = db;
 window.save = save;
 
@@ -57,7 +58,7 @@ onAuthStateChanged(auth, (currentUser) => {
                     msg_renovacao: "Olá {cliente}, seu plano {plano} vence em {dias} dias ({vencimento}). Vamos renovar?",
                     msg_sucesso: "Obrigado pelo pagamento, {cliente}! Seu acesso foi renovado com sucesso.",
                     msg_suspensa: "Olá {cliente}, seu acesso venceu em {vencimento} e foi suspenso. Para reativar, entre em contato.",
-                    msg_oscilacao: "⚠️ *Aviso de Instabilidade*\n\nOlá {cliente}, identificamos uma instabilidade no servidor do app {app}. Nossa equipa já está a atuar para normalizar.",
+                    msg_oscilacao: "⚠️ *Aviso de Instabilidade*\n\nOlá {cliente}, identificamos uma instabilidade no servidor do app {app}. Nossa equipe já está atuando para normalizar.",
                     msg_manutencao: "🔧 *Aviso de Manutenção*\n\nOlá {cliente}, o servidor do app {app} entrará em manutenção programada em breve para melhorias de estabilidade."
                 };
 
@@ -89,12 +90,15 @@ onAuthStateChanged(auth, (currentUser) => {
                 const navAdmin = document.getElementById('nav-admin');
                 if (currentUser.email === MEU_EMAIL_ADMIN && navAdmin) {
                     navAdmin.classList.remove('hidden');
+                    // 🔥 CORREÇÃO DO BUG DO F5 (Recarrega os usuários na hora)
+                    if (window.carregarAssinantes) window.carregarAssinantes();
                 }
 
                 const precisaPersistirPadroes = !data.planos || !data.apps || !data.config;
 
                 setDb({
                     clientes: data.clientes || [],
+                    invoices_pending: data.invoices_pending || [],
                     planos: data.planos && data.planos.length > 0 ? data.planos : planosPadrao,
                     faturas: data.faturas || [],
                     apps: data.apps && data.apps.length > 0 ? data.apps : appsPadrao,
@@ -320,42 +324,4 @@ window.excluirEmMassa = function() {
         window.atualizarBarraAcoes();
         UI.updateDashboard();
     }
-};
-
-window.exportarSistema = function() {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(window.db));
-    const dlAnchor = document.createElement('a');
-    const dataAtual = new Date().toLocaleDateString().replace(/\//g, '-');
-    
-    dlAnchor.setAttribute("href", dataStr);
-    dlAnchor.setAttribute("download", `w3gestor_backup_${dataAtual}.json`);
-    document.body.appendChild(dlAnchor);
-    dlAnchor.click();
-    dlAnchor.remove();
-    UI.showNotify("Backup", "Download do arquivo iniciado!", "success");
-};
-
-window.importarSistema = function(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const backupValido = JSON.parse(e.target.result);
-            if (!backupValido.clientes) {
-                UI.showNotify("Erro na Importação", "Arquivo JSON inválido ou corrompido.", "error");
-                return;
-            }
-
-            if (confirm(`Atenção: Deseja restaurar este backup contendo ${backupValido.clientes.length} clientes?`)) {
-                setDb(backupValido);
-                save();
-                location.reload();
-            }
-        } catch (err) {
-            UI.showNotify("Erro", "Falha ao processar o arquivo de backup.", "error");
-        }
-    };
-    reader.readAsText(file);
 };

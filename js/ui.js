@@ -4,8 +4,13 @@ import { sendManualWA } from "./api.js";
 export let isRegisterMode = false;
 let financeChart;
 let appsDonutChart;
+let planosDonutChart; 
 
-// EXPORTS NAVEGAÇÃO / MODAIS
+// Helper para formatar a data blindada
+function formatarDataBR_ISO(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export function openModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
 export function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
 export function checkCustomDays(v) { const el = document.getElementById('plan_dias_custom'); if (el) el.classList.toggle('hidden', v !== 'custom'); }
@@ -96,12 +101,52 @@ export function alternarAbasAuth(irParaCadastro) {
 
 export function initApp() {
     renderPlanos(); renderApps(); renderClientes(); renderFaturas(); updateDashboard(); renderConfig();
+    gerarFaturasAutomaticas();
+
     const inputWhatsapp = document.getElementById('cli_whatsapp');
     if (inputWhatsapp) {
         inputWhatsapp.addEventListener('input', (e) => {
             let x = e.target.value.replace(/\D/g, '').match(/(\d{0,2})(\d{0,5})(\d{0,4})/);
             e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
         });
+    }
+}
+
+// 💡 Automação da Régua: Joga para pendentes automaticamente
+export function gerarFaturasAutomaticas() {
+    if (!db.invoices_pending) db.invoices_pending = [];
+    
+    const hojeObj = new Date();
+    hojeObj.setHours(0,0,0,0);
+    let gerouAlgo = false;
+
+    db.clientes.forEach(cli => {
+        const [y, m, d] = cli.vencimento.split('-').map(Number);
+        const cliVencObj = new Date(y, m - 1, d, 12, 0, 0);
+        
+        const diffDias = Math.ceil((cliVencObj.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (diffDias <= (db.config.aviso_dias || 3)) {
+            const jaTem = db.invoices_pending.find(i => i.cliId == cli.id && i.vencimento === cli.vencimento);
+            if (!jaTem) {
+                const plano = db.planos.find(p => p.id == cli.plano_id) || { valor: 0, nome: 'Plano' };
+                db.invoices_pending.push({
+                    id: Date.now() + Math.floor(Math.random() * 10000),
+                    cliId: cli.id,
+                    cliente: cli.nome,
+                    plano: plano.nome,
+                    vencimento: cli.vencimento,
+                    valor: plano.valor,
+                    data_geracao: new Date().toLocaleDateString('pt-BR')
+                });
+                gerouAlgo = true;
+            }
+        }
+    });
+
+    if (gerouAlgo) {
+        save();
+        renderFaturas();
     }
 }
 
@@ -144,7 +189,7 @@ export function updateDashboard() {
                         </div>
                     </div>
                     <div class="flex gap-1 shrink-0">
-                        <button onclick="openModalRenovar(${cli.id})" class="w-7 h-7 flex items-center justify-center bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg text-xs hover:bg-green-500 hover:text-white transition"><i class="fas fa-check-circle"></i></button>
+                        <button onclick="gerarFaturaManual(${cli.id})" title="Gerar Fatura" class="w-7 h-7 flex items-center justify-center bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-lg text-xs hover:bg-yellow-500 hover:text-black transition"><i class="fas fa-file-invoice-dollar"></i></button>
                         <button onclick="sendManualWA(${cli.id}, 'renew')" class="w-7 h-7 flex items-center justify-center bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg text-xs hover:bg-purple-500 hover:text-white transition"><i class="fab fa-whatsapp"></i></button>
                     </div>
                 </div>`;
@@ -155,6 +200,7 @@ export function updateDashboard() {
         }
         renderChartEvolucao();
         renderChartAppsDonut();
+        renderChartPlanosDonut();
     }
 }
 
@@ -170,7 +216,8 @@ export function renderChartEvolucao() {
         stroke: { curve: 'smooth', width: 2.5 },
         colors: ['#a855f7'],
         fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.3, opacityTo: 0.02 } },
-        xaxis: { categories: dadosRecentes.map(f => f.data_pgto ? f.data_pgto.slice(0, 5) : "") }
+        xaxis: { categories: dadosRecentes.map(f => f.data_pgto ? f.data_pgto.slice(0, 5) : "") },
+        dataLabels: { enabled: false }
     };
     if (financeChart) financeChart.destroy();
     financeChart = new ApexCharts(el, options);
@@ -189,10 +236,18 @@ export function renderChartAppsDonut() {
         if (appObj) contagem[appObj.nome] = (contagem[appObj.nome] || 0) + 1;
     });
 
+    const labelsArray = Object.keys(contagem).length > 0 ? Object.keys(contagem) : ["Sem Clientes"];
     const options = {
         series: Object.values(contagem).length > 0 ? Object.values(contagem) : [0],
-        labels: Object.keys(contagem).length > 0 ? Object.keys(contagem) : ["Sem Clientes"],
-        chart: { type: 'donut', height: '100%', background: 'transparent' },
+        labels: labelsArray,
+        chart: { 
+            type: 'donut', height: '100%', background: 'transparent',
+            events: {
+                dataPointSelection: function(event, chartContext, config) {
+                    window.abrirModalFiltroGrafico('app', labelsArray[config.dataPointIndex]);
+                }
+            }
+        },
         theme: { mode: 'dark' },
         colors: ['#a855f7', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
         stroke: { show: false },
@@ -203,6 +258,74 @@ export function renderChartAppsDonut() {
     if (appsDonutChart) appsDonutChart.destroy();
     appsDonutChart = new ApexCharts(el, options);
     appsDonutChart.render();
+}
+
+export function renderChartPlanosDonut() {
+    const el = document.querySelector("#chart-planos-donut");
+    if (!el || !window.ApexCharts) return;
+    const clientes = db.clientes || [];
+    const planos = db.planos || [];
+    const contagem = {};
+    planos.forEach(p => { contagem[p.nome] = 0; });
+    clientes.forEach(c => {
+        const pObj = planos.find(p => p.id == c.plano_id);
+        if (pObj) contagem[pObj.nome] = (contagem[pObj.nome] || 0) + 1;
+    });
+
+    const labelsArray = Object.keys(contagem).length > 0 ? Object.keys(contagem) : ["Sem Clientes"];
+    const options = {
+        series: Object.values(contagem).length > 0 ? Object.values(contagem) : [0],
+        labels: labelsArray,
+        chart: { 
+            type: 'donut', height: '100%', background: 'transparent',
+            events: {
+                dataPointSelection: function(event, chartContext, config) {
+                    window.abrirModalFiltroGrafico('plano', labelsArray[config.dataPointIndex]);
+                }
+            }
+        },
+        theme: { mode: 'dark' },
+        colors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#a855f7'],
+        stroke: { show: false },
+        legend: { position: 'right', fontSize: '10px', labels: { colors: '#9ca3af' } },
+        dataLabels: { enabled: false }
+    };
+
+    if (planosDonutChart) planosDonutChart.destroy();
+    planosDonutChart = new ApexCharts(el, options);
+    planosDonutChart.render();
+}
+
+// 💡 Botão Manual: Envia o cliente para "Cobranças em Aberto"
+export function gerarFaturaManual(cliId) {
+    const cli = db.clientes.find(c => c.id == cliId);
+    if (!cli) return;
+    
+    const plano = db.planos.find(p => p.id == cli.plano_id) || { valor: 0, nome: "Plano Genérico" };
+    
+    if (!db.invoices_pending) db.invoices_pending = [];
+
+    const jaTem = db.invoices_pending.find(i => i.cliId == cli.id && i.vencimento === cli.vencimento);
+    if (jaTem) {
+        showNotify('Aviso', 'A fatura para este cliente já está nas Cobranças em Aberto.', 'warning');
+        switchTab('faturas');
+        return;
+    }
+
+    db.invoices_pending.push({
+        id: Date.now() + Math.floor(Math.random() * 10000),
+        cliId: cli.id,
+        cliente: cli.nome,
+        plano: plano.nome,
+        vencimento: cli.vencimento,
+        valor: plano.valor,
+        data_geracao: new Date().toLocaleDateString('pt-BR')
+    });
+
+    save();
+    renderFaturas();
+    showNotify('Sucesso', 'Fatura gerada com sucesso! Movendo para o Caixa.');
+    switchTab('faturas');
 }
 
 export function renderClientes() {
@@ -265,7 +388,6 @@ export function renderClientes() {
 
         // Se o checkbox Inadimplente estiver desmarcado e o cliente for inadimplente, oculta.
         if (!iF && isInadimplente) return;
-
         if (nF && !cli.nome.toLowerCase().includes(nF)) return;
         if (aF && cli.app_id != aF) return;
         if (pF && cli.plano_id != pF) return;
@@ -284,24 +406,18 @@ export function renderClientes() {
 
         let rCls = isInadimplente ? 'row-inadimplente' : (isOverdue ? 'row-overdue' : (isWarning ? 'row-warning' : ''));
 
+        // Substituição do botão "PAGO" por "GERAR FATURA"
         tableBody.innerHTML += `<tr class="border-t border-gray-800/50 text-xs hover:bg-white/5 ${rCls}">
             <td class="p-2.5 text-center w-10"><input type="checkbox" class="client-checkbox" value="${cli.id}" onchange="window.atualizarBarraAcoes()"></td>
             <td class="p-2.5 font-bold text-white uppercase">${cli.nome}</td>
             <td class="p-2.5 uppercase text-[10px] text-gray-400">${p.nome}<br><span class="text-purple-400 font-bold">${app.nome}</span></td>
             <td class="p-2.5 text-center font-bold ${isOverdue ? 'text-red-500' : (isWarning ? 'text-yellow-500' : 'text-green-500')}">${cli.vencimento.split('-').reverse().join('/')}</td>
             <td class="p-2.5 text-center font-mono text-gray-400">${cli.whatsapp}</td>
-            <td class="p-2.5 text-center">
-                <div class="flex items-center justify-center gap-3">
-                    <button onclick="sendManualWA(${cli.id}, 'renew')" class="text-purple-400 hover:scale-110 transition"><i class="fas fa-redo"></i></button>
-                    <button onclick="sendManualWA(${cli.id}, 'welcome')" class="text-green-500 hover:scale-110 transition"><i class="fas fa-star"></i></button>
-                    <button onclick="sendManualWA(${cli.id}, 'suspended')" class="text-red-500 hover:scale-110 transition"><i class="fas fa-ban"></i></button>
-                </div>
-            </td>
             <td class="p-2.5 text-right space-x-1 whitespace-nowrap">
                 <button onclick="openModalHistory(${cli.id})" title="Histórico" class="text-blue-400 hover:bg-blue-500/20 hover:text-white p-1.5 rounded transition"><i class="fas fa-history"></i></button>
                 <button onclick="copyFullAccess(${cli.id})" title="Copiar Acesso" class="text-purple-400 hover:bg-purple-500/20 hover:text-white p-1.5 rounded transition"><i class="fas fa-copy"></i></button>
                 <button onclick="addThreeDays(${cli.id})" title="+3 Dias Extras" class="text-purple-400 hover:bg-purple-500/20 hover:text-white p-1.5 rounded font-bold transition">+3</button>
-                <button onclick="openModalRenovar(${cli.id})" class="px-2 py-1 ml-1 bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-white rounded text-[9px] font-black transition">PAGO</button>
+                <button onclick="gerarFaturaManual(${cli.id})" title="Gerar Fatura" class="px-2 py-1 ml-1 bg-yellow-600/20 text-yellow-500 hover:bg-yellow-600 hover:text-black rounded text-[9px] font-black transition">GERAR FATURA</button>
                 <button onclick="openModalClienteEdit(${cli.id})" title="Editar" class="text-gray-500 hover:bg-white/10 hover:text-white p-1.5 rounded transition ml-1"><i class="fas fa-edit"></i></button>
                 <button onclick="deleteCliente(${cli.id})" title="Excluir" class="text-gray-700 hover:bg-red-500/20 hover:text-red-500 p-1.5 rounded transition"><i class="fas fa-trash"></i></button>
             </td>
@@ -310,6 +426,7 @@ export function renderClientes() {
         let cardBorder = isInadimplente ? 'border-purple-500/20 bg-purple-950/5' : (isOverdue ? 'border-red-500/20 bg-red-950/5' : 'border-white/5 bg-[#16162d]');
         let statusBadge = isInadimplente ? '<span class="text-purple-400">Inadimplente</span>' : (isOverdue ? '<span class="text-red-400">Atrasado</span>' : '<span class="text-green-400">Ativo</span>');
 
+        // Substituição do botão "PAGO" por "GERAR FATURA"
         mobileContainer.innerHTML += `
         <div class="card p-3 rounded-xl border ${cardBorder} mb-2 text-xs">
             <div class="flex justify-between items-start mb-2">
@@ -321,10 +438,9 @@ export function renderClientes() {
                 <span class="text-[10px] text-purple-400 uppercase font-bold truncate max-w-[100px]">${p.nome}</span>
                 <div class="flex gap-2">
                     <button onclick="openModalHistory(${cli.id})" class="text-blue-400 hover:scale-110 p-1"><i class="fas fa-history"></i></button>
-                    <button onclick="sendManualWA(${cli.id}, 'renew')" class="text-purple-400 hover:scale-110 p-1"><i class="fab fa-whatsapp"></i></button>
                     <button onclick="addThreeDays(${cli.id})" class="text-purple-400 font-bold hover:scale-110 p-1">+3</button>
                     <button onclick="openModalClienteEdit(${cli.id})" class="text-gray-400 hover:scale-110 p-1"><i class="fas fa-edit"></i></button>
-                    <button onclick="openModalRenovar(${cli.id})" class="bg-green-600/20 text-green-500 px-2 py-0.5 rounded font-bold hover:bg-green-600 hover:text-white transition">PAGO</button>
+                    <button onclick="gerarFaturaManual(${cli.id})" class="bg-yellow-600/20 text-yellow-500 px-2 py-0.5 rounded font-bold hover:bg-yellow-600 hover:text-black transition">GERAR FATURA</button>
                 </div>
             </div>
         </div>`;
@@ -364,9 +480,10 @@ export function addThreeDays(id) {
         if (!db.clientes[idx].historico_dias) db.clientes[idx].historico_dias = [];
         db.clientes[idx].historico_dias.unshift({ data: new Date().toLocaleDateString(), dias: 3 });
 
-        let d = new Date(db.clientes[idx].vencimento);
-        d.setDate(d.getDate() + 3);
-        db.clientes[idx].vencimento = d.toISOString().split('T')[0];
+        let [y, m, d] = db.clientes[idx].vencimento.split('-').map(Number);
+        let base = new Date(y, m - 1, d, 12, 0, 0);
+        base.setDate(base.getDate() + 3);
+        db.clientes[idx].vencimento = formatarDataBR_ISO(base);
         save();
         renderClientes();
         showNotify('+3 Dias', 'Vencimento adiado em 3 dias.');
@@ -439,31 +556,38 @@ export function renderFaturas() {
     const pBody = document.getElementById('table-faturas-pendentes-body');
     const hBody = document.getElementById('table-faturas-body');
     if (!pBody || !hBody) return;
+    
     const hoje = new Date().toISOString().split('T')[0];
-    const pendentes = (db.clientes || []).filter(c => c.vencimento <= hoje).sort((a, b) => new Date(b.vencimento) - new Date(a.vencimento));
+    const pendentes = (db.invoices_pending || []).sort((a,b) => new Date(a.vencimento) - new Date(b.vencimento));
 
-    pBody.innerHTML = pendentes.map(cli => {
-        const plano = db.planos.find(p => p.id == cli.plano_id) || { nome: 'N/A', valor: 0 };
-        return `<tr class="border-t border-gray-800 text-xs">
-            <td class="p-3 font-bold text-red-400">${cli.vencimento.split('-').reverse().join('/')}</td>
-            <td class="p-3 text-white uppercase font-bold">${cli.nome}</td>
-            <td class="p-3 text-gray-400 uppercase">${plano.nome}</td>
-            <td class="p-3 text-white">R$ ${plano.valor.toFixed(2)}</td>
-            <td class="p-3 text-right"><button onclick="openModalRenovar(${cli.id})" class="px-2 py-0.5 bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-white transition border border-green-500/20 rounded font-black text-[9px]">RECEBER</button></td>
+    pBody.innerHTML = pendentes.map(inv => {
+        return `<tr class="border-t border-gray-800 text-xs hover:bg-white/5">
+            <td class="p-3 font-bold text-yellow-400">${inv.vencimento.split('-').reverse().join('/')}</td>
+            <td class="p-3 text-white uppercase font-bold">${inv.cliente}</td>
+            <td class="p-3 text-gray-400 uppercase">${inv.plano}</td>
+            <td class="p-3 text-white font-bold">R$ ${(inv.valor||0).toFixed(2)}</td>
+            <td class="p-3 text-right flex justify-end gap-2 whitespace-nowrap">
+                <button onclick="openModalRenovar(${inv.id})" title="Confirmar Pagamento" class="px-2 py-1 bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-white transition border border-green-500/20 rounded font-black text-[9px]"><i class="fas fa-check"></i> PAGO</button>
+                <button onclick="window.excluirCobrancaPendente(${inv.id})" title="Excluir/Ignorar Cobrança" class="px-2 py-1 bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white transition border border-red-500/20 rounded font-black text-[9px]"><i class="fas fa-trash"></i></button>
+            </td>
         </tr>`;
-    }).join('') || '<tr><td colspan="5" class="p-3 text-center text-gray-500">Nenhuma fatura em aberto.</td></tr>';
+    }).join('') || '<tr><td colspan="5" class="p-3 text-center text-gray-500 italic">Nenhuma fatura em aberto.</td></tr>';
 
     let totalLucro = 0;
     hBody.innerHTML = (db.faturas || []).map(f => {
         totalLucro += (f.lucro || 0);
-        return `<tr class="border-t border-gray-800 text-[10px]">
+        return `<tr class="border-t border-gray-800 text-[10px] hover:bg-white/5">
             <td class="p-3 text-gray-500">${f.data_pgto}</td>
             <td class="p-3 font-bold text-white uppercase">${f.cliente}</td>
             <td class="p-3 text-green-500 font-bold">R$ ${(f.valor || 0).toFixed(2)}</td>
             <td class="p-3 text-purple-400 font-bold">R$ ${(f.lucro || 0).toFixed(2)}</td>
-            <td class="p-3 text-right"><button onclick="deleteFatura(${f.id})" class="text-gray-600 hover:text-red-500 transition"><i class="fas fa-undo"></i> Estornar</button></td>
+            <td class="p-3 text-right flex justify-end gap-2 whitespace-nowrap">
+                <button onclick="window.openModalEditFatura(${f.id})" title="Editar Data" class="text-blue-400 hover:text-white transition bg-blue-500/10 p-1.5 rounded"><i class="fas fa-edit"></i></button>
+                <button onclick="deleteFatura(${f.id})" title="Estornar Pagamento e Reverter Vencimento" class="text-orange-500 hover:text-white transition bg-orange-500/10 p-1.5 rounded"><i class="fas fa-undo"></i> Estornar</button>
+                <button onclick="window.excluirFaturaHistorico(${f.id})" title="Excluir do Histórico Permanentemente" class="text-red-500 hover:text-white transition bg-red-500/10 p-1.5 rounded"><i class="fas fa-trash"></i></button>
+            </td>
         </tr>`;
-    }).join('') || '<tr><td colspan="5" class="p-3 text-center text-gray-500">Sem histórico de pagamentos.</td></tr>';
+    }).join('') || '<tr><td colspan="5" class="p-3 text-center text-gray-500 italic">Sem histórico de pagamentos.</td></tr>';
 
     if (document.getElementById('fatura-total-lucro')) document.getElementById('fatura-total-lucro').innerText = `R$ ${totalLucro.toFixed(2)}`;
 }
@@ -563,38 +687,156 @@ export function deleteApp(id) {
     }
 }
 
+// ===============================================
+// SISTEMA DE PAGAMENTO E ESTORNO BLINDADO E EXATO
+// ===============================================
+
 export function openModalRenovar(id) {
-    const cli = db.clientes.find(c => c.id == id);
-    const p = db.planos.find(pl => pl.id == cli.plano_id) || { valor: 0 };
+    const inv = db.invoices_pending.find(i => i.id == id);
+    if (!inv) return;
     document.getElementById('renovar-cli-id').value = id;
-    document.getElementById('renovar-info').innerText = `Marcar R$ ${p.valor.toFixed(2)} pagos por ${cli.nome}?`;
+    document.getElementById('renovar-info').innerText = `Marcar R$ ${inv.valor.toFixed(2)} pagos por ${inv.cliente}?`;
     openModal('modalRenovar');
 }
 
 export function confirmarRenovacao() {
     const id = document.getElementById('renovar-cli-id').value;
-    const cliIdx = db.clientes.findIndex(c => c.id == id);
+    const inv = db.invoices_pending.find(i => i.id == id);
+    if (!inv) return;
+
+    const cliIdx = db.clientes.findIndex(c => c.id == inv.cliId);
+    if (cliIdx === -1) return;
+    
     const cli = db.clientes[cliIdx];
-    const p = db.planos.find(pl => pl.id == cli.plano_id);
-    let base = new Date(); const vAtual = new Date(cli.vencimento);
+    const p = db.planos.find(pl => pl.id == cli.plano_id) || { valor: inv.valor, custo: 0, dias: 30 };
+    
+    // GUARDA A FOTOGRAFIA EXATA DE ANTES DE RENOVAR PARA ESTORNO
+    const vencimento_original_antes_de_pagar = cli.vencimento;
+
+    let base = new Date(); 
+    let [y, m, d] = cli.vencimento.split('-').map(Number);
+    let vAtual = new Date(y, m - 1, d, 12, 0, 0); 
+    
     if (vAtual > base) base = vAtual;
+    
     base.setDate(base.getDate() + parseInt(p.dias));
-    db.clientes[cliIdx].vencimento = base.toISOString().split('T')[0];
-    db.faturas.unshift({ id: Date.now(), cliId: cli.id, data_pgto: new Date().toLocaleDateString(), cliente: cli.nome, valor: p.valor, lucro: p.valor - p.custo, dias_somados: p.dias });
+    db.clientes[cliIdx].vencimento = formatarDataBR_ISO(base);
+    
+    db.faturas.unshift({ 
+        id: Date.now(), 
+        cliId: cli.id, 
+        data_pgto: new Date().toLocaleDateString('pt-BR'), 
+        cliente: cli.nome, 
+        valor: p.valor, 
+        lucro: p.valor - p.custo, 
+        dias_somados: p.dias,
+        vencimento_original: vencimento_original_antes_de_pagar // SALVO NA FATURA!
+    });
+    
+    db.invoices_pending = db.invoices_pending.filter(i => i.id != id);
+
     save(); closeModal('modalRenovar'); renderClientes(); renderFaturas(); updateDashboard(); showNotify('Pago!', 'Vencimento atualizado.');
 }
 
 export function deleteFatura(fid) {
-    if (!confirm("Estornar pagamento? O vencimento voltará ao anterior.")) return;
+    if (!confirm("Estornar pagamento? O vencimento voltará ao estado exato antes do pagamento e a fatura volta para o aberto.")) return;
     const f = db.faturas.find(x => x.id == fid);
+    if (!f) return;
     const cIdx = db.clientes.findIndex(c => c.id == f.cliId);
+    
     if (cIdx !== -1) {
-        let d = new Date(db.clientes[cIdx].vencimento);
-        d.setDate(d.getDate() - parseInt(f.dias_somados));
-        db.clientes[cIdx].vencimento = d.toISOString().split('T')[0];
+        if (f.vencimento_original) {
+            db.clientes[cIdx].vencimento = f.vencimento_original;
+        } else {
+            let [y, m, d] = db.clientes[cIdx].vencimento.split('-').map(Number);
+            let dObj = new Date(y, m - 1, d, 12, 0, 0);
+            dObj.setDate(dObj.getDate() - parseInt(f.dias_somados || 30));
+            db.clientes[cIdx].vencimento = formatarDataBR_ISO(dObj);
+        }
+
+        db.invoices_pending.push({
+            id: Date.now(),
+            cliId: f.cliId,
+            cliente: f.cliente,
+            plano: f.plano || "Plano Genérico",
+            vencimento: db.clientes[cIdx].vencimento,
+            valor: f.valor,
+            data_geracao: new Date().toLocaleDateString('pt-BR')
+        });
     }
-    db.faturas = db.faturas.filter(x => x.id != fid); save(); renderFaturas(); updateDashboard(); showNotify('Estornado', 'Vencimento corrigido.');
+    db.faturas = db.faturas.filter(x => x.id != fid); 
+    save(); renderFaturas(); updateDashboard(); renderClientes(); showNotify('Estornado', 'Vencimento revertido e cliente devolvido.');
 }
+
+window.excluirCobrancaPendente = function(invId) {
+    if(!confirm("Deseja ignorar esta cobrança e apagá-la da lista de pendentes? O cliente continuará a existir mas não registrará pagamento neste ciclo.")) return;
+    db.invoices_pending = db.invoices_pending.filter(x => x.id != invId);
+    save(); renderFaturas(); updateDashboard();
+    showNotify('Apagado', 'Cobrança removida da lista.');
+};
+
+window.excluirFaturaHistorico = function(fid) {
+    if(!confirm("Excluir permanentemente do histórico? Isso NÃO altera o vencimento do cliente.")) return;
+    db.faturas = db.faturas.filter(x => x.id != fid);
+    save(); renderFaturas(); updateDashboard();
+    showNotify('Apagado', 'Removido do histórico.');
+};
+
+window.openModalEditFatura = function(fid) {
+    const f = db.faturas.find(x => x.id == fid);
+    if(!f) return;
+    document.getElementById('edit_fatura_id').value = f.id;
+    let part = f.data_pgto.split('/'); 
+    if(part.length === 3) document.getElementById('edit_fatura_data').value = `${part[2]}-${part[1]}-${part[0]}`;
+    openModal('modalEditFatura');
+};
+
+window.confirmarEdicaoFatura = function() {
+    const id = document.getElementById('edit_fatura_id').value;
+    const nvData = document.getElementById('edit_fatura_data').value;
+    if(!nvData) return;
+    const f = db.faturas.find(x => x.id == id);
+    if(f) {
+        let part = nvData.split('-');
+        f.data_pgto = `${part[2]}/${part[1]}/${part[0]}`;
+        save(); renderFaturas(); closeModal('modalEditFatura');
+        showNotify('Sucesso', 'Data atualizada no histórico.');
+    }
+};
+
+window.abrirModalFiltroGrafico = function(tipo, nomeItem) {
+    if(!nomeItem || nomeItem === "Sem Clientes") return;
+    const titulo = document.getElementById('chart-details-title');
+    const lista = document.getElementById('chart-details-list');
+    titulo.innerText = nomeItem;
+    lista.innerHTML = '';
+    
+    const clientes = db.clientes || [];
+    const filtrados = clientes.filter(c => {
+        if(tipo === 'app') {
+            const app = db.apps.find(a => a.id == c.app_id);
+            return app && app.nome === nomeItem;
+        } else {
+            const plano = db.planos.find(p => p.id == c.plano_id);
+            return plano && plano.nome === nomeItem;
+        }
+    });
+
+    if(filtrados.length === 0) {
+        lista.innerHTML = `<div class="p-4 text-center text-gray-500 text-xs italic">Nenhum cliente encontrado.</div>`;
+    } else {
+        lista.innerHTML = filtrados.map(c => `
+            <div class="p-3 bg-white/5 border border-white/5 rounded-xl flex justify-between items-center mb-2">
+                <div>
+                    <p class="text-xs font-bold text-white uppercase">${c.nome}</p>
+                    <p class="text-[10px] text-gray-400 font-mono mt-0.5">Venc: ${c.vencimento.split('-').reverse().join('/')}</p>
+                </div>
+                <button onclick="closeModal('modalChartDetails'); switchTab('clientes'); setTimeout(() => openModalClienteEdit(${c.id}), 300)" class="text-blue-400 hover:text-white bg-blue-500/10 p-2 rounded transition"><i class="fas fa-edit"></i></button>
+            </div>
+        `).join('');
+    }
+    openModal('modalChartDetails');
+};
 
 export function copyFullAccess(id) {
     const cli = db.clientes.find(c => c.id == id); if (!cli) return;
@@ -623,7 +865,6 @@ export function showNotify(titulo, message, tipo = 'success') {
     setTimeout(() => toast.remove(), 4000);
 }
 
-// LOGICA DE CANCELAMENTO DE ENVIOS
 window.cancelarDisparo = false;
 window.cancelarEnvioMassa = function() { window.cancelarDisparo = true; };
 
@@ -642,12 +883,10 @@ window.dispararAlertaGeral = async function(tipoAlerta) {
 
     for (let i = 0; i < ativos.length; i++) {
         if (window.cancelarDisparo) { showNotify("Cancelado", "Transmissão interrompida.", "warning"); break; }
-        
         const pct = Math.round(((i + 1) / ativos.length) * 100);
         document.getElementById('progresso-texto-mini').innerText = `Aviso: ${ativos[i].nome} (${i+1}/${ativos.length})`;
         document.getElementById('progresso-barra-mini').style.width = `${pct}%`;
         document.getElementById('progresso-porcentagem-mini').innerText = `${pct}%`;
-
         sendManualWA(ativos[i].id, tipoAlerta);
         await new Promise(r => setTimeout(r, 3000));
     }
@@ -664,13 +903,11 @@ window.dispararNotificacaoEmMassa = async function() {
 
     for (let i = 0; i < selecionados.length; i++) {
         if (window.cancelarDisparo) { showNotify("Cancelado", "Cobranças interrompidas.", "warning"); break; }
-
         const cli = db.clientes.find(c => c.id == selecionados[i]);
         const pct = Math.round(((i + 1) / selecionados.length) * 100);
         document.getElementById('progresso-texto-mini').innerText = `Enviando: ${cli.nome} (${i+1}/${selecionados.length})`;
         document.getElementById('progresso-barra-mini').style.width = `${pct}%`;
         document.getElementById('progresso-porcentagem-mini').innerText = `${pct}%`;
-
         sendManualWA(selecionados[i], 'renew');
         await new Promise(r => setTimeout(r, 3000));
     }
@@ -679,7 +916,6 @@ window.dispararNotificacaoEmMassa = async function() {
     window.atualizarBarraAcoes();
 };
 
-// VINCULAÇÃO GLOBAL PARA O HTML
 window.switchTab = switchTab;
 window.openModalAdd = openModalAdd;
 window.openModalClienteEdit = openModalClienteEdit;
@@ -702,3 +938,9 @@ window.checkCustomDays = checkCustomDays;
 window.openModalHistory = openModalHistory;
 window.toggleFiltrosGaveta = toggleFiltrosGaveta;
 window.alternarAbasAuth = alternarAbasAuth;
+window.gerarFaturaManual = gerarFaturaManual;
+window.excluirFaturaHistorico = excluirFaturaHistorico;
+window.excluirCobrancaPendente = excluirCobrancaPendente;
+window.openModalEditFatura = openModalEditFatura;
+window.confirmarEdicaoFatura = confirmarEdicaoFatura;
+window.abrirModalFiltroGrafico = abrirModalFiltroGrafico;
