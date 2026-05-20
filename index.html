@@ -297,25 +297,28 @@
         </aside>
 
 <main class="flex-1 lg:ml-64 transition-all duration-300" id="main-content">
-            <header class="bg-[#16162d]/90 backdrop-blur-md sticky top-0 z-40 border-b border-gray-800 p-4 flex items-center justify-between w-full">
-                <div class="flex items-center gap-3">
-                    <button onclick="window.controlarSidebarGeral()" class="text-gray-400 p-2 -ml-2 hover:bg-white/5 rounded-xl transition active:scale-95 flex items-center justify-center">
-                        <i class="fas fa-bars text-lg"></i>
-                    </button>
-                    <div class="flex items-center select-none lg:hidden">
-                        <span class="text-white font-black text-xl tracking-tighter">w3</span>
-                        <span class="text-white font-light text-xl tracking-tight">Gestor</span>
-                        <span class="text-purple-500 font-black text-xl ml-0.5">.</span>
-                    </div>
-                </div>
-                
-                <div class="flex items-center">
-                    <button onclick="window.logout()" title="Sair do Sistema" 
-                        class="lg:hidden flex items-center justify-center w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white transition-all active:scale-90 duration-100">
-                        <i class="fas fa-sign-out-alt text-sm"></i>
-                    </button>
-                </div>
-            </header>
+           <div id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-[#16162d]/95 backdrop-blur-lg border-t border-white/10 z-50 flex justify-around items-center py-2 px-1 shadow-2xl lg:hidden">
+    <button onclick="switchTab('dashboard')" class="flex flex-col items-center gap-1 text-gray-400 hover:text-purple-400 transition-all flex-1">
+        <i class="fas fa-chart-pie text-sm"></i>
+        <span class="text-[8px] font-bold uppercase tracking-tighter">Painel</span>
+    </button>
+    <button onclick="switchTab('clientes')" class="flex flex-col items-center gap-1 text-purple-400 hover:text-purple-400 transition-all flex-1">
+        <i class="fas fa-users text-sm"></i>
+        <span class="text-[8px] font-bold uppercase tracking-tighter">Clientes</span>
+    </button>
+    <button onclick="switchTab('faturas')" class="flex flex-col items-center gap-1 text-gray-400 hover:text-purple-400 transition-all flex-1">
+        <i class="fas fa-file-invoice-dollar text-sm"></i>
+        <span class="text-[8px] font-bold uppercase tracking-tighter">Faturas</span>
+    </button>
+    <button onclick="switchTab('planos')" class="flex flex-col items-center gap-1 text-gray-400 hover:text-purple-400 transition-all flex-1">
+        <i class="fas fa-tags text-sm"></i>
+        <span class="text-[8px] font-bold uppercase tracking-tighter">Planos</span>
+    </button>
+    <button onclick="switchTab('configuracoes')" class="flex flex-col items-center gap-1 text-gray-400 hover:text-purple-400 transition-all flex-1">
+        <i class="fas fa-sliders-h text-sm"></i>
+        <span class="text-[8px] font-bold uppercase tracking-tighter">Ajustes</span>
+    </button>
+</div>
 
             <div id="free-plan-banner" class="hidden bg-yellow-500 text-black text-center py-2 text-xs font-bold uppercase tracking-widest shadow-md">
                 Você está usando o Plano Free (Limite de 3 clientes). <a href="https://wa.me/5511999999999" target="_blank" class="underline ml-2 hover:text-purple-900">Fazer Upgrade VIP</a>
@@ -446,15 +449,15 @@
                     <h4 class="text-xs font-bold text-yellow-500 uppercase mb-4"><i class="fas fa-exclamation-circle mr-2"></i> Cobranças em Aberto</h4>
                     <div class="card rounded-2xl overflow-hidden shadow-xl border border-yellow-500/10 bg-[#16162d]">
                         <table class="w-full text-left text-sm">
-                            <thead class="bg-yellow-500/5 text-gray-500 uppercase text-[10px] tracking-widest">
-                                <tr>
-                                    <th class="p-4">Vencimento</th>
-                                    <th class="p-4">Cliente</th>
-                                    <th class="p-4">Plano</th>
-                                    <th class="p-4">Valor</th>
-                                    <th class="p-4 text-right">Ação</th>
-                                </tr>
-                            </thead>
+                          <thead class="bg-yellow-500/5 text-gray-500 uppercase text-[10px] tracking-widest">
+    <tr>
+        <th class="p-4 w-1/5">Vencimento</th>
+        <th class="p-4 w-1/4">Cliente</th>
+        <th class="p-4 w-1/5">Plano</th>
+        <th class="p-4 w-1/6">Valor</th>
+        <th class="p-4 text-right w-1/6">Ação</th>
+    </tr>
+</thead>
                             <tbody id="table-faturas-pendentes-body"></tbody>
                         </table>
                     </div>
@@ -825,6 +828,28 @@
         
         <h5 class="text-[10px] font-bold text-purple-400 uppercase bg-purple-500/10 p-2 rounded-lg mb-2">Dias Adicionados (+3)</h5>
         <div id="history-days-list" class="space-y-1"></div>
+    </div>
+</div>
+
+<div id="modalEditFatura" class="fixed inset-0 z-[80] hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div class="w-full max-w-sm rounded-2xl p-6 bg-[#16162d] border border-white/5 shadow-2xl">
+        <h3 class="text-sm font-bold text-white mb-4 uppercase tracking-widest">Alterar Data do Pagamento</h3>
+        <input type="hidden" id="edit_fatura_id">
+        <input type="date" id="edit_fatura_data" class="w-full bg-black/40 text-white p-3 rounded-xl border border-white/10 mb-6 text-sm">
+        <div class="flex gap-3">
+            <button onclick="closeModal('modalEditFatura')" class="flex-1 bg-gray-800 p-3 rounded-xl text-[10px] font-bold text-gray-400 uppercase">Cancelar</button>
+            <button onclick="window.confirmarEdicaoFatura()" class="flex-1 bg-purple-600 p-3 rounded-xl text-[10px] font-bold text-white uppercase">Salvar Data</button>
+        </div>
+    </div>
+</div>
+<div id="modalConfirm" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+    <div class="w-full max-w-sm rounded-2xl p-6 bg-[#16162d] border border-white/5 shadow-2xl">
+        <h3 id="confirm-title" class="text-sm font-bold text-white mb-2 uppercase">Tem certeza?</h3>
+        <p id="confirm-msg" class="text-xs text-gray-400 mb-6">Esta ação não poderá ser desfeita.</p>
+        <div class="flex gap-3">
+            <button id="btn-cancel" class="flex-1 bg-gray-800 p-3 rounded-xl text-[10px] font-bold text-gray-400 uppercase">Cancelar</button>
+            <button id="btn-ok" class="flex-1 bg-purple-600 p-3 rounded-xl text-[10px] font-bold text-white uppercase">Confirmar</button>
+        </div>
     </div>
 </div>
     <div id="toast-container" class="fixed top-5 right-5 z-[200] flex flex-col gap-3 pointer-events-none max-w-sm w-full"></div>
