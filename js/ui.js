@@ -554,25 +554,47 @@ export function renderApps() {
 
 export function renderFaturas() {
     const pBody = document.getElementById('table-faturas-pendentes-body');
+    const pMobile = document.getElementById('lista-faturas-pendentes-mobile');
     const hBody = document.getElementById('table-faturas-body');
-    if (!pBody || !hBody) return;
+    const hMobile = document.getElementById('lista-faturas-historico-mobile');
+    
+    if (!pBody && !pMobile) return;
     
     const hoje = new Date().toISOString().split('T')[0];
     const pendentes = (db.invoices_pending || []).sort((a,b) => new Date(a.vencimento) - new Date(b.vencimento));
 
-    pBody.innerHTML = pendentes.map(inv => {
-        return `<tr class="border-t border-gray-800 text-xs hover:bg-white/5">
-            <td class="p-3 font-bold text-yellow-400">${inv.vencimento.split('-').reverse().join('/')}</td>
-            <td class="p-3 text-white uppercase font-bold">${inv.cliente}</td>
-            <td class="p-3 text-gray-400 uppercase">${inv.plano}</td>
-            <td class="p-3 text-white font-bold">R$ ${(inv.valor||0).toFixed(2)}</td>
-            <td class="p-3 text-right flex justify-end gap-2 whitespace-nowrap">
-                <button onclick="openModalRenovar(${inv.id})" title="Confirmar Pagamento" class="px-2 py-1 bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-white transition border border-green-500/20 rounded font-black text-[9px]"><i class="fas fa-check"></i> PAGO</button>
-                <button onclick="window.excluirCobrancaPendente(${inv.id})" title="Excluir/Ignorar Cobrança" class="px-2 py-1 bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white transition border border-red-500/20 rounded font-black text-[9px]"><i class="fas fa-trash"></i></button>
-            </td>
-        </tr>`;
-    }).join('') || '<tr><td colspan="5" class="p-3 text-center text-gray-500 italic">Nenhuma fatura em aberto.</td></tr>';
+    // --- COBRANÇAS EM ABERTO ---
+    if (pBody) {
+        pBody.innerHTML = pendentes.map(inv => {
+            return `<tr class="border-t border-gray-800 text-xs hover:bg-white/5">
+                <td class="p-3 font-bold text-yellow-400">${inv.vencimento.split('-').reverse().join('/')}</td>
+                <td class="p-3 text-white uppercase font-bold">${inv.cliente}</td>
+                <td class="p-3 text-gray-400 uppercase">${inv.plano}</td>
+                <td class="p-3 text-white font-bold">R$ ${(inv.valor||0).toFixed(2)}</td>
+                <td class="p-3 text-right flex justify-end gap-2 whitespace-nowrap">
+                    <button onclick="openModalRenovar(${inv.id})" title="Receber" class="px-2 py-1.5 bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-white transition border border-green-500/20 rounded font-black text-[9px]"><i class="fas fa-check"></i></button>
+                    <button onclick="window.excluirCobrancaPendente(${inv.id})" title="Excluir" class="px-2 py-1.5 bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white transition border border-red-500/20 rounded font-black text-[9px]"><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }).join('') || '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic border-t border-gray-800">Nenhuma fatura em aberto.</td></tr>';
+    }
 
+    if (pMobile) {
+        pMobile.innerHTML = pendentes.map(inv => {
+            return `<div class="p-4 bg-[#16162d] border border-yellow-500/30 rounded-2xl mb-2">
+                <div class="flex justify-between mb-3">
+                    <div><p class="text-xs font-bold text-white uppercase">${inv.cliente}</p><p class="text-[10px] text-gray-400">${inv.plano}</p></div>
+                    <div class="text-right"><p class="text-xs font-black text-yellow-500">${inv.vencimento.split('-').reverse().join('/')}</p><p class="text-sm font-bold">R$ ${(inv.valor||0).toFixed(2)}</p></div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="openModalRenovar(${inv.id})" class="flex-1 py-2 bg-green-600/20 text-green-500 rounded-xl font-bold text-[10px]">RECEBER</button>
+                    <button onclick="window.excluirCobrancaPendente(${inv.id})" class="px-4 py-2 bg-red-600/20 text-red-500 rounded-xl font-bold text-[10px]"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>`;
+        }).join('') || '<div class="p-4 text-center text-gray-500 text-xs italic bg-[#16162d] rounded-xl border border-white/5">Nenhuma fatura em aberto.</div>';
+    }
+
+    // --- HISTÓRICO ---
     let totalLucro = 0;
     hBody.innerHTML = (db.faturas || []).map(f => {
         totalLucro += (f.lucro || 0);
@@ -582,12 +604,28 @@ export function renderFaturas() {
             <td class="p-3 text-green-500 font-bold">R$ ${(f.valor || 0).toFixed(2)}</td>
             <td class="p-3 text-purple-400 font-bold">R$ ${(f.lucro || 0).toFixed(2)}</td>
             <td class="p-3 text-right flex justify-end gap-2 whitespace-nowrap">
-                <button onclick="window.openModalEditFatura(${f.id})" title="Editar Data" class="text-blue-400 hover:text-white transition bg-blue-500/10 p-1.5 rounded"><i class="fas fa-edit"></i></button>
-                <button onclick="deleteFatura(${f.id})" title="Estornar Pagamento e Reverter Vencimento" class="text-orange-500 hover:text-white transition bg-orange-500/10 p-1.5 rounded"><i class="fas fa-undo"></i> Estornar</button>
-                <button onclick="window.excluirFaturaHistorico(${f.id})" title="Excluir do Histórico Permanentemente" class="text-red-500 hover:text-white transition bg-red-500/10 p-1.5 rounded"><i class="fas fa-trash"></i></button>
+                <button onclick="window.openModalEditFatura(${f.id})" class="text-blue-400 hover:text-white transition bg-blue-500/10 p-2 rounded"><i class="fas fa-edit"></i></button>
+                <button onclick="deleteFatura(${f.id})" class="text-orange-500 hover:text-white transition bg-orange-500/10 p-2 rounded"><i class="fas fa-undo"></i></button>
+                <button onclick="window.excluirFaturaHistorico(${f.id})" class="text-red-500 hover:text-white transition bg-red-500/10 p-2 rounded"><i class="fas fa-trash"></i></button>
             </td>
         </tr>`;
-    }).join('') || '<tr><td colspan="5" class="p-3 text-center text-gray-500 italic">Sem histórico de pagamentos.</td></tr>';
+    }).join('') || '<tr><td colspan="5" class="p-4 text-center text-gray-500 italic">Sem histórico.</td></tr>';
+
+    if (hMobile) {
+        hMobile.innerHTML = (db.faturas || []).map(f => {
+            return `<div class="p-4 bg-[#16162d] border border-white/5 rounded-2xl mb-2">
+                <div class="flex justify-between mb-3">
+                    <div><p class="text-[10px] text-gray-500 font-mono">${f.data_pgto}</p><p class="text-xs font-black text-white uppercase">${f.cliente}</p></div>
+                    <div class="text-right"><p class="text-xs font-black text-green-500">R$ ${(f.valor||0).toFixed(2)}</p></div>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="window.openModalEditFatura(${f.id})" class="flex-1 py-2 bg-blue-600/20 text-blue-400 rounded-xl text-[10px] font-bold"><i class="fas fa-edit"></i></button>
+                    <button onclick="deleteFatura(${f.id})" class="flex-1 py-2 bg-orange-600/20 text-orange-500 rounded-xl text-[10px] font-bold"><i class="fas fa-undo"></i></button>
+                    <button onclick="window.excluirFaturaHistorico(${f.id})" class="flex-1 py-2 bg-red-600/20 text-red-500 rounded-xl text-[10px] font-bold"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>`;
+        }).join('') || '<div class="p-4 text-center text-gray-500 text-xs italic bg-[#16162d] rounded-xl border border-white/5">Sem histórico.</div>';
+    }
 
     if (document.getElementById('fatura-total-lucro')) document.getElementById('fatura-total-lucro').innerText = `R$ ${totalLucro.toFixed(2)}`;
 }
