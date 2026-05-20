@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "w3-gestor"
+  },
+  "targets": {
+    "w3-gestor": {
+      "hosting": {
+        "site-principal": [
+          "w3gestor"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
