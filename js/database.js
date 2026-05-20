@@ -8,7 +8,7 @@ export let db = {
     clientes: [], 
     planos: [], 
     faturas: [], 
-    invoices_pending: [], // Nova área de pendentes
+    invoices_pending: [], 
     apps: [], 
     config: { 
         aviso_dias: 3,
@@ -80,10 +80,20 @@ window.importarSistema = function(event) {
                 if(window.showNotify) window.showNotify("Erro", "Arquivo JSON inválido.");
                 return;
             }
-            if (confirm(`Atenção: Deseja importar este backup?`)) {
-                setDb(backupValido);
-                save();
-                location.reload();
+            
+            // Usando a confirmação bonita para a importação!
+            if(window.meuConfirm) {
+                window.meuConfirm("Restaurar Backup", "Deseja importar este backup? Isso substituirá todos os seus dados atuais da tela.", () => {
+                    setDb(backupValido);
+                    save();
+                    location.reload();
+                });
+            } else {
+                if (confirm(`Atenção: Deseja importar este backup? Isso substituirá todos os dados atuais.`)) {
+                    setDb(backupValido);
+                    save();
+                    location.reload();
+                }
             }
         } catch (err) {
             if(window.showNotify) window.showNotify("Erro", "Erro ao ler o arquivo de backup.");
