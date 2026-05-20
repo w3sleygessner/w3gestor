@@ -343,7 +343,7 @@
                 <div id="lista-clientes-mobile" class="w-full mt-2 lg:hidden"></div>
             </div> 
 
-           <div id="tab-faturas" class="p-4 sm:p-6 hidden">
+       <div id="tab-faturas" class="p-4 sm:p-6 hidden">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-bold text-white uppercase tracking-tighter">Financeiro</h2>
                     <div class="text-right">
@@ -354,7 +354,8 @@
                 
                 <div class="mb-8">
                     <h4 class="text-xs font-bold text-yellow-500 uppercase mb-4"><i class="fas fa-exclamation-circle mr-2"></i> Cobranças em Aberto</h4>
-                    <div class="card rounded-2xl overflow-hidden shadow-xl border border-yellow-500/10 bg-[#16162d]">
+                    
+                    <div class="hidden lg:block card rounded-2xl overflow-hidden shadow-xl border border-yellow-500/10 bg-[#16162d]">
                         <div class="max-h-[40vh] overflow-y-auto scrollbar-thin">
                             <table class="w-full text-left text-sm border-separate border-spacing-y-0.5 px-1 relative min-w-[500px]">
                                 <thead class="sticky top-0 bg-[#16162d] z-10 shadow-md">
@@ -370,11 +371,15 @@
                             </table>
                         </div>
                     </div>
+
+                    <div id="lista-faturas-pendentes-mobile" class="lg:hidden flex flex-col gap-2 max-h-[50vh] overflow-y-auto scrollbar-thin pr-1 pb-4">
+                        </div>
                 </div>
                 
                 <div>
                     <h4 class="text-xs font-bold text-green-500 uppercase mb-4"><i class="fas fa-history mr-2"></i> Histórico de Recebimentos</h4>
-                    <div class="card rounded-2xl overflow-hidden shadow-xl bg-[#16162d] border border-white/5">
+                    
+                    <div class="hidden lg:block card rounded-2xl overflow-hidden shadow-xl bg-[#16162d] border border-white/5">
                         <div class="max-h-[50vh] overflow-y-auto scrollbar-thin">
                             <table class="w-full text-left text-sm border-separate border-spacing-y-0.5 px-1 relative min-w-[600px]">
                                 <thead class="sticky top-0 bg-[#16162d] z-10 shadow-md">
@@ -390,6 +395,9 @@
                             </table>
                         </div>
                     </div>
+
+                    <div id="lista-faturas-historico-mobile" class="lg:hidden flex flex-col gap-2 max-h-[50vh] overflow-y-auto scrollbar-thin pr-1 pb-10">
+                        </div>
                 </div>
             </div>
 
