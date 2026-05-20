@@ -343,7 +343,7 @@
                 <div id="lista-clientes-mobile" class="w-full mt-2 lg:hidden"></div>
             </div> 
 
-            <div id="tab-faturas" class="p-6 hidden">
+           <div id="tab-faturas" class="p-4 sm:p-6 hidden">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-bold text-white uppercase tracking-tighter">Financeiro</h2>
                     <div class="text-right">
@@ -351,38 +351,44 @@
                         <h3 id="fatura-total-lucro" class="text-2xl font-bold text-purple-400">R$ 0,00</h3>
                     </div>
                 </div>
-                <div class="mb-10">
+                
+                <div class="mb-8">
                     <h4 class="text-xs font-bold text-yellow-500 uppercase mb-4"><i class="fas fa-exclamation-circle mr-2"></i> Cobranças em Aberto</h4>
                     <div class="card rounded-2xl overflow-hidden shadow-xl border border-yellow-500/10 bg-[#16162d]">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-yellow-500/5 text-gray-500 uppercase text-[10px] tracking-widest">
-                                <tr>
-                                    <th class="p-4 w-1/5">Vencimento</th>
-                                    <th class="p-4 w-1/4">Cliente</th>
-                                    <th class="p-4 w-1/5">Plano</th>
-                                    <th class="p-4 w-1/6">Valor</th>
-                                    <th class="p-4 text-right w-1/6">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="table-faturas-pendentes-body"></tbody>
-                        </table>
+                        <div class="max-h-[40vh] overflow-y-auto scrollbar-thin">
+                            <table class="w-full text-left text-sm border-separate border-spacing-y-0.5 px-1 relative min-w-[500px]">
+                                <thead class="sticky top-0 bg-[#16162d] z-10 shadow-md">
+                                    <tr class="bg-black/40 text-gray-500 uppercase text-[10px] tracking-widest">
+                                        <th class="p-4 border-b border-gray-800 w-1/5">Vencimento</th>
+                                        <th class="p-4 border-b border-gray-800 w-1/4">Cliente</th>
+                                        <th class="p-4 border-b border-gray-800 w-1/5">Plano</th>
+                                        <th class="p-4 border-b border-gray-800 w-1/6">Valor</th>
+                                        <th class="p-4 border-b border-gray-800 text-right w-1/6">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-faturas-pendentes-body"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
+                
                 <div>
                     <h4 class="text-xs font-bold text-green-500 uppercase mb-4"><i class="fas fa-history mr-2"></i> Histórico de Recebimentos</h4>
-                    <div class="card rounded-2xl overflow-hidden shadow-xl bg-[#16162d]">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-black/40 text-gray-500 uppercase text-[10px] tracking-widest">
-                                <tr>
-                                    <th class="p-4">Data Pgto</th>
-                                    <th class="p-4">Cliente</th>
-                                    <th class="p-4">Valor Pago</th>
-                                    <th class="p-4 text-purple-400 font-black">Lucro Real</th>
-                                    <th class="p-4 text-right">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="table-faturas-body"></tbody>
-                        </table>
+                    <div class="card rounded-2xl overflow-hidden shadow-xl bg-[#16162d] border border-white/5">
+                        <div class="max-h-[50vh] overflow-y-auto scrollbar-thin">
+                            <table class="w-full text-left text-sm border-separate border-spacing-y-0.5 px-1 relative min-w-[600px]">
+                                <thead class="sticky top-0 bg-[#16162d] z-10 shadow-md">
+                                    <tr class="bg-black/40 text-gray-500 uppercase text-[10px] tracking-widest">
+                                        <th class="p-4 border-b border-gray-800">Data Pgto</th>
+                                        <th class="p-4 border-b border-gray-800">Cliente</th>
+                                        <th class="p-4 border-b border-gray-800">Valor Pago</th>
+                                        <th class="p-4 border-b border-gray-800 text-purple-400 font-black">Lucro Real</th>
+                                        <th class="p-4 border-b border-gray-800 text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-faturas-body"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
