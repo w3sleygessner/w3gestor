@@ -9,7 +9,7 @@ import * as ADMIN from "./admin.js";
 Object.assign(window, UI);
 Object.assign(window, API);
 Object.assign(window, ADMIN);
-window.carregarAssinantes = ADMIN.carregarAssinantes; // Vincula a função do admin
+window.carregarAssinantes = ADMIN.carregarAssinantes;
 window.db = db;
 window.save = save;
 
@@ -90,7 +90,6 @@ onAuthStateChanged(auth, (currentUser) => {
                 const navAdmin = document.getElementById('nav-admin');
                 if (currentUser.email === MEU_EMAIL_ADMIN && navAdmin) {
                     navAdmin.classList.remove('hidden');
-                    // 🔥 CORREÇÃO DO BUG DO F5 (Recarrega os usuários na hora)
                     if (window.carregarAssinantes) window.carregarAssinantes();
                 }
 
@@ -200,7 +199,7 @@ document.getElementById('formCliente').onsubmit = function (e) {
     const editId = document.getElementById('cli_edit_id').value;
     
     if (db.account.type !== 'vip' && !editId && db.clientes.length >= 3) {
-        UI.showNotify("Limite Atingido", "O plano FREE permite apenas 3 clientes cadastrados.", "warning");
+        UI.openModal('modalLimiteClientes');
         return;
     }
 
@@ -292,7 +291,7 @@ window.atualizarBarraAcoes = function() {
     if (!barra) return;
 
     if (selecionados.length > 0) {
-        if (contador) contador.innerText = `${selecionados.length} selecionado(s)`;
+        if (contador) contador.innerText = `${selecionados.length} selecionados`;
         barra.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
     } else {
         barra.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
@@ -313,7 +312,7 @@ window.excluirEmMassa = function() {
     const selecionados = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
     if (selecionados.length === 0) return;
 
-    if (confirm(`Tem certeza que deseja apagar esses ${selecionados.length} clientes?`)) {
+    window.meuConfirm("Excluir Clientes", `Tem certeza que deseja apagar esses ${selecionados.length} clientes?`, () => {
         window.db.clientes = window.db.clientes.filter(c => !selecionados.includes(c.id.toString()));
         window.save();
         
@@ -323,5 +322,5 @@ window.excluirEmMassa = function() {
         UI.renderClientes();
         window.atualizarBarraAcoes();
         UI.updateDashboard();
-    }
+    });
 };
