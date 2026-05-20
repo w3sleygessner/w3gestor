@@ -11,30 +11,6 @@ function formatarDataBR_ISO(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// ==========================================
-// FUNÇÃO DO MODAL DE CONFIRMAÇÃO
-// ==========================================
-window.meuConfirm = function(titulo, mensagem, acaoSim) {
-    const modal = document.getElementById('modalConfirm');
-    if (!modal) {
-        if (window.confirm(mensagem)) acaoSim();
-        return;
-    }
-    
-    document.getElementById('confirm-title').innerText = titulo;
-    document.getElementById('confirm-msg').innerText = mensagem;
-    modal.classList.remove('hidden');
-
-    document.getElementById('btn-ok').onclick = () => {
-        modal.classList.add('hidden');
-        if (typeof acaoSim === 'function') acaoSim();
-    };
-    
-    document.getElementById('btn-cancel').onclick = () => {
-        modal.classList.add('hidden');
-    };
-};
-
 export function openModal(id) { const el = document.getElementById(id); if (el) el.classList.remove('hidden'); }
 export function closeModal(id) { const el = document.getElementById(id); if (el) el.classList.add('hidden'); }
 export function checkCustomDays(v) { const el = document.getElementById('plan_dias_custom'); if (el) el.classList.toggle('hidden', v !== 'custom'); }
@@ -136,7 +112,6 @@ export function initApp() {
     }
 }
 
-// 💡 Automação da Régua: Joga para pendentes automaticamente
 export function gerarFaturasAutomaticas() {
     if (!db.invoices_pending) db.invoices_pending = [];
     
@@ -320,7 +295,6 @@ export function renderChartPlanosDonut() {
     planosDonutChart.render();
 }
 
-// 💡 Botão Manual: Envia o cliente para "Cobranças em Aberto"
 export function gerarFaturaManual(cliId) {
     const cli = db.clientes.find(c => c.id == cliId);
     if (!cli) return;
@@ -701,10 +675,10 @@ export function openModalClienteEdit(id) {
 }
 
 export function deleteCliente(id) {
-    window.meuConfirm("Apagar Cliente", "Tem certeza que deseja apagar este cliente?", () => {
+    if (confirm("Tem certeza que deseja apagar este cliente?")) {
         db.clientes = db.clientes.filter(c => c.id != id);
         save(); renderClientes(); updateDashboard(); showNotify('Removido', 'Cliente apagado.');
-    });
+    }
 }
 
 export function openModalPlanoAdd() { document.getElementById('formPlano').reset(); document.getElementById('plan_edit_id').value = ""; document.getElementById('modalPlanoTitle').innerText = "Novo Plano"; openModal('modalPlano'); }
@@ -722,10 +696,10 @@ export function openModalPlanoEdit(id) {
 }
 
 export function deletePlano(id) {
-    window.meuConfirm("Apagar Plano", "Tem certeza que deseja apagar este plano?", () => {
+    if (confirm("Tem certeza que deseja apagar este plano?")) {
         db.planos = db.planos.filter(p => p.id != id);
         save(); renderPlanos(); showNotify('Removido', 'Plano apagado.');
-    });
+    }
 }
 
 export function openModalAppAdd() { document.getElementById('formApp').reset(); document.getElementById('app_edit_id').value = ""; document.getElementById('modalAppTitle').innerText = "Novo App"; openModal('modalApp'); }
@@ -742,10 +716,10 @@ export function openModalAppEdit(id) {
 }
 
 export function deleteApp(id) {
-    window.meuConfirm("Apagar App", "Tem certeza que deseja apagar esta aplicação?", () => {
+    if (confirm("Tem certeza que deseja apagar esta aplicação?")) {
         db.apps = db.apps.filter(a => a.id != id);
         save(); renderApps(); showNotify('Removido', 'Aplicação apagada.');
-    });
+    }
 }
 
 export function openModalRenovar(id) {
@@ -799,20 +773,20 @@ export function confirmarRenovacao() {
 
     save(); closeModal('modalRenovar'); renderClientes(); renderFaturas(); updateDashboard(); showNotify('Pago!', 'Vencimento atualizado.');
     
-    // Pergunta de Notificação pós-pagamento
+    // Pergunta de Notificação pós-pagamento com o confirm() padrão
     setTimeout(() => {
-        window.meuConfirm("Enviar Comprovante?", "Deseja notificar o cliente pelo WhatsApp com a nova data, usuário e senha?", () => {
+        if (confirm("Deseja notificar o cliente pelo WhatsApp com a nova data de vencimento, utilizador e palavra-passe?")) {
             const numZap = cli.whatsapp.replace(/\D/g, ''); 
-            const texto = `✅ *Pagamento Confirmado!*\n\nOlá, *${cli.nome}*!\nSua assinatura foi renovada com sucesso.\n\n📅 *Novo Vencimento:* ${novaDataFormatadaBR}\n\n👤 *Usuário:* ${cli.usuario || 'Não informado'}\n🔑 *Senha:* ${cli.senha || 'Não informada'}\n\nObrigado pela preferência! 🚀`;
+            const texto = `✅ *Pagamento Confirmado!*\n\nOlá, *${cli.nome}*!\nA sua subscrição foi renovada com sucesso.\n\n📅 *Novo Vencimento:* ${novaDataFormatadaBR}\n\n👤 *Utilizador:* ${cli.usuario || 'Não informado'}\n🔑 *Palavra-passe:* ${cli.senha || 'Não informada'}\n\nObrigado pela preferência! 🚀`;
             
             const urlZap = `https://wa.me/55${numZap}?text=${encodeURIComponent(texto)}`;
             window.open(urlZap, '_blank');
-        });
+        }
     }, 400);
 }
 
 export function deleteFatura(fid) {
-    window.meuConfirm("Estornar pagamento?", "O vencimento voltará ao estado exato antes do pagamento e a fatura volta para o aberto.", () => {
+    if (confirm("O vencimento voltará ao estado exato antes do pagamento e a fatura volta para o aberto. Confirmar estorno?")) {
         const f = db.faturas.find(x => x.id == fid);
         if (!f) return;
         const cIdx = db.clientes.findIndex(c => c.id == f.cliId);
@@ -839,23 +813,23 @@ export function deleteFatura(fid) {
         }
         db.faturas = db.faturas.filter(x => x.id != fid); 
         save(); renderFaturas(); updateDashboard(); renderClientes(); showNotify('Estornado', 'Vencimento revertido e cliente devolvido.');
-    });
+    }
 }
 
 window.excluirCobrancaPendente = function(invId) {
-    window.meuConfirm("Ignorar Cobrança?", "Deseja ignorar esta cobrança? O cliente continuará a existir mas não registrará pagamento neste ciclo.", () => {
+    if (confirm("Deseja ignorar esta cobrança? O cliente continuará a existir mas não registrará pagamento neste ciclo.")) {
         db.invoices_pending = db.invoices_pending.filter(x => x.id != invId);
         save(); renderFaturas(); updateDashboard();
         showNotify('Apagado', 'Cobrança removida da lista.');
-    });
+    }
 };
 
 window.excluirFaturaHistorico = function(fid) {
-    window.meuConfirm("Excluir do Histórico?", "Excluir permanentemente do histórico? Isso NÃO altera o vencimento do cliente.", () => {
+    if (confirm("Excluir permanentemente do histórico? Isso NÃO altera o vencimento do cliente.")) {
         db.faturas = db.faturas.filter(x => x.id != fid);
         save(); renderFaturas(); updateDashboard();
         showNotify('Apagado', 'Removido do histórico.');
-    });
+    }
 };
 
 window.openModalEditFatura = function(fid) {
@@ -953,7 +927,7 @@ window.dispararAlertaGeral = async function(tipoAlerta) {
     });
     if (ativos.length === 0) return;
     
-    window.meuConfirm("Alerta Geral", `Transmitir alerta para ${ativos.length} clientes ativos?`, () => {
+    if (confirm(`Transmitir alerta para ${ativos.length} clientes ativos?`)) {
         const miniBadge = document.getElementById('badgeProgressoFlutuante');
         if (miniBadge) miniBadge.classList.remove('hidden');
 
@@ -970,7 +944,7 @@ window.dispararAlertaGeral = async function(tipoAlerta) {
             if (miniBadge) miniBadge.classList.add('hidden');
             if (!window.cancelarDisparo) showNotify("Concluído", "Alerta transmitido!");
         })();
-    });
+    }
 };
 
 window.dispararNotificacaoEmMassa = async function() {
@@ -978,7 +952,7 @@ window.dispararNotificacaoEmMassa = async function() {
     const selecionados = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
     if (selecionados.length === 0) return;
     
-    window.meuConfirm("Cobrança em Massa", `Deseja notificar os ${selecionados.length} clientes selecionados?`, () => {
+    if (confirm(`Deseja notificar os ${selecionados.length} clientes selecionados?`)) {
         const miniBadge = document.getElementById('badgeProgressoFlutuante');
         if (miniBadge) miniBadge.classList.remove('hidden');
 
@@ -997,7 +971,7 @@ window.dispararNotificacaoEmMassa = async function() {
             document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = false);
             window.atualizarBarraAcoes();
         })();
-    });
+    }
 };
 
 window.switchTab = switchTab;
