@@ -1,9 +1,12 @@
 import { db } from "./database.js";
+import { auth } from "./firebase-config.js";
 
+// A instância seria o ID único de quem fez o login no sistema
 // Configurações da sua API do WhatsApp (Evolution API / CodeChat)
 const baseURL = "https://w3gestorzap.duckdns.org";
 const apiKey = "Wesley123!";
-const instancia = "wesley_final_ok";
+const instancia = "user_" + auth.currentUser.uid;
+
 
 export async function sendManualWA(cliId, type) {
     const cli = db.clientes.find(c => c.id == cliId);
@@ -85,21 +88,23 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
 export async function conectarWhatsAppReal() {
     const baseURL = "https://w3gestorzap.duckdns.org"; 
     const apiKey = "Wesley123!";
-    const instancia = "wesley_final_ok";
+    // MUDANÇA AQUI: Novo nome para criar uma instância limpa, sem histórico de erros
 
     try {
-        if(window.showNotify) window.showNotify("Conectando", "A processar conexão com o servidor...", "info");
+        if(window.showNotify) window.showNotify("Conectando", "A comunicar com o servidor...", "info");
 
-        // 1. Verifica se a instância já existe
+        // 1. Tenta ver se a instância já existe
         let resState = await fetch(`${baseURL}/instance/connectionState/${instancia}`, {
             headers: { 'apikey': apiKey }
         });
 
-        // 2. Se NÃO EXISTIR (404), manda criar
-        if (resState.status === 404) {
-            if(window.showNotify) window.showNotify("Instância", "Criando instância no servidor...", "info");
+        let qrCodeBase64 = null;
+
+        // 2. Se NÃO EXISTIR (404), manda criar e JÁ PEGA a imagem!
+        if (resState.status === 404 || resState.status === 400) {
+            if(window.showNotify) window.showNotify("Instância", "A criar nova máquina limpa...", "info");
             
-            await fetch(`${baseURL}/instance/create`, {
+            const resCreate = await fetch(`${baseURL}/instance/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
                 body: JSON.stringify({
@@ -109,8 +114,12 @@ export async function conectarWhatsAppReal() {
                 })
             });
             
-            // Dá 2 segundos de pausa para o motor do WhatsApp inicializar internamente
-            await new Promise(r => setTimeout(r, 2000));
+            const dataCreate = await resCreate.json();
+            console.log("Resposta da Criação:", dataCreate);
+            
+            // Na V2 o QR Code já vem dentro da resposta de criação!
+            qrCodeBase64 = dataCreate?.qrcode?.base64 || dataCreate?.base64;
+            
         } else {
             // 3. Se JÁ EXISTE, vê se está conectada
             const dataState = await resState.json();
@@ -121,18 +130,17 @@ export async function conectarWhatsAppReal() {
                 document.getElementById('wa-status').classList.remove("text-red-500", "text-yellow-500");
                 document.getElementById('wa-status').classList.add("text-green-500");
                 if(window.showNotify) window.showNotify("Sucesso", "O WhatsApp já está conectado!", "success");
-                return; // Para aqui, não pede QR Code
+                return; // Para aqui
+            } else {
+                // 4. Se existe mas está fechada, pede o QR Code novo
+                const resConnect = await fetch(`${baseURL}/instance/connect/${instancia}`, {
+                    headers: { 'apikey': apiKey }
+                });
+                const dataConnect = await resConnect.json();
+                console.log("Resposta do Connect:", dataConnect);
+                qrCodeBase64 = dataConnect?.qrcode?.base64 || dataConnect?.base64;
             }
         }
-
-        // 4. Pede o QR Code atualizado da instância (criada agora ou já existente)
-        const resConnect = await fetch(`${baseURL}/instance/connect/${instancia}`, {
-            headers: { 'apikey': apiKey }
-        });
-        const dataConnect = await resConnect.json();
-        
-        // Na V2 o QR Code pode vir na raiz ou dentro do objeto qrcode
-        const qrCodeBase64 = dataConnect?.base64 || dataConnect?.qrcode?.base64 || dataConnect?.qrcode;
 
         // 5. Joga a imagem na tela
         if (qrCodeBase64 && typeof qrCodeBase64 === 'string' && qrCodeBase64.includes("base64")) {
@@ -141,8 +149,7 @@ export async function conectarWhatsAppReal() {
             document.getElementById('wa-status').classList.remove("text-red-500", "text-green-500");
             document.getElementById('wa-status').classList.add("text-yellow-500");
         } else {
-            console.log("Resposta do Connect:", dataConnect);
-            if(window.showNotify) window.showNotify("Aviso", "O servidor está gerando a imagem. Clique em conectar novamente.", "warning");
+            if(window.showNotify) window.showNotify("Aviso", "Gerando QR Code... Clique em conectar novamente.", "warning");
         }
 
     } catch (e) { 
