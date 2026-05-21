@@ -131,7 +131,7 @@ export async function checarStatusWhatsAppSilencioso() {
             if (estadoAtual === 'open') {
                 statusTxt.innerText = "WHATSAPP CONECTADO!";
                 statusTxt.className = "text-emerald-400 font-bold uppercase tracking-wider";
-                qrImg.src = "https://cdn-icons-png.flaticon.com/512/134/134937.png";
+                qrImg.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='250' viewBox='0 0 250 250'><rect width='250' height='250' fill='%23f3f4f6'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-family='sans-serif' font-size='14'>Sem Sessão Ativa</text></svg>";
                 qrImg.classList.add("p-6");
                 if (btnConectar) btnConectar.classList.add('hidden');
                 if (descContainer) descContainer.classList.remove('hidden');
@@ -240,7 +240,7 @@ export async function desconectarWhatsAppReal() {
             
             document.getElementById('wa-status').innerText = "DESCONECTADO";
             document.getElementById('wa-status').className = "text-rose-500 font-bold uppercase tracking-wider";
-            document.getElementById('wa-qr-code').src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='250' viewBox='0 0 250 250'><rect width='250' height='250' fill='%230f172a'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2364748b' font-family='sans-serif' font-size='14'>Sessão Encerrada</text></svg>"; 
+            document.getElementById('wa-qr-code').src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='250' viewBox='0 0 250 250'><rect width='250' height='250' fill='%23f3f4f6'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-family='sans-serif' font-size='14'>Sem Sessão Ativa</text></svg>"; 
             document.getElementById('wa-qr-code').classList.remove("p-6");
 
             document.getElementById('wa-disconnect-container').classList.add('hidden');
