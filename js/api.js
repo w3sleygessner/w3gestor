@@ -107,41 +107,52 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     }
 }
 
-// 🔌 DESCONEXAR WHATSAPP DA API (Zera o status imediatamente)
-export async function desconectarWhatsAppReal() {
+// 🔍 VERIFICAÇÃO SILENCIOSA: Roda ao carregar o app para checar se o usuário já tem sessão ativa
+export async function checarStatusWhatsAppSilencioso() {
     const instancia = obterNomeInstancia();
     if (!instancia) return;
 
-    if (!confirm("Tem certeza que deseja encerrar a conexão do WhatsApp no servidor?")) return;
+    const qrImg = document.getElementById('wa-qr-code');
+    const statusTxt = document.getElementById('wa-status');
+    const btnConectar = document.getElementById('btn-conectar-wa');
+    const descContainer = document.getElementById('wa-disconnect-container');
+
+    if (!statusTxt || !qrImg) return;
 
     try {
-        if (window.showNotify) window.showNotify("Aguarde", "Encerrando sessão no servidor...", "info");
-
-        const response = await fetch(`${baseURL}/instance/logout/${instancia}`, {
-            method: 'DELETE',
+        let resState = await fetch(`${baseURL}/instance/connectionState/${instancia}`, {
             headers: { 'apikey': apiKey }
         });
 
-        if (response.ok || response.status === 404) {
-            if (window.showNotify) window.showNotify("Desconectado", "Sessão encerrada com sucesso.", "success");
-            
-            // Restaura o layout imediatamente para o estado Desconectado
-            document.getElementById('wa-status').innerText = "DESCONECTADO";
-            document.getElementById('wa-status').className = "text-rose-500 font-bold uppercase tracking-wider";
-            document.getElementById('wa-qr-code').src = "https://via.placeholder.com/250?text=Sem+Sessao+Ativa"; 
-            
-            // Esconde a área de desconexão e exibe o botão de Gerar QR Code novamente
-            document.getElementById('wa-disconnect-container').classList.add('hidden');
-            document.getElementById('btn-conectar-wa').classList.remove('hidden');
-        } else {
-            if (window.showNotify) window.showNotify("Erro", "Não foi possível desconectar a API. Tente pelo celular.", "error");
+        if (resState.status === 200) {
+            const dataState = await resState.json();
+            const estadoAtual = dataState?.instance?.state || dataState?.state;
+
+            if (estadoAtual === 'open') {
+                statusTxt.innerText = "WHATSAPP CONECTADO!";
+                statusTxt.className = "text-emerald-400 font-bold uppercase tracking-wider";
+                qrImg.src = "https://cdn-icons-png.flaticon.com/512/134/134937.png";
+                qrImg.classList.add("p-6");
+                if (btnConectar) btnConectar.classList.add('hidden');
+                if (descContainer) descContainer.classList.remove('hidden');
+                return;
+            }
         }
-    } catch (error) {
-        console.error("Erro ao efetuar logout:", error);
+
+        // Se não retornar status 200 ou não estiver aberto, monta o estado inicial padrão
+        statusTxt.innerText = "DESCONECTADO";
+        statusTxt.className = "text-rose-500 font-bold uppercase tracking-wider";
+        qrImg.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='250' viewBox='0 0 250 250'><rect width='250' height='250' fill='%230f172a'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2364748b' font-family='sans-serif' font-size='14'>Sem Sessão Ativa</text></svg>";
+        qrImg.classList.remove("p-6");
+        if (btnConectar) btnConectar.classList.remove('hidden');
+        if (descContainer) descContainer.classList.add('hidden');
+
+    } catch (e) {
+        console.error("Erro na verificação silenciosa:", e);
     }
 }
 
-// 🔌 CONEXÃO INTEGRADA E CONTROLE DE ESTADOS VISUAIS
+// 🔌 GERADOR DE QR CODE: Executa apenas quando o usuário clica no botão de conectar
 export async function conectarWhatsAppReal() {
     const instancia = obterNomeInstancia();
     if (!instancia) return;
@@ -152,15 +163,16 @@ export async function conectarWhatsAppReal() {
     const descContainer = document.getElementById('wa-disconnect-container');
 
     try {
-        // Consulta o estado real no servidor Oracle
+        if(window.showNotify) window.showNotify("Verificando", "A consultar o servidor...", "info");
+
         let resState = await fetch(`${baseURL}/instance/connectionState/${instancia}`, {
             headers: { 'apikey': apiKey }
         });
 
         let qrCodeBase64 = null;
 
-        // Caso 1: Instância não existe no servidor (Gera uma nova)
         if (resState.status === 404 || resState.status === 400) {
+            if(window.showNotify) window.showNotify("Instância", "A preparar o motor do WhatsApp...", "info");
             await fetch(`${baseURL}/instance/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
@@ -173,47 +185,70 @@ export async function conectarWhatsAppReal() {
             qrCodeBase64 = dataConn?.qrcode?.base64 || dataConn?.base64;
             
         } else {
-            // Caso 2: Instância existe, vamos ler o estado retornado pela Evolution API
             const dataState = await resState.json();
             const estadoAtual = dataState?.instance?.state || dataState?.state;
 
             if (estadoAtual === 'open') {
-                // 🌟 ESTADO: CONECTADO
                 statusTxt.innerText = "WHATSAPP CONECTADO!";
                 statusTxt.className = "text-emerald-400 font-bold uppercase tracking-wider";
-                
-                // Altera a imagem do contêiner para o selo de verificado ativo
                 qrImg.src = "https://cdn-icons-png.flaticon.com/512/134/134937.png"; 
-                
-                // REGRA ATIVADA: Remove o botão de verificar/conectar e exibe apenas a desconexão
+                qrImg.classList.add("p-6");
                 if (btnConectar) btnConectar.classList.add('hidden');
                 if (descContainer) descContainer.classList.remove('hidden');
-
                 if(window.showNotify) window.showNotify("Conectado", "O link com o WhatsApp está ativo.", "success");
                 return;
             }
             
-            // Caso 3: A instância existe na Oracle mas perdeu a conexão com o celular (Pede novo QR)
+            if(window.showNotify) window.showNotify("QR Code", "Gerando código de pareamento...", "info");
             const resConn = await fetch(`${baseURL}/instance/connect/${instancia}`, { headers: { 'apikey': apiKey } });
             const dataConn = await resConn.json();
             qrCodeBase64 = dataConn?.qrcode?.base64 || dataConn?.base64;
         }
 
-        // Se retornou imagem de QR Code, exibe para o escaneamento
         if (qrCodeBase64 && qrCodeBase64.includes("base64")) {
             qrImg.src = qrCodeBase64;
+            qrImg.classList.remove("p-6");
             statusTxt.innerText = "ESCANEAR AGORA!";
             statusTxt.className = "text-amber-400 font-bold uppercase tracking-wider";
-            
-            // Garante que o botão de gerar continua ativo até fechar a conexão
             if (btnConectar) btnConectar.classList.remove('hidden');
             if (descContainer) descContainer.classList.add('hidden');
         }
 
     } catch (e) { 
-        console.error("Erro na comunicação com a API:", e);
-        statusTxt.innerText = "OFFLINE";
-        statusTxt.className = "text-rose-500 font-bold uppercase tracking-wider";
-        if(window.showNotify) window.showNotify("Erro", "Não foi possível validar o status na Oracle.", "error");
+        console.error("Erro API WA:", e); 
+        if(window.showNotify) window.showNotify("Erro", "O Servidor está offline.", "error");
+    }
+}
+
+// 🔌 LOGOUT: Encerra a sessão e devolve a interface gráfica ao estado inicial
+export async function desconectarWhatsAppReal() {
+    const instancia = obterNomeInstancia();
+    if (!instancia) return;
+
+    if (!confirm("Tem certeza que deseja encerrar a conexão do WhatsApp no servidor?")) return;
+
+    try {
+        if (window.showNotify) window.showNotify("Aguarde", "A desconectar...", "info");
+
+        const response = await fetch(`${baseURL}/instance/logout/${instancia}`, {
+            method: 'DELETE',
+            headers: { 'apikey': apiKey }
+        });
+
+        if (response.ok || response.status === 404) {
+            if (window.showNotify) window.showNotify("Desconectado", "Sessão encerrada com sucesso.", "success");
+            
+            document.getElementById('wa-status').innerText = "DESCONECTADO";
+            document.getElementById('wa-status').className = "text-rose-500 font-bold uppercase tracking-wider";
+            document.getElementById('wa-qr-code').src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='250' viewBox='0 0 250 250'><rect width='250' height='250' fill='%230f172a'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2364748b' font-family='sans-serif' font-size='14'>Sessão Encerrada</text></svg>"; 
+            document.getElementById('wa-qr-code').classList.remove("p-6");
+
+            document.getElementById('wa-disconnect-container').classList.add('hidden');
+            document.getElementById('btn-conectar-wa').classList.remove('hidden');
+        } else {
+            if (window.showNotify) window.showNotify("Erro", "Falha ao encerrar a sessão na API.", "error");
+        }
+    } catch (error) {
+        console.error("Erro:", error);
     }
 }
