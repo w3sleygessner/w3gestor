@@ -2,7 +2,7 @@ import { db } from "./database.js";
 import { auth } from "./firebase-config.js";
 
 // Configurações Globais da API do WhatsApp
-const baseURL = "https://w3gestorzap.duckdns.org";
+const baseURL = "https://w3gestorapi.duckdns.org";
 const apiKey = "Wesley123!";
 
 // 🛠️ FUNÇÃO AUXILIAR: Pega a instância dinamicamente apenas quando necessário
