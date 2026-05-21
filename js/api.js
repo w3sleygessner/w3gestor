@@ -100,6 +100,7 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
 }
 
 // 🔌 CONEXÃO DO QR CODE DINÂMICA
+// 🔌 CONEXÃO DO QR CODE DINÂMICA
 export async function conectarWhatsAppReal() {
     const instancia = obterNomeInstancia();
 
@@ -116,13 +117,11 @@ export async function conectarWhatsAppReal() {
             headers: { 'apikey': apiKey }
         });
 
-        let qrCodeBase64 = null;
-
         // 2. Se NÃO EXISTIR (404), manda criar isolada para este usuário
         if (resState.status === 404 || resState.status === 400) {
             if(window.showNotify) window.showNotify("Instância", "A criar nova máquina limpa...", "info");
             
-            const resCreate = await fetch(`${baseURL}/instance/create`, {
+            await fetch(`${baseURL}/instance/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
                 body: JSON.stringify({
@@ -132,9 +131,8 @@ export async function conectarWhatsAppReal() {
                 })
             });
             
-            const dataCreate = await resCreate.json();
-            console.log("Resposta da Criação:", dataCreate);
-            qrCodeBase64 = dataCreate?.qrcode?.base64 || dataCreate?.base64;
+            // PAUSA OBRIGATÓRIA: Dá 2.5 segundos para o motor do WhatsApp ligar e gerar a imagem
+            await new Promise(r => setTimeout(r, 2500));
             
         } else {
             // 3. Se JÁ EXISTE, vê se está conectada
@@ -147,16 +145,17 @@ export async function conectarWhatsAppReal() {
                 document.getElementById('wa-status').classList.add("text-green-500");
                 if(window.showNotify) window.showNotify("Sucesso", "O WhatsApp já está conectado!", "success");
                 return;
-            } else {
-                // 4. Se existe mas está fechada, pede o QR Code novo daquela máquina do usuário
-                const resConnect = await fetch(`${baseURL}/instance/connect/${instancia}`, {
-                    headers: { 'apikey': apiKey }
-                });
-                const dataConnect = await resConnect.json();
-                console.log("Resposta do Connect:", dataConnect);
-                qrCodeBase64 = dataConnect?.qrcode?.base64 || dataConnect?.base64;
             }
         }
+
+        // 4. Pede o QR Code de conexão (Serve para máquinas recém-criadas ou já existentes)
+        const resConnect = await fetch(`${baseURL}/instance/connect/${instancia}`, {
+            headers: { 'apikey': apiKey }
+        });
+        const dataConnect = await resConnect.json();
+        console.log("Resposta do Connect:", dataConnect);
+        
+        const qrCodeBase64 = dataConnect?.qrcode?.base64 || dataConnect?.base64;
 
         // 5. Renderiza na tela
         if (qrCodeBase64 && typeof qrCodeBase64 === 'string' && qrCodeBase64.includes("base64")) {
@@ -165,7 +164,7 @@ export async function conectarWhatsAppReal() {
             document.getElementById('wa-status').classList.remove("text-red-500", "text-green-500");
             document.getElementById('wa-status').classList.add("text-yellow-500");
         } else {
-            if(window.showNotify) window.showNotify("Aviso", "Gerando QR Code... Clique em conectar novamente.", "warning");
+            if(window.showNotify) window.showNotify("Aviso", "Gerando imagem... Clique em conectar novamente.", "warning");
         }
 
     } catch (e) { 
