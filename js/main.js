@@ -112,6 +112,15 @@ onAuthStateChanged(auth, (currentUser) => {
                 UI.initApp();
                 esconderSplashScreen();
 
+                // 🤖 ATIVAÇÃO DA AUTOMAÇÃO AQUI
+                // Aguarda 3 segundos após a tela abrir para não travar o carregamento inicial,
+                // e então verifica quem precisa receber aviso de cobrança.
+                setTimeout(() => {
+                    if (typeof API.verificarReguaDeCobranca === 'function') {
+                        API.verificarReguaDeCobranca();
+                    }
+                }, 3000);
+
             } catch (err) {
                 console.error("Erro crítico na montagem das abas:", err);
                 esconderSplashScreen();

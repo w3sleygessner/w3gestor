@@ -12,8 +12,58 @@ function obterNomeInstancia() {
         console.warn("Aviso: Firebase Auth ainda não inicializou.");
         return null;
     }
-    // CRUCIAL: O .toLowerCase() evita que o banco de dados se perca com o ID
     return `user_${usuarioLogado.uid.toLowerCase()}`;
+}
+
+// 🤖 AUTOMAÇÃO: Régua de Cobrança Automática (Executa 1x por dia ao abrir o painel)
+export async function verificarReguaDeCobranca() {
+    const instancia = obterNomeInstancia();
+    if (!instancia) return;
+
+    // Evita disparos duplicados no mesmo dia caso dê F5 no painel
+    const hojeStr = new Date().toISOString().split('T')[0];
+    if (localStorage.getItem(`regua_executada_${hojeStr}`) === 'true') {
+        console.log("🤖 Régua de cobrança já foi executada hoje.");
+        return;
+    }
+
+    if (!db.clientes || !db.config) return;
+
+    // Pega os dias configurados na sua régua (ex: 3 dias antes). Padrão é 3 se estiver vazio.
+    const diasRegua = parseInt(db.config.dias_aviso) || 3; 
+
+    if (window.showNotify) window.showNotify("Régua Ativa", "A verificar vencimentos automáticos...", "info");
+
+    let disparosRealizados = 0;
+
+    for (const cli of db.clientes) {
+        if (!cli.vencimento || cli.status === 'inativo') continue;
+
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        
+        const vencimento = new Date(cli.vencimento);
+        vencimento.setHours(0, 0, 0, 0);
+
+        // Calcula a diferença exata de dias
+        const diffTime = vencimento - hoje;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        // Se o cliente estiver exatamente no dia da régua (ex: 3 dias para vencer)
+        if (diffDays === diasRegua) {
+            await sendManualWA(cli.id, 'renovacao');
+            disparosRealizados++;
+            // Delay de 2 segundos entre clientes para evitar bloqueios no WhatsApp
+            await new Promise(r => setTimeout(r, 2000));
+        }
+    }
+
+    // Salva que já rodou hoje com sucesso
+    localStorage.setItem(`regua_executada_${hojeStr}`, 'true');
+
+    if (disparosRealizados > 0 && window.showNotify) {
+        window.showNotify("Sucesso", `${disparosRealizados} avisos automáticos enviados!`, "success");
+    }
 }
 
 export async function sendManualWA(cliId, type) {
@@ -23,7 +73,6 @@ export async function sendManualWA(cliId, type) {
     const app = db.apps.find(a => a.id == cli.app_id) || {};
     const plano = db.planos.find(p => p.id == cli.plano_id) || {};
 
-    // 🛡️ ADICIONADO: Textos padrão à prova de falhas caso o painel esteja vazio!
     let template = db.config.msg_renovacao || "Olá {cliente}, sua assinatura do app {app} vence dia {vencimento}. Valor: {valor}.";
     if (type === 'welcome') template = db.config.msg_boas_vindas || "Olá {cliente}, seja bem-vindo(a) ao {app}! \n👤 Usuário: {usuario}\n🔑 Senha: {senha}";
     if (type === 'success') template = db.config.msg_sucesso || "Olá {cliente}, pagamento de {valor} confirmado! Próximo vencimento: {vencimento}.";
@@ -48,14 +97,12 @@ export async function sendManualWA(cliId, type) {
     await sendCustomWA(cli.whatsapp, msg, cli.nome);
 }
 
-// 🚀 DISPARO ATUALIZADO (Ajustado o formato exato que a API espera)
 export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     if (!msg || msg.trim() === "") {
         if(window.showNotify) window.showNotify("Erro", "A mensagem está vazia.", "error");
         return;
     }
 
-    // Limpa o número removendo espaços e traços. Adiciona o 55 se faltar.
     let fone = telefone.replace(/\D/g, '');
     if (!fone.startsWith('55')) fone = '55' + fone; 
 
@@ -68,11 +115,9 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     try {
         if(window.showNotify) window.showNotify("Enviando...", `Processando envio para ${nomeCliente}`, "info");
 
-        // PAYLOAD CORRETO! Sem 'textMessage', apenas number, text e delay.
         const payload = {
             number: fone,
-            text: msg,
-            delay: 1200 // Simula que está a digitar durante 1.2 segundos para evitar bloqueios
+            text: msg
         };
 
         const response = await fetch(`${baseURL}/message/sendText/${instancia}`, {
@@ -101,6 +146,42 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     }
 }
 
+// 🔌 DESCONEXÃO: Encerra a sessão do WhatsApp no servidor
+export async function desconectarWhatsAppReal() {
+    const instancia = obterNomeInstancia();
+    if (!instancia) return;
+
+    if (!confirm("Tem a certeza que deseja desconectar o WhatsApp do painel?")) return;
+
+    try {
+        if (window.showNotify) window.showNotify("A desconectar", "A encerrar sessão no servidor...", "info");
+
+        const response = await fetch(`${baseURL}/instance/logout/${instancia}`, {
+            method: 'POST',
+            headers: { 'apikey': apiKey }
+        });
+
+        if (response.ok) {
+            if (window.showNotify) window.showNotify("Desconectado", "WhatsApp desconectado com sucesso.", "success");
+            
+            // Reseta a interface gráfica
+            document.getElementById('wa-status').innerText = "DESCONECTADO";
+            document.getElementById('wa-status').classList.remove("text-green-500", "text-yellow-500");
+            document.getElementById('wa-status').classList.add("text-red-500");
+            document.getElementById('wa-qr-code').src = ""; 
+
+            // Remove o botão de desconectar da tela
+            const btnExistente = document.getElementById('btn-desconectar-wa');
+            if (btnExistente) btnExistente.remove();
+        } else {
+            if (window.showNotify) window.showNotify("Erro", "Não foi possível desconectar a instância.", "error");
+        }
+    } catch (error) {
+        console.error("Erro ao desconectar:", error);
+        if (window.showNotify) window.showNotify("Erro", "Falha de rede ao tentar desconectar.", "error");
+    }
+}
+
 // 🔌 CONEXÃO DO QR CODE DINÂMICA
 export async function conectarWhatsAppReal() {
     const instancia = obterNomeInstancia();
@@ -113,14 +194,12 @@ export async function conectarWhatsAppReal() {
     try {
         if(window.showNotify) window.showNotify("Conectando", "A verificar servidor...", "info");
 
-        // 1. Tenta ver se a instância já existe
         let resState = await fetch(`${baseURL}/instance/connectionState/${instancia}`, {
             headers: { 'apikey': apiKey }
         });
 
         let qrCodeBase64 = null;
 
-        // 2. Se NÃO EXISTIR (404), manda criar
         if (resState.status === 404 || resState.status === 400) {
             if(window.showNotify) window.showNotify("Instância", "A preparar o motor do WhatsApp...", "info");
             
@@ -134,37 +213,47 @@ export async function conectarWhatsAppReal() {
                 })
             });
             
-            // Graças à "vacina" do Chrome no servidor, 3 segundos agora são suficientes!
             await new Promise(r => setTimeout(r, 3000));
             
-            // Pede a imagem fresca da máquina recém-criada
             const resConn = await fetch(`${baseURL}/instance/connect/${instancia}`, { headers: { 'apikey': apiKey } });
             const dataConn = await resConn.json();
-            console.log("Resposta Connect (Nova Instância):", dataConn);
             qrCodeBase64 = dataConn?.qrcode?.base64 || dataConn?.base64;
             
         } else {
-            // 3. Se JÁ EXISTE, vê se está conectada
             const dataState = await resState.json();
             const estadoAtual = dataState?.instance?.state || dataState?.state;
 
+            // CASO CONECTADO: Configura o estado visual e injeta o botão Desconectar
             if (estadoAtual === 'open') {
                 document.getElementById('wa-status').innerText = "WHATSAPP CONECTADO!";
                 document.getElementById('wa-status').classList.remove("text-red-500", "text-yellow-500");
                 document.getElementById('wa-status').classList.add("text-green-500");
+                document.getElementById('wa-qr-code').src = ""; // Oculta o QR code antigo
+
+                // Cria o botão de desconectar dinamicamente se ele ainda não existir na tela
+                if (!document.getElementById('btn-desconectar-wa')) {
+                    const btnDesc = document.createElement('button');
+                    btnDesc.id = 'btn-desconectar-wa';
+                    btnDesc.innerText = "Desconectar WhatsApp";
+                    btnDesc.className = "mt-4 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition duration-200 block mx-auto text-sm shadow";
+                    btnDesc.onclick = () => desconectarWhatsAppReal();
+                    document.getElementById('wa-status').after(btnDesc);
+                }
+
                 if(window.showNotify) window.showNotify("Sucesso", "O WhatsApp já está conectado!", "success");
                 return;
             }
             
-            // Se existe mas a conexão está fechada, pede o QR Code novo
+            // Se cair aqui, a instância existe mas não está conectada (precisa de novo QR)
+            const btnExistente = document.getElementById('btn-desconectar-wa');
+            if (btnExistente) btnExistente.remove();
+
             if(window.showNotify) window.showNotify("QR Code", "A gerar nova imagem de segurança...", "info");
             const resConn = await fetch(`${baseURL}/instance/connect/${instancia}`, { headers: { 'apikey': apiKey } });
             const dataConn = await resConn.json();
-            console.log("Resposta Connect (Máquina Existente):", dataConn);
             qrCodeBase64 = dataConn?.qrcode?.base64 || dataConn?.base64;
         }
 
-        // 4. Renderiza na tela
         if (qrCodeBase64 && typeof qrCodeBase64 === 'string' && qrCodeBase64.includes("base64")) {
             document.getElementById('wa-qr-code').src = qrCodeBase64;
             document.getElementById('wa-status').innerText = "ESCANEAR AGORA!";
