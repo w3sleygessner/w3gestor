@@ -76,14 +76,13 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
                 'apikey': apiKey,
                 'ngrok-skip-browser-warning': 'true' // Mantido por precaução
             },
+            // AQUI ESTÁ A MUDANÇA PARA A VERSÃO 2.3+
             body: JSON.stringify({
                 number: fone,
+                text: msg, // Na V2 o texto vai direto aqui na raiz!
                 options: {
-                    delay: 1500, // Simula que está digitando
+                    delay: 1500, // Dá um delay para o WhatsApp mostrar "a escrever..."
                     presence: "composing" 
-                },
-                textMessage: {
-                    text: msg
                 }
             })
         });
@@ -91,14 +90,16 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
         if (response.ok) {
             if(window.showNotify) window.showNotify("Sucesso!", `Mensagem entregue direto no WhatsApp.`, "success");
         } else {
-            console.error("Resposta da API falhou. Status:", response.status);
-            throw new Error("Erro na resposta da API");
+            // Caso falhe novamente, vamos ler exatamente qual foi o motivo
+            const erroDetalhado = await response.text();
+            console.error("Erro detalhado da API:", erroDetalhado);
+            throw new Error(`Erro na resposta da API: ${response.status}`);
         }
 
     } catch (error) {
-        console.error("Erro na API do WhatsApp:", error);
-        // Exibe o erro na tela em vez de abrir o wa.me!
-        if(window.showNotify) window.showNotify("Erro de Envio", "O WhatsApp falhou ou está desconectado.", "error");
+        console.error("Erro no envio pelo WhatsApp:", error);
+        // Exibe o erro na tela silenciosamente!
+        if(window.showNotify) window.showNotify("Erro de Envio", "Falha de comunicação com o servidor WhatsApp.", "error");
     }
 }
 
