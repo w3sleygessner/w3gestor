@@ -101,7 +101,7 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
 }
 
 // 🔌 CONEXÃO DO QR CODE DINÂMICA
-// 🔌 CONEXÃO DO QR CODE DINÂMICA
+
 export async function conectarWhatsAppReal() {
     const instancia = obterNomeInstancia();
 
@@ -118,11 +118,11 @@ export async function conectarWhatsAppReal() {
             headers: { 'apikey': apiKey }
         });
 
-        let darStart = false;
+        let qrCodeBase64 = null;
 
-        // 2. Se NÃO EXISTIR, cria a máquina
+        // 2. Se NÃO EXISTIR (404), manda criar
         if (resState.status === 404 || resState.status === 400) {
-            if(window.showNotify) window.showNotify("Instância", "A ligar o motor do WhatsApp...", "info");
+            if(window.showNotify) window.showNotify("Instância", "A preparar o motor do WhatsApp...", "info");
             
             await fetch(`${baseURL}/instance/create`, {
                 method: 'POST',
@@ -133,6 +133,16 @@ export async function conectarWhatsAppReal() {
                     qrcode: true
                 })
             });
+            
+            // Graças à "vacina" do Chrome no servidor, 3 segundos agora são suficientes!
+            await new Promise(r => setTimeout(r, 3000));
+            
+            // Pede a imagem fresca da máquina recém-criada
+            const resConn = await fetch(`${baseURL}/instance/connect/${instancia}`, { headers: { 'apikey': apiKey } });
+            const dataConn = await resConn.json();
+            console.log("Resposta Connect (Nova Instância):", dataConn);
+            qrCodeBase64 = dataConn?.qrcode?.base64 || dataConn?.base64;
+            
         } else {
             // 3. Se JÁ EXISTE, vê se está conectada
             const dataState = await resState.json();
@@ -144,58 +154,24 @@ export async function conectarWhatsAppReal() {
                 document.getElementById('wa-status').classList.add("text-green-500");
                 if(window.showNotify) window.showNotify("Sucesso", "O WhatsApp já está conectado!", "success");
                 return;
-            } else if (estadoAtual === 'close') {
-                // Existe mas está desconectada. Precisamos dar um "choque" de start!
-                darStart = true;
             }
-        }
-
-        // Dá o choque de conexão APENAS UMA VEZ para não reiniciar a máquina à toa
-        if (darStart) {
-            await fetch(`${baseURL}/instance/connect/${instancia}`, { headers: { 'apikey': apiKey } });
-        }
-
-        // 4. BUSCA PASSIVA DA IMAGEM (A Mágica!)
-        // Em vez de bater na porta do connect, nós lemos a memória do servidor silenciosamente
-        if(window.showNotify) window.showNotify("QR Code", "A processar imagem... aguarde.", "info");
-        
-        let qrCodeBase64 = null;
-        let tentativas = 0;
-
-        while (tentativas < 6) {
-            await new Promise(r => setTimeout(r, 2500)); // Espera 2.5s
             
-            try {
-                // Rota que apenas LÊ as instâncias sem alterar o estado delas
-                const resMemoria = await fetch(`${baseURL}/instance/fetchInstances?instanceName=${instancia}`, {
-                    headers: { 'apikey': apiKey }
-                });
-                const memoria = await resMemoria.json();
-                
-                // Pega a nossa instância da lista devolvida
-                const dadosInstancia = memoria.length > 0 ? memoria[0] : null;
-                console.log(`Buscando imagem (Tentativa ${tentativas + 1}):`, dadosInstancia?.qrcode);
-                
-                qrCodeBase64 = dadosInstancia?.qrcode?.base64;
-
-                // Se o servidor finalmente cuspiu a imagem base64, quebramos o loop!
-                if (qrCodeBase64 && typeof qrCodeBase64 === 'string' && qrCodeBase64.includes("base64")) {
-                    break; 
-                }
-            } catch(e) {
-                console.log("A aguardar servidor...");
-            }
-            tentativas++;
+            // Se existe mas a conexão está fechada, pede o QR Code novo
+            if(window.showNotify) window.showNotify("QR Code", "A gerar nova imagem de segurança...", "info");
+            const resConn = await fetch(`${baseURL}/instance/connect/${instancia}`, { headers: { 'apikey': apiKey } });
+            const dataConn = await resConn.json();
+            console.log("Resposta Connect (Máquina Existente):", dataConn);
+            qrCodeBase64 = dataConn?.qrcode?.base64 || dataConn?.base64;
         }
 
-        // 5. Renderiza na tela
+        // 4. Renderiza na tela
         if (qrCodeBase64 && typeof qrCodeBase64 === 'string' && qrCodeBase64.includes("base64")) {
             document.getElementById('wa-qr-code').src = qrCodeBase64;
             document.getElementById('wa-status').innerText = "ESCANEAR AGORA!";
             document.getElementById('wa-status').classList.remove("text-red-500", "text-green-500");
             document.getElementById('wa-status').classList.add("text-yellow-500");
         } else {
-            if(window.showNotify) window.showNotify("Aviso", "O servidor ainda está a gerar a imagem. Clique em conectar novamente.", "warning");
+            if(window.showNotify) window.showNotify("Aviso", "Servidor a finalizar a imagem. Clique em conectar novamente.", "warning");
         }
 
     } catch (e) { 
