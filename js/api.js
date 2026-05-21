@@ -1,7 +1,7 @@
 import { db } from "./database.js";
 
 // Configurações da sua API do WhatsApp (Evolution API / CodeChat)
-const baseURL = "http://163.176.153.212:8080"; 
+const baseURL = "https://w3gestorzap.duckdns.org";
 const apiKey = "Wesley123!";
 const instancia = "wesley_final_ok";
 
