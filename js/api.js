@@ -48,13 +48,14 @@ export async function sendManualWA(cliId, type) {
     await sendCustomWA(cli.whatsapp, msg, cli.nome);
 }
 
-// 🚀 DISPARO ATUALIZADO (Evita congelamento e falhas silenciosas do WhatsApp)
+// 🚀 DISPARO ATUALIZADO (Ajustado o formato exato que a API espera)
 export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     if (!msg || msg.trim() === "") {
         if(window.showNotify) window.showNotify("Erro", "A mensagem está vazia.", "error");
         return;
     }
 
+    // Limpa o número removendo espaços e traços. Adiciona o 55 se faltar.
     let fone = telefone.replace(/\D/g, '');
     if (!fone.startsWith('55')) fone = '55' + fone; 
 
@@ -67,17 +68,11 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     try {
         if(window.showNotify) window.showNotify("Enviando...", `Processando envio para ${nomeCliente}`, "info");
 
-        // PAYLOAD INFALÍVEL DA V2 (Simula digitação por 1 segundo para evitar bloqueio)
+        // PAYLOAD CORRETO! Sem 'textMessage', apenas number, text e delay.
         const payload = {
             number: fone,
-            options: {
-                delay: 1200,
-                presence: "composing",
-                linkPreview: false
-            },
-            textMessage: {
-                text: msg
-            }
+            text: msg,
+            delay: 1200 // Simula que está a digitar durante 1.2 segundos para evitar bloqueios
         };
 
         const response = await fetch(`${baseURL}/message/sendText/${instancia}`, {
@@ -107,7 +102,6 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
 }
 
 // 🔌 CONEXÃO DO QR CODE DINÂMICA
-
 export async function conectarWhatsAppReal() {
     const instancia = obterNomeInstancia();
 
