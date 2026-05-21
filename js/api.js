@@ -83,31 +83,55 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
 }
 
 export async function conectarWhatsAppReal() {
+    const baseURL = "https://w3gestorzap.duckdns.org"; // Coloque o seu subdomínio aqui
+    const apiKey = "Wesley123!";
+    const instancia = "wesley_final_ok";
+
     try {
-        if(window.showNotify) window.showNotify("Conectando", "Solicitando QR Code à API...", "info");
-        
-        await fetch(`${baseURL}/instance/create`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'apikey': apiKey, 'ngrok-skip-browser-warning': 'true' },
-            body: JSON.stringify({ instanceName: instancia, token: apiKey, qrcode: true })
+        if(window.showNotify) window.showNotify("Conectando", "A processar conexão...", "info");
+
+        // 1. Tenta conectar diretamente a uma instância que já existe
+        let res = await fetch(`${baseURL}/instance/connect/${instancia}`, {
+            headers: { 'apikey': apiKey }
         });
-        
-        await new Promise(r => setTimeout(r, 3000));
-        
-        const res = await fetch(`${baseURL}/instance/connect/${instancia}`, {
-            headers: { 'apikey': apiKey, 'ngrok-skip-browser-warning': 'true' }
-        });
+
+        // 2. Se der 404 (a instância não existe no banco de dados), nós a criamos!
+        if (res.status === 404) {
+            await fetch(`${baseURL}/instance/create`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
+                body: JSON.stringify({
+                    instanceName: instancia,
+                    qrcode: true,
+                    integration: "WHATSAPP-BAILEYS"
+                })
+            });
+            
+            await new Promise(r => setTimeout(r, 2000));
+            
+            // Tenta conectar de novo após criar
+            res = await fetch(`${baseURL}/instance/connect/${instancia}`, {
+                headers: { 'apikey': apiKey }
+            });
+        }
+
         const data = await res.json();
         
+        // 3. Lê a resposta
         if (data.base64) {
             document.getElementById('wa-qr-code').src = data.base64;
             document.getElementById('wa-status').innerText = "ESCANEAR AGORA!";
+            document.getElementById('wa-status').classList.replace("text-red-500", "text-yellow-500");
+        } else if (data.instance?.state === 'open' || data.state === 'open') {
+            document.getElementById('wa-status').innerText = "WHATSAPP CONECTADO!";
             document.getElementById('wa-status').classList.replace("text-red-500", "text-green-500");
+            if(window.showNotify) window.showNotify("Sucesso", "WhatsApp já está conectado e pronto para disparos!", "success");
         } else {
-            if(window.showNotify) window.showNotify("Aviso", "Instância conectada ou erro de geração.", "warning");
+            console.log("Status não reconhecido:", data);
         }
+
     } catch (e) { 
-        console.log("Erro API WA", e); 
-        if(window.showNotify) window.showNotify("Erro", "API Offline. Verifique seu servidor.", "error");
+        console.error("Erro API WA:", e); 
+        if(window.showNotify) window.showNotify("Erro", "Falha de comunicação com a Evolution API.", "error");
     }
 }
