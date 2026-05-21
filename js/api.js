@@ -101,6 +101,7 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
 }
 
 // 🔌 CONEXÃO DO QR CODE DINÂMICA
+// 🔌 CONEXÃO DO QR CODE DINÂMICA
 export async function conectarWhatsAppReal() {
     const instancia = obterNomeInstancia();
 
@@ -117,7 +118,9 @@ export async function conectarWhatsAppReal() {
             headers: { 'apikey': apiKey }
         });
 
-        // 2. Se NÃO EXISTIR (404), manda criar
+        let darStart = false;
+
+        // 2. Se NÃO EXISTIR, cria a máquina
         if (resState.status === 404 || resState.status === 400) {
             if(window.showNotify) window.showNotify("Instância", "A ligar o motor do WhatsApp...", "info");
             
@@ -141,29 +144,41 @@ export async function conectarWhatsAppReal() {
                 document.getElementById('wa-status').classList.add("text-green-500");
                 if(window.showNotify) window.showNotify("Sucesso", "O WhatsApp já está conectado!", "success");
                 return;
+            } else if (estadoAtual === 'close') {
+                // Existe mas está desconectada. Precisamos dar um "choque" de start!
+                darStart = true;
             }
         }
 
-        // 4. SISTEMA DE BUSCA INTELIGENTE (POLLING)
-        // Bate à porta do servidor até 5 vezes, aguardando a imagem ficar pronta
-        if(window.showNotify) window.showNotify("QR Code", "A gerar imagem de segurança... aguarde.", "info");
+        // Dá o choque de conexão APENAS UMA VEZ para não reiniciar a máquina à toa
+        if (darStart) {
+            await fetch(`${baseURL}/instance/connect/${instancia}`, { headers: { 'apikey': apiKey } });
+        }
+
+        // 4. BUSCA PASSIVA DA IMAGEM (A Mágica!)
+        // Em vez de bater na porta do connect, nós lemos a memória do servidor silenciosamente
+        if(window.showNotify) window.showNotify("QR Code", "A processar imagem... aguarde.", "info");
         
         let qrCodeBase64 = null;
         let tentativas = 0;
 
-        while (tentativas < 5) {
+        while (tentativas < 6) {
             await new Promise(r => setTimeout(r, 2500)); // Espera 2.5s
             
             try {
-                const resConnect = await fetch(`${baseURL}/instance/connect/${instancia}`, {
+                // Rota que apenas LÊ as instâncias sem alterar o estado delas
+                const resMemoria = await fetch(`${baseURL}/instance/fetchInstances?instanceName=${instancia}`, {
                     headers: { 'apikey': apiKey }
                 });
-                const dataConnect = await resConnect.json();
-                console.log(`Tentativa ${tentativas + 1}:`, dataConnect);
+                const memoria = await resMemoria.json();
                 
-                qrCodeBase64 = dataConnect?.qrcode?.base64 || dataConnect?.base64 || dataConnect?.qrcode;
+                // Pega a nossa instância da lista devolvida
+                const dadosInstancia = memoria.length > 0 ? memoria[0] : null;
+                console.log(`Buscando imagem (Tentativa ${tentativas + 1}):`, dadosInstancia?.qrcode);
+                
+                qrCodeBase64 = dadosInstancia?.qrcode?.base64;
 
-                // Se a imagem finalmente chegou, interrompe o loop!
+                // Se o servidor finalmente cuspiu a imagem base64, quebramos o loop!
                 if (qrCodeBase64 && typeof qrCodeBase64 === 'string' && qrCodeBase64.includes("base64")) {
                     break; 
                 }
@@ -180,7 +195,7 @@ export async function conectarWhatsAppReal() {
             document.getElementById('wa-status').classList.remove("text-red-500", "text-green-500");
             document.getElementById('wa-status').classList.add("text-yellow-500");
         } else {
-            if(window.showNotify) window.showNotify("Aviso", "O servidor ainda está a processar. Clique em conectar novamente.", "warning");
+            if(window.showNotify) window.showNotify("Aviso", "O servidor ainda está a gerar a imagem. Clique em conectar novamente.", "warning");
         }
 
     } catch (e) { 
