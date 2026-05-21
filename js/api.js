@@ -90,18 +90,16 @@ export async function conectarWhatsAppReal() {
     try {
         if(window.showNotify) window.showNotify("Conectando", "A processar conexão com o servidor...", "info");
 
-        // 1. Pergunta à API qual o estado atual dessa instância
+        // 1. Verifica se a instância já existe
         let resState = await fetch(`${baseURL}/instance/connectionState/${instancia}`, {
             headers: { 'apikey': apiKey }
         });
 
-        let qrCodeBase64 = null;
-
-        // 2. Se a instância NÃO EXISTIR (Erro 404), nós criamos!
+        // 2. Se NÃO EXISTIR (404), manda criar
         if (resState.status === 404) {
-            if(window.showNotify) window.showNotify("Instância", "A criar nova instância...", "info");
+            if(window.showNotify) window.showNotify("Instância", "Criando instância no servidor...", "info");
             
-            const resCreate = await fetch(`${baseURL}/instance/create`, {
+            await fetch(`${baseURL}/instance/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
                 body: JSON.stringify({
@@ -111,42 +109,40 @@ export async function conectarWhatsAppReal() {
                 })
             });
             
-            const dataCreate = await resCreate.json();
-            
-            // Na versão 2.0, o QR Code de criação vem aqui:
-            qrCodeBase64 = dataCreate?.qrcode?.base64 || dataCreate?.base64;
-            
+            // Dá 2 segundos de pausa para o motor do WhatsApp inicializar internamente
+            await new Promise(r => setTimeout(r, 2000));
         } else {
-            // 3. Se a instância EXISTE, vamos ver o estado dela
+            // 3. Se JÁ EXISTE, vê se está conectada
             const dataState = await resState.json();
             const estadoAtual = dataState?.instance?.state || dataState?.state;
 
             if (estadoAtual === 'open') {
-                // Já conectado! Sucesso total.
                 document.getElementById('wa-status').innerText = "WHATSAPP CONECTADO!";
-                document.getElementById('wa-status').classList.replace("text-red-500", "text-green-500");
-                document.getElementById('wa-status').classList.replace("text-yellow-500", "text-green-500");
-                if(window.showNotify) window.showNotify("Sucesso", "O WhatsApp já está conectado e pronto a disparar!", "success");
-                return; // Interrompe aqui para não pedir QR Code
-            } else {
-                // Está desligada. Pede apenas o QR Code de conexão.
-                const resConnect = await fetch(`${baseURL}/instance/connect/${instancia}`, {
-                    headers: { 'apikey': apiKey }
-                });
-                const dataConnect = await resConnect.json();
-                qrCodeBase64 = dataConnect?.base64;
+                document.getElementById('wa-status').classList.remove("text-red-500", "text-yellow-500");
+                document.getElementById('wa-status').classList.add("text-green-500");
+                if(window.showNotify) window.showNotify("Sucesso", "O WhatsApp já está conectado!", "success");
+                return; // Para aqui, não pede QR Code
             }
         }
 
-        // 4. Joga a imagem do QR Code na tela
-        if (qrCodeBase64) {
+        // 4. Pede o QR Code atualizado da instância (criada agora ou já existente)
+        const resConnect = await fetch(`${baseURL}/instance/connect/${instancia}`, {
+            headers: { 'apikey': apiKey }
+        });
+        const dataConnect = await resConnect.json();
+        
+        // Na V2 o QR Code pode vir na raiz ou dentro do objeto qrcode
+        const qrCodeBase64 = dataConnect?.base64 || dataConnect?.qrcode?.base64 || dataConnect?.qrcode;
+
+        // 5. Joga a imagem na tela
+        if (qrCodeBase64 && typeof qrCodeBase64 === 'string' && qrCodeBase64.includes("base64")) {
             document.getElementById('wa-qr-code').src = qrCodeBase64;
             document.getElementById('wa-status').innerText = "ESCANEAR AGORA!";
-            document.getElementById('wa-status').classList.replace("text-red-500", "text-yellow-500");
-            document.getElementById('wa-status').classList.replace("text-green-500", "text-yellow-500");
+            document.getElementById('wa-status').classList.remove("text-red-500", "text-green-500");
+            document.getElementById('wa-status').classList.add("text-yellow-500");
         } else {
-            console.error("Falha ao obter QR Code da API.");
-            if(window.showNotify) window.showNotify("Erro", "Não foi possível gerar o QR Code.", "error");
+            console.log("Resposta do Connect:", dataConnect);
+            if(window.showNotify) window.showNotify("Aviso", "O servidor está gerando a imagem. Clique em conectar novamente.", "warning");
         }
 
     } catch (e) { 
