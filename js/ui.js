@@ -1,5 +1,5 @@
 import { db, save } from "./database.js";
-import { sendManualWA } from "./api.js";
+import { sendManualWA, sendCustomWA } from "./api.js";
 
 export let isRegisterMode = false;
 let financeChart;
@@ -807,8 +807,7 @@ export function confirmarRenovacao() {
             const numZap = cli.whatsapp.replace(/\D/g, ''); 
             const texto = `✅ *Pagamento Confirmado!*\n\nOlá, *${cli.nome}*!\nA sua assinatura foi renovada com sucesso.\n\n📅 *Novo Vencimento:* ${novaDataFormatadaBR}\n\n👤 *Usuário:* ${cli.usuario || 'Não informado'}\n🔑 *Senha:* ${cli.senha || 'Não informada'}\n\nObrigado pela preferência! 🚀`;
             
-            const urlZap = `https://wa.me/55${numZap}?text=${encodeURIComponent(texto)}`;
-            window.open(urlZap, '_blank');
+           sendCustomWA(numZap, texto, cli.nome);
         }, 'question');
     }, 400);
 }
