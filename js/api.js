@@ -77,16 +77,12 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
                 'apikey': apiKey,
                 'ngrok-skip-browser-warning': 'true' 
             },
+            // ENVIO BRUTO: Sem simular digitação para evitar que a API trave
             body: JSON.stringify({
                 number: fone,
-                text: msg, 
-                options: {
-                    delay: 1500, 
-                    presence: "composing" 
-                }
+                text: msg
             })
         });
-
         if (response.ok) {
             if(window.showNotify) window.showNotify("Sucesso!", `Mensagem entregue direto no WhatsApp.`, "success");
         } else {
