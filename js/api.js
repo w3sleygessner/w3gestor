@@ -83,55 +83,74 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
 }
 
 export async function conectarWhatsAppReal() {
-    const baseURL = "https://w3gestorzap.duckdns.org"; // Coloque o seu subdomínio aqui
+    const baseURL = "https://w3gestorzap.duckdns.org"; 
     const apiKey = "Wesley123!";
     const instancia = "wesley_final_ok";
 
     try {
-        if(window.showNotify) window.showNotify("Conectando", "A processar conexão...", "info");
+        if(window.showNotify) window.showNotify("Conectando", "A processar conexão com o servidor...", "info");
 
-        // 1. Tenta conectar diretamente a uma instância que já existe
-        let res = await fetch(`${baseURL}/instance/connect/${instancia}`, {
+        // 1. Pergunta à API qual o estado atual dessa instância
+        let resState = await fetch(`${baseURL}/instance/connectionState/${instancia}`, {
             headers: { 'apikey': apiKey }
         });
 
-        // 2. Se der 404 (a instância não existe no banco de dados), nós a criamos!
-        if (res.status === 404) {
-            await fetch(`${baseURL}/instance/create`, {
+        let qrCodeBase64 = null;
+
+        // 2. Se a instância NÃO EXISTIR (Erro 404), nós criamos!
+        if (resState.status === 404) {
+            if(window.showNotify) window.showNotify("Instância", "A criar nova instância...", "info");
+            
+            const resCreate = await fetch(`${baseURL}/instance/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
                 body: JSON.stringify({
                     instanceName: instancia,
-                    qrcode: true,
-                    integration: "WHATSAPP-BAILEYS"
+                    integration: "WHATSAPP-BAILEYS",
+                    qrcode: true
                 })
             });
             
-            await new Promise(r => setTimeout(r, 2000));
+            const dataCreate = await resCreate.json();
             
-            // Tenta conectar de novo após criar
-            res = await fetch(`${baseURL}/instance/connect/${instancia}`, {
-                headers: { 'apikey': apiKey }
-            });
+            // Na versão 2.0, o QR Code de criação vem aqui:
+            qrCodeBase64 = dataCreate?.qrcode?.base64 || dataCreate?.base64;
+            
+        } else {
+            // 3. Se a instância EXISTE, vamos ver o estado dela
+            const dataState = await resState.json();
+            const estadoAtual = dataState?.instance?.state || dataState?.state;
+
+            if (estadoAtual === 'open') {
+                // Já conectado! Sucesso total.
+                document.getElementById('wa-status').innerText = "WHATSAPP CONECTADO!";
+                document.getElementById('wa-status').classList.replace("text-red-500", "text-green-500");
+                document.getElementById('wa-status').classList.replace("text-yellow-500", "text-green-500");
+                if(window.showNotify) window.showNotify("Sucesso", "O WhatsApp já está conectado e pronto a disparar!", "success");
+                return; // Interrompe aqui para não pedir QR Code
+            } else {
+                // Está desligada. Pede apenas o QR Code de conexão.
+                const resConnect = await fetch(`${baseURL}/instance/connect/${instancia}`, {
+                    headers: { 'apikey': apiKey }
+                });
+                const dataConnect = await resConnect.json();
+                qrCodeBase64 = dataConnect?.base64;
+            }
         }
 
-        const data = await res.json();
-        
-        // 3. Lê a resposta
-        if (data.base64) {
-            document.getElementById('wa-qr-code').src = data.base64;
+        // 4. Joga a imagem do QR Code na tela
+        if (qrCodeBase64) {
+            document.getElementById('wa-qr-code').src = qrCodeBase64;
             document.getElementById('wa-status').innerText = "ESCANEAR AGORA!";
             document.getElementById('wa-status').classList.replace("text-red-500", "text-yellow-500");
-        } else if (data.instance?.state === 'open' || data.state === 'open') {
-            document.getElementById('wa-status').innerText = "WHATSAPP CONECTADO!";
-            document.getElementById('wa-status').classList.replace("text-red-500", "text-green-500");
-            if(window.showNotify) window.showNotify("Sucesso", "WhatsApp já está conectado e pronto para disparos!", "success");
+            document.getElementById('wa-status').classList.replace("text-green-500", "text-yellow-500");
         } else {
-            console.log("Status não reconhecido:", data);
+            console.error("Falha ao obter QR Code da API.");
+            if(window.showNotify) window.showNotify("Erro", "Não foi possível gerar o QR Code.", "error");
         }
 
     } catch (e) { 
         console.error("Erro API WA:", e); 
-        if(window.showNotify) window.showNotify("Erro", "Falha de comunicação com a Evolution API.", "error");
+        if(window.showNotify) window.showNotify("Erro", "Falha de comunicação com o servidor WhatsApp.", "error");
     }
 }
