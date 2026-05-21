@@ -23,16 +23,13 @@ export async function sendManualWA(cliId, type) {
     const app = db.apps.find(a => a.id == cli.app_id) || {};
     const plano = db.planos.find(p => p.id == cli.plano_id) || {};
 
-    let template = db.config.msg_renovacao;
-    if (type === 'welcome') template = db.config.msg_boas_vindas;
-    if (type === 'success') template = db.config.msg_sucesso;
-    if (type === 'suspended') template = db.config.msg_suspensa;
-    if (type === 'oscilacao') {
-        template = db.config.msg_oscilacao || "⚠️ *Aviso de Instabilidade*\n\nOlá {cliente}, identificamos uma oscilação no servidor do app {app}. Nossa equipe já está atuando para normalizar o sinal.";
-    }
-    if (type === 'manutencao') {
-        template = db.config.msg_manutencao || "🔧 *Aviso de Manutenção*\n\nOlá {cliente}, o servidor do app {app} entrará em manutenção programada em breve para melhorias.";
-    }
+    // 🛡️ ADICIONADO: Textos padrão à prova de falhas caso o painel esteja vazio!
+    let template = db.config.msg_renovacao || "Olá {cliente}, sua assinatura do app {app} vence dia {vencimento}. Valor: {valor}.";
+    if (type === 'welcome') template = db.config.msg_boas_vindas || "Olá {cliente}, seja bem-vindo(a) ao {app}! \n👤 Usuário: {usuario}\n🔑 Senha: {senha}";
+    if (type === 'success') template = db.config.msg_sucesso || "Olá {cliente}, pagamento de {valor} confirmado! Próximo vencimento: {vencimento}.";
+    if (type === 'suspended') template = db.config.msg_suspensa || "⚠️ *Aviso de Suspensão*\n\nOlá {cliente}, seu acesso ao app {app} foi suspenso devido a atraso no pagamento. Por favor, regularize para voltar a usar.";
+    if (type === 'oscilacao') template = db.config.msg_oscilacao || "⚠️ *Aviso de Instabilidade*\n\nOlá {cliente}, identificamos uma oscilação no servidor do app {app}. Nossa equipe já está atuando para normalizar o sinal.";
+    if (type === 'manutencao') template = db.config.msg_manutencao || "🔧 *Aviso de Manutenção*\n\nOlá {cliente}, o servidor do app {app} entrará em manutenção programada em breve.";
 
     let msg = template || "";
     msg = msg.replace(/{cliente}/g, cli.nome || "");
@@ -51,15 +48,19 @@ export async function sendManualWA(cliId, type) {
     await sendCustomWA(cli.whatsapp, msg, cli.nome);
 }
 
-// 🚀 DISPARO SILENCIOSO
 // 🚀 DISPARO 100% SILENCIOSO (Sem abrir abas)
 export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
+    // Impede o envio se a mensagem estiver magicamente vazia
+    if (!msg || msg.trim() === "") {
+        if(window.showNotify) window.showNotify("Erro", "A mensagem está vazia. Verifique as configurações.", "error");
+        return;
+    }
+
     let fone = telefone.replace(/\D/g, '');
     if (!fone.startsWith('55')) fone = '55' + fone; 
 
     const instancia = obterNomeInstancia();
     
-    // Se não achar a instância, mostra erro em vez de abrir link
     if (!instancia) {
         console.error("Erro: Instância indisponível.");
         if(window.showNotify) window.showNotify("Erro", "Aguarde o sistema carregar a sua conta para enviar.", "error");
@@ -74,14 +75,13 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
             headers: { 
                 'Content-Type': 'application/json', 
                 'apikey': apiKey,
-                'ngrok-skip-browser-warning': 'true' // Mantido por precaução
+                'ngrok-skip-browser-warning': 'true' 
             },
-            // AQUI ESTÁ A MUDANÇA PARA A VERSÃO 2.3+
             body: JSON.stringify({
                 number: fone,
-                text: msg, // Na V2 o texto vai direto aqui na raiz!
+                text: msg, 
                 options: {
-                    delay: 1500, // Dá um delay para o WhatsApp mostrar "a escrever..."
+                    delay: 1500, 
                     presence: "composing" 
                 }
             })
@@ -90,7 +90,6 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
         if (response.ok) {
             if(window.showNotify) window.showNotify("Sucesso!", `Mensagem entregue direto no WhatsApp.`, "success");
         } else {
-            // Caso falhe novamente, vamos ler exatamente qual foi o motivo
             const erroDetalhado = await response.text();
             console.error("Erro detalhado da API:", erroDetalhado);
             throw new Error(`Erro na resposta da API: ${response.status}`);
@@ -98,7 +97,6 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
 
     } catch (error) {
         console.error("Erro no envio pelo WhatsApp:", error);
-        // Exibe o erro na tela silenciosamente!
         if(window.showNotify) window.showNotify("Erro de Envio", "Falha de comunicação com o servidor WhatsApp.", "error");
     }
 }

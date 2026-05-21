@@ -450,7 +450,7 @@ export function renderClientes() {
             </td>
         </tr>`;
 
-        let cardBorder = isInadimplente ? 'border-purple-500/20 bg-purple-950/5' : (isOverdue ? 'border-red-500/20 bg-red-950/5' : 'border-white/5 bg-[#16162d]');
+       let cardBorder = isInadimplente ? 'border-purple-500/20 bg-purple-950/5' : (isOverdue ? 'border-red-500/20 bg-red-950/5' : 'border-white/5 bg-[#16162d]');
         let statusBadge = isInadimplente ? '<span class="text-purple-400">Inadimplente</span>' : (isOverdue ? '<span class="text-red-400">Atrasado</span>' : '<span class="text-green-400">Ativo</span>');
 
         mobileContainer.innerHTML += `
@@ -460,13 +460,17 @@ export function renderClientes() {
                 <span class="font-mono text-[11px] text-gray-400">${cli.vencimento.split('-').reverse().join('/')} ${statusBadge}</span>
             </div>
             <div class="flex gap-2 items-center text-[10px] text-gray-400 mb-2 font-mono"><i class="fab fa-whatsapp"></i> ${cli.whatsapp}</div>
+            
             <div class="flex justify-between items-center mt-1 pt-2 border-t border-white/5">
-                <span class="text-[10px] text-purple-400 uppercase font-bold truncate max-w-[100px]">${p.nome}</span>
-                <div class="flex gap-2">
-                    <button onclick="openModalHistory(${cli.id})" class="text-blue-400 hover:scale-110 p-1"><i class="fas fa-history"></i></button>
-                    <button onclick="addThreeDays(${cli.id})" class="text-purple-400 font-bold hover:scale-110 p-1">+3</button>
-                    <button onclick="openModalClienteEdit(${cli.id})" class="text-gray-400 hover:scale-110 p-1"><i class="fas fa-edit"></i></button>
-                    <button onclick="gerarFaturaManual(${cli.id})" class="bg-yellow-600/20 text-yellow-500 px-2 py-0.5 rounded font-bold hover:bg-yellow-600 hover:text-black transition">GERAR FATURA</button>
+                <span class="text-[10px] text-purple-400 uppercase font-bold truncate max-w-[60px]">${p.nome}</span>
+                <div class="flex gap-1 flex-wrap justify-end">
+                    <button onclick="sendManualWA(${cli.id}, 'renew')" class="text-purple-400 hover:bg-purple-500/20 bg-white/5 p-1.5 rounded transition" title="Cobrar"><i class="fas fa-redo"></i></button>
+                    <button onclick="sendManualWA(${cli.id}, 'welcome')" class="text-green-500 hover:bg-green-500/20 bg-white/5 p-1.5 rounded transition" title="Boas Vindas"><i class="fas fa-star"></i></button>
+                    <button onclick="sendManualWA(${cli.id}, 'suspended')" class="text-red-500 hover:bg-red-500/20 bg-white/5 p-1.5 rounded transition" title="Bloqueio"><i class="fas fa-ban"></i></button>
+                    
+                    <button onclick="openModalHistory(${cli.id})" class="text-blue-400 hover:bg-blue-500/20 bg-white/5 p-1.5 rounded ml-2" title="Histórico"><i class="fas fa-history"></i></button>
+                    <button onclick="openModalClienteEdit(${cli.id})" class="text-gray-400 hover:bg-gray-500/20 bg-white/5 p-1.5 rounded" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button onclick="gerarFaturaManual(${cli.id})" class="bg-yellow-600/20 text-yellow-500 px-2 py-0.5 rounded font-bold hover:bg-yellow-600 hover:text-black transition ml-1">FATURA</button>
                 </div>
             </div>
         </div>`;
