@@ -48,11 +48,10 @@ export async function sendManualWA(cliId, type) {
     await sendCustomWA(cli.whatsapp, msg, cli.nome);
 }
 
-// 🚀 DISPARO 100% SILENCIOSO (Sem abrir abas)
+// 🚀 DISPARO ATUALIZADO (Evita congelamento e falhas silenciosas do WhatsApp)
 export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
-    // Impede o envio se a mensagem estiver magicamente vazia
     if (!msg || msg.trim() === "") {
-        if(window.showNotify) window.showNotify("Erro", "A mensagem está vazia. Verifique as configurações.", "error");
+        if(window.showNotify) window.showNotify("Erro", "A mensagem está vazia.", "error");
         return;
     }
 
@@ -60,15 +59,26 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     if (!fone.startsWith('55')) fone = '55' + fone; 
 
     const instancia = obterNomeInstancia();
-    
     if (!instancia) {
-        console.error("Erro: Instância indisponível.");
-        if(window.showNotify) window.showNotify("Erro", "Aguarde o sistema carregar a sua conta para enviar.", "error");
+        if(window.showNotify) window.showNotify("Erro", "Aguarde o sistema carregar.", "error");
         return;
     }
 
     try {
         if(window.showNotify) window.showNotify("Enviando...", `Processando envio para ${nomeCliente}`, "info");
+
+        // PAYLOAD INFALÍVEL DA V2 (Simula digitação por 1 segundo para evitar bloqueio)
+        const payload = {
+            number: fone,
+            options: {
+                delay: 1200,
+                presence: "composing",
+                linkPreview: false
+            },
+            textMessage: {
+                text: msg
+            }
+        };
 
         const response = await fetch(`${baseURL}/message/sendText/${instancia}`, {
             method: 'POST',
@@ -77,23 +87,22 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
                 'apikey': apiKey,
                 'ngrok-skip-browser-warning': 'true' 
             },
-            // ENVIO BRUTO: Sem simular digitação para evitar que a API trave
-            body: JSON.stringify({
-                number: fone,
-                text: msg
-            })
+            body: JSON.stringify(payload)
         });
+
         if (response.ok) {
-            if(window.showNotify) window.showNotify("Sucesso!", `Mensagem entregue direto no WhatsApp.`, "success");
+            const data = await response.json();
+            console.log("Sucesso API:", data);
+            if(window.showNotify) window.showNotify("Sucesso!", `Mensagem entregue no WhatsApp.`, "success");
         } else {
             const erroDetalhado = await response.text();
-            console.error("Erro detalhado da API:", erroDetalhado);
-            throw new Error(`Erro na resposta da API: ${response.status}`);
+            console.error("Erro da API:", erroDetalhado);
+            if(window.showNotify) window.showNotify("Erro de Envio", "O WhatsApp recusou o número ou a API falhou.", "error");
         }
 
     } catch (error) {
-        console.error("Erro no envio pelo WhatsApp:", error);
-        if(window.showNotify) window.showNotify("Erro de Envio", "Falha de comunicação com o servidor WhatsApp.", "error");
+        console.error("Erro de Rede:", error);
+        if(window.showNotify) window.showNotify("Erro", "Falha de comunicação com o servidor.", "error");
     }
 }
 
