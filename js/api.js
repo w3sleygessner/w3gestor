@@ -1,12 +1,19 @@
 import { db } from "./database.js";
 import { auth } from "./firebase-config.js";
 
-// A instância seria o ID único de quem fez o login no sistema
-// Configurações da sua API do WhatsApp (Evolution API / CodeChat)
+// Configurações Globais da API do WhatsApp
 const baseURL = "https://w3gestorzap.duckdns.org";
 const apiKey = "Wesley123!";
-const instancia = "user_" + auth.currentUser.uid;
 
+// 🛠️ FUNÇÃO AUXILIAR: Pega a instância dinamicamente apenas quando necessário
+function obterNomeInstancia() {
+    const usuarioLogado = auth.currentUser;
+    if (!usuarioLogado) {
+        console.warn("Aviso: Firebase Auth ainda não inicializou ou usuário está deslogado.");
+        return null;
+    }
+    return `user_${usuarioLogado.uid}`;
+}
 
 export async function sendManualWA(cliId, type) {
     const cli = db.clientes.find(c => c.id == cliId);
@@ -43,10 +50,19 @@ export async function sendManualWA(cliId, type) {
     await sendCustomWA(cli.whatsapp, msg, cli.nome);
 }
 
-// 🚀 NOVA FUNÇÃO: Dispara mensagens de forma 100% silenciosa
+// 🚀 DISPARO SILENCIOSO
 export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     let fone = telefone.replace(/\D/g, '');
-    if (!fone.startsWith('55')) fone = '55' + fone; // Garante o código do Brasil
+    if (!fone.startsWith('55')) fone = '55' + fone; 
+
+    const instancia = obterNomeInstancia();
+    
+    // Rota de fuga caso o usuário clique antes do Firebase validar o login
+    if (!instancia) {
+        console.error("Erro: Instância indisponível. Abrindo fallback manual.");
+        window.open(`https://wa.me/${fone}?text=${encodeURIComponent(msg)}`, '_blank');
+        return;
+    }
 
     try {
         if(window.showNotify) window.showNotify("Enviando...", `Processando envio para ${nomeCliente}`, "info");
@@ -56,12 +72,12 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
             headers: { 
                 'Content-Type': 'application/json', 
                 'apikey': apiKey,
-                'ngrok-skip-browser-warning': 'true' // Vital enquanto usar o ngrok
+                'ngrok-skip-browser-warning': 'true'
             },
             body: JSON.stringify({
                 number: fone,
                 options: {
-                    delay: 1500, // Dá um delay para simular que você está digitando
+                    delay: 1500,
                     presence: "composing" 
                 },
                 textMessage: {
@@ -79,28 +95,30 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     } catch (error) {
         console.error("Erro na API do WhatsApp:", error);
         if(window.showNotify) window.showNotify("Aviso", "API Offline. Abrindo janela manual...", "warning");
-        
-        // Plano B: Se a API falhar (ex: ngrok fechou), abre a URL antiga
         window.open(`https://wa.me/${fone}?text=${encodeURIComponent(msg)}`, '_blank');
     }
 }
 
+// 🔌 CONEXÃO DO QR CODE DINÂMICA
 export async function conectarWhatsAppReal() {
-    const baseURL = "https://w3gestorzap.duckdns.org"; 
-    const apiKey = "Wesley123!";
-    // MUDANÇA AQUI: Novo nome para criar uma instância limpa, sem histórico de erros
+    const instancia = obterNomeInstancia();
+
+    if (!instancia) {
+        if(window.showNotify) window.showNotify("Erro", "Aguarde a autenticação do usuário ser concluída.", "error");
+        return;
+    }
 
     try {
         if(window.showNotify) window.showNotify("Conectando", "A comunicar com o servidor...", "info");
 
-        // 1. Tenta ver se a instância já existe
+        // 1. Tenta ver se a instância com o UID do usuário já existe
         let resState = await fetch(`${baseURL}/instance/connectionState/${instancia}`, {
             headers: { 'apikey': apiKey }
         });
 
         let qrCodeBase64 = null;
 
-        // 2. Se NÃO EXISTIR (404), manda criar e JÁ PEGA a imagem!
+        // 2. Se NÃO EXISTIR (404), manda criar isolada para este usuário
         if (resState.status === 404 || resState.status === 400) {
             if(window.showNotify) window.showNotify("Instância", "A criar nova máquina limpa...", "info");
             
@@ -116,8 +134,6 @@ export async function conectarWhatsAppReal() {
             
             const dataCreate = await resCreate.json();
             console.log("Resposta da Criação:", dataCreate);
-            
-            // Na V2 o QR Code já vem dentro da resposta de criação!
             qrCodeBase64 = dataCreate?.qrcode?.base64 || dataCreate?.base64;
             
         } else {
@@ -130,9 +146,9 @@ export async function conectarWhatsAppReal() {
                 document.getElementById('wa-status').classList.remove("text-red-500", "text-yellow-500");
                 document.getElementById('wa-status').classList.add("text-green-500");
                 if(window.showNotify) window.showNotify("Sucesso", "O WhatsApp já está conectado!", "success");
-                return; // Para aqui
+                return;
             } else {
-                // 4. Se existe mas está fechada, pede o QR Code novo
+                // 4. Se existe mas está fechada, pede o QR Code novo daquela máquina do usuário
                 const resConnect = await fetch(`${baseURL}/instance/connect/${instancia}`, {
                     headers: { 'apikey': apiKey }
                 });
@@ -142,7 +158,7 @@ export async function conectarWhatsAppReal() {
             }
         }
 
-        // 5. Joga a imagem na tela
+        // 5. Renderiza na tela
         if (qrCodeBase64 && typeof qrCodeBase64 === 'string' && qrCodeBase64.includes("base64")) {
             document.getElementById('wa-qr-code').src = qrCodeBase64;
             document.getElementById('wa-status').innerText = "ESCANEAR AGORA!";
