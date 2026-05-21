@@ -52,16 +52,17 @@ export async function sendManualWA(cliId, type) {
 }
 
 // 🚀 DISPARO SILENCIOSO
+// 🚀 DISPARO 100% SILENCIOSO (Sem abrir abas)
 export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     let fone = telefone.replace(/\D/g, '');
     if (!fone.startsWith('55')) fone = '55' + fone; 
 
     const instancia = obterNomeInstancia();
     
-    // Rota de fuga caso o usuário clique antes do Firebase validar o login
+    // Se não achar a instância, mostra erro em vez de abrir link
     if (!instancia) {
-        console.error("Erro: Instância indisponível. Abrindo fallback manual.");
-        window.open(`https://wa.me/${fone}?text=${encodeURIComponent(msg)}`, '_blank');
+        console.error("Erro: Instância indisponível.");
+        if(window.showNotify) window.showNotify("Erro", "Aguarde o sistema carregar a sua conta para enviar.", "error");
         return;
     }
 
@@ -73,12 +74,12 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
             headers: { 
                 'Content-Type': 'application/json', 
                 'apikey': apiKey,
-                'ngrok-skip-browser-warning': 'true'
+                'ngrok-skip-browser-warning': 'true' // Mantido por precaução
             },
             body: JSON.stringify({
                 number: fone,
                 options: {
-                    delay: 1500,
+                    delay: 1500, // Simula que está digitando
                     presence: "composing" 
                 },
                 textMessage: {
@@ -90,13 +91,14 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
         if (response.ok) {
             if(window.showNotify) window.showNotify("Sucesso!", `Mensagem entregue direto no WhatsApp.`, "success");
         } else {
+            console.error("Resposta da API falhou. Status:", response.status);
             throw new Error("Erro na resposta da API");
         }
 
     } catch (error) {
         console.error("Erro na API do WhatsApp:", error);
-        if(window.showNotify) window.showNotify("Aviso", "API Offline. Abrindo janela manual...", "warning");
-        window.open(`https://wa.me/${fone}?text=${encodeURIComponent(msg)}`, '_blank');
+        // Exibe o erro na tela em vez de abrir o wa.me!
+        if(window.showNotify) window.showNotify("Erro de Envio", "O WhatsApp falhou ou está desconectado.", "error");
     }
 }
 
