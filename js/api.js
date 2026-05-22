@@ -82,16 +82,9 @@ export async function sendManualWA(cliId, type) {
 // ==========================================
 // A MÁGICA DO ENVIO CORRIGIDA AQUI
 // ==========================================
-// ==========================================
-// O ENVIO BRUTO CORRIGIDO (EVOLUTION V2)
-// ==========================================
-// ==========================================
-// O ENVIO BRUTO CORRIGIDO (EVOLUTION V2)
-// ==========================================
 export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     if (!msg || msg.trim() === "") return;
 
-    // Limpa a formatação e garante o 55 no início
     let fone = telefone.replace(/\D/g, '');
     if (!fone.startsWith('55')) fone = '55' + fone; 
 
@@ -101,7 +94,7 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     try {
         if(window.showNotify) window.showNotify("Enviando...", `A disparar para ${nomeCliente}`, "info");
 
-        // Formato DEFINITIVO e exato para Evolution API v2 (latest)
+        // Payload da v2.0 usando options corretamente no JSON
         const response = await fetch(`${baseURL}/message/sendText/${instancia}`, {
             method: 'POST',
             headers: { 
@@ -111,7 +104,10 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
             body: JSON.stringify({
                 number: fone,
                 text: msg,
-                delay: 1200 // O delay fica direto aqui na raiz, sem a palavra 'options'
+                options: {
+                    delay: 1200,
+                    presence: "composing"
+                }
             })
         });
 
@@ -196,10 +192,19 @@ export async function conectarWhatsAppReal() {
         let qrCodeBase64 = null;
 
         if (resState.status === 404 || resState.status === 400) {
+            // AQUI É O SEGREDO: Criar a instância com as permissões de sincronizar contatos e histórico
             let resCreate = await fetch(`${baseURL}/instance/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
-                body: JSON.stringify({ instanceName: instancia, integration: "WHATSAPP-BAILEYS", qrcode: true })
+                body: JSON.stringify({ 
+                    instanceName: instancia, 
+                    integration: "WHATSAPP-BAILEYS", 
+                    qrcode: true,
+                    alwaysOnline: true,
+                    readMessages: true,
+                    readStatus: true,
+                    syncFullHistory: true // ESTA FLAG É A QUE FAZ OS CONTATOS APARECEREM NO MANAGER E O ENVIO FUNCIONAR
+                })
             });
             let dataCreate = await resCreate.json();
             qrCodeBase64 = dataCreate?.qrcode?.base64 || dataCreate?.base64;
@@ -279,21 +284,27 @@ export async function desconectarWhatsAppReal() {
     const instancia = obterNomeInstancia();
     if (!instancia) return;
 
-    if (!confirm("Tem certeza que deseja encerrar a conexão do WhatsApp no servidor?")) return;
+    if (!confirm("Tem certeza que deseja encerrar a conexão e DELETAR a instância do servidor para limpar erros?")) return;
 
     try {
-        if (window.showNotify) window.showNotify("Aguarde", "A desconectar...", "info");
+        if (window.showNotify) window.showNotify("Aguarde", "A desconectar e limpar dados...", "info");
 
-        const response = await fetch(`${baseURL}/instance/logout/${instancia}`, {
+        // NOVO: Excluir a instância definitivamente para garantir que ela perca os "vícios" da criação antiga
+        const response = await fetch(`${baseURL}/instance/delete/${instancia}`, {
             method: 'DELETE',
             headers: { 'apikey': apiKey }
         });
 
         if (response.ok || response.status === 404) {
-            if (window.showNotify) window.showNotify("Desconectado", "Sessão encerrada com sucesso.", "success");
+            if (window.showNotify) window.showNotify("Desconectado", "Instância limpa com sucesso. Gere um novo QR Code.", "success");
             checarStatusWhatsAppSilencioso(); 
         } else {
-            if (window.showNotify) window.showNotify("Erro", "Falha ao encerrar a sessão na API.", "error");
+            // Tenta dar logout como fallback
+            await fetch(`${baseURL}/instance/logout/${instancia}`, {
+                method: 'DELETE',
+                headers: { 'apikey': apiKey }
+            });
+            checarStatusWhatsAppSilencioso(); 
         }
     } catch (error) {
         console.error("Erro:", error);
