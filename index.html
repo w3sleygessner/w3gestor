@@ -421,7 +421,14 @@
             <div id="tab-configuracoes" class="p-4 sm:p-6 hidden">
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 w-full">
                     <h2 class="text-xl font-bold text-white uppercase tracking-tighter">Configurações</h2>
-                    <button onclick="openModal('modalChangePassword')" class="w-full sm:w-auto bg-gray-800 hover:bg-gray-700 text-white px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase shadow-lg border border-white/10 transition-all text-center active:scale-95 duration-100"><i class="fas fa-lock mr-1"></i> Alterar Senha</button>
+<div class="flex gap-2 mb-1">
+
+    <button type="button" onclick="openModal('modalExplicacaoTemplates')" class="text-purple-400 hover:text-purple-300 text-[11px] font-bold flex items-center gap-1 bg-purple-500/10 px-2 py-0.5 rounded-md border border-purple-500/20 transition">
+        <i class="fas fa-question-circle"></i> Ajuda com Spintax/Templates
+    </button>
+
+    <button onclick="openModal('modalChangePassword')" class="w-full sm:w-auto bg-gray-800 hover:bg-gray-700 text-white px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase shadow-lg border border-white/10 transition-all text-center active:scale-95 duration-100"><i class="fas fa-lock mr-1"></i> Alterar Senha</button>
+</div>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start w-full">
                     <div class="card p-6 rounded-2xl shadow-xl border border-white/5 bg-[#16162d] w-full">
@@ -496,14 +503,41 @@
                                 </div>
                                 <button onclick="updateConfig()" class="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 sm:py-2 rounded-xl font-bold text-[10px] uppercase shadow-lg shadow-purple-500/20 whitespace-nowrap tracking-wider transition-all active:scale-95 text-center duration-100"><i class="fas fa-save mr-1"></i> Salvar Configurações</button>
                             </div>
+  
                             <h4 class="font-bold text-green-400 uppercase text-xs tracking-widest mb-4"><i class="fas fa-comment-alt mr-2"></i> Textos das Notificações</h4>
                             <div class="space-y-2">
+
                                 <div><label class="text-[9px] text-gray-500 uppercase font-black tracking-wider mb-1.5 block">Mensagem de Boas-vindas</label><textarea id="cfg_msg_boas_vindas" rows="2" class="w-full bg-black/20 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500/40 transition resize-none placeholder-gray-600"></textarea></div>
                                 <div><label class="text-[9px] text-gray-500 uppercase font-black tracking-wider mb-1.5 block">Aviso de Cobrança / Renovação</label><textarea id="cfg_msg_renovacao" rows="2" class="w-full bg-black/20 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500/40 transition resize-none placeholder-gray-600"></textarea></div>
                                 <div><label class="text-[9px] text-gray-500 uppercase font-black tracking-wider mb-1.5 block">Confirmação de Pagamento Recebido</label><textarea id="cfg_msg_sucesso" rows="2" class="w-full bg-black/20 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-purple-500/40 transition resize-none placeholder-gray-600"></textarea></div>
                                 <div><label class="text-[9px] text-yellow-500 uppercase font-black tracking-wider mb-1.5 block">Alerta: Instabilidade / Oscilação no Sinal</label><textarea id="cfg_msg_oscilacao" rows="2" class="w-full bg-black/20 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-yellow-500/40 transition resize-none placeholder-gray-600"></textarea></div>
                                 <div><label class="text-[9px] text-red-500 uppercase font-black tracking-wider mb-1.5 block">Alerta: Manutenção Agendada / Geral</label><textarea id="cfg_msg_manutencao" rows="2" class="w-full bg-black/20 border border-white/5 rounded-xl p-3 text-xs text-white outline-none focus:border-red-500/40 transition resize-none placeholder-gray-600"></textarea></div>
                             </div>
+                            <div class="mt-6 border-t border-gray-700 pt-4">
+    <h4 class="text-sm font-bold text-white mb-3"><i class="fas fa-robot text-purple-400 mr-2"></i> Automação Avançada</h4>
+    
+    <div class="flex items-center justify-between mb-3 bg-gray-900/50 p-3 rounded-lg border border-gray-700">
+        <div>
+            <span class="text-sm text-gray-300 font-bold block">Variação de Texto (Spintax)</span>
+            <span class="text-[10px] text-gray-500">Ex: {Oi|Olá} {cliente}! Permite sortear palavras para evitar banimento.</span>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="cfg_usar_spintax" class="sr-only peer">
+            <div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+        </label>
+    </div>
+
+    <div class="flex items-center justify-between bg-gray-900/50 p-3 rounded-lg border border-gray-700">
+        <div>
+            <span class="text-sm text-gray-300 font-bold block">Disparo em Massa 1-Clique</span>
+            <span class="text-[10px] text-gray-500">Ignora a janela de opções e envia a cobrança padrão instantaneamente.</span>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="cfg_disparo_rapido" class="sr-only peer">
+            <div class="w-9 h-5 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+        </label>
+    </div>
+</div>
                         </div>
                     </div>
                 </div>
@@ -669,6 +703,55 @@
 </div>
     <div id="toast-container" class="fixed top-5 right-5 z-[200] flex flex-col gap-3 pointer-events-none max-w-sm w-full"></div>
 
+
+    <div id="modalExplicacaoTemplates" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div class="bg-[#16162d] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative animate-fadeIn text-xs text-gray-300">
+        <button onclick="closeModal('modalExplicacaoTemplates')" class="absolute top-4 right-4 text-gray-500 hover:text-white transition text-sm">
+            <i class="fas fa-times"></i>
+        </button>
+        
+        <h3 class="text-base font-black text-white uppercase tracking-tight mb-4 flex items-center gap-2">
+            <i class="fas fa-lightbulb text-amber-400"></i> Como funcionam os Templates e Variações
+        </h3>
+
+        <div class="space-y-4">
+            <div>
+                <p class="font-bold text-purple-400 mb-1 uppercase tracking-wider text-[10px]">1. Variáveis Mágicas (Automáticas)</p>
+                <p class="mb-2">Estas palavras são substituídas instantaneamente pelos dados individuais de cada cliente no momento do envio:</p>
+                <div class="grid grid-cols-2 gap-2 font-mono text-[10px] bg-black/20 p-2 rounded-xl border border-white/5 text-gray-400">
+                    <div><strong class="text-white">{cliente}</strong> - Nome do cliente</div>
+                    <div><strong class="text-white">{app}</strong> - Nome do Aplicativo</div>
+                    <div><strong class="text-white">{vencimento}</strong> - Data de Vencimento</div>
+                    <div><strong class="text-white">{valor}</strong> - Valor do Plano</div>
+                    <div><strong class="text-white">{usuario}</strong> - Usuário de Acesso</div>
+                    <div><strong class="text-white">{senha}</strong> - Senha de Acesso</div>
+                    <div><strong class="text-white">{dias}</strong> - Dias Restantes</div>
+                    <div><strong class="text-white">{cliente}</strong> - Nome do cliente</div>
+                    <div><strong class="text-white">{app}</strong> - Nome do Aplicativo</div>
+                    <div><strong class="text-white">{dns}</strong> - URL/DNS do App</div> <div>
+                    <strong class="text-white">{plano}</strong> - Nome do Plano</div> 
+                    <div><strong class="text-white">{vencimento}</strong> - Data de Vencimento</div>
+                </div>
+            </div>
+
+            <div class="border-t border-white/5 pt-3">
+                <p class="font-bold text-purple-400 mb-1 uppercase tracking-wider text-[10px]">2. Variação de Texto Anti-Ban (Spintax)</p>
+                <p class="mb-2">Para evitar que o WhatsApp detete padrões robóticos, use chavetas com palavras separadas por uma barra vertical <strong class="text-white">|</strong>. O sistema escolherá uma opção aleatória para cada mensagem enviado.</p>
+                
+                <div class="bg-gray-900/60 p-3 rounded-xl border border-purple-500/20 font-mono text-[11px] text-purple-300 mb-2">
+                    {Olá|Bom dia|Fala} {cliente}, {sua assinatura|seu acesso} do app {app} {vence|expira} dia {vencimento}.
+                </div>
+
+                <p class="text-[10px] text-gray-400"><strong>Resultado no Cliente 1:</strong> Olá Wesley, sua assinatura do app P2P vence dia 25/05/2026.</p>
+                <p class="text-[10px] text-gray-400"><strong>Resultado no Cliente 2:</strong> Bom dia Robson, seu acesso do app P2P expira dia 25/05/2026.</p>
+            </div>
+        </div>
+
+        <button onclick="closeModal('modalExplicacaoTemplates')" class="w-full mt-6 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-xl transition duration-200 uppercase tracking-wider font-black">
+            Entendi, Fechar
+        </button>
+    </div>
+</div>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="module" src="js/main.js"></script>

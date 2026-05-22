@@ -53,6 +53,8 @@ if (diffDays === diasRegua) {
     }
 }
 
+
+   
 export async function sendManualWA(cliId, type) {
     const cli = db.clientes.find(c => c.id == cliId);
     if (!cli) return;
@@ -73,6 +75,7 @@ export async function sendManualWA(cliId, type) {
     msg = msg.replace(/{senha}/g, cli.senha || "N/A");
     msg = msg.replace(/{vencimento}/g, cli.vencimento.split('-').reverse().join('/'));
     msg = msg.replace(/{app}/g, app.nome || "N/A");
+    msg = msg.replace(/{dns}/g, app.url || app.host || "N/A"); // <-- NOVA LINHA DO DNS
     msg = msg.replace(/{plano}/g, plano.nome || "");
     msg = msg.replace(/{valor}/g, plano.valor ? `R$ ${plano.valor.toFixed(2)}` : "0,00");
 
@@ -80,6 +83,16 @@ export async function sendManualWA(cliId, type) {
     const venci = new Date(cli.vencimento);
     const diff = Math.ceil((venci - hoje) / (1000 * 60 * 60 * 24));
     msg = msg.replace(/{dias}/g, diff);
+
+    // 🎲 PROCESSADOR DE SPINTAX
+    if (db.config.usar_spintax) {
+        msg = msg.replace(/\{([^{}]+)\}/g, function(match, contents) {
+            // ADICIONADOS 'dns' e 'plano' AQUI NA LISTA:
+            if (['cliente', 'app', 'vencimento', 'valor', 'dias', 'usuario', 'senha', 'dns', 'plano'].includes(contents.toLowerCase().trim())) return match;
+            const parts = contents.split('|');
+            return parts[Math.floor(Math.random() * parts.length)];
+        });
+    }
 
     await sendCustomWA(cli.whatsapp, msg, cli.nome);
 }

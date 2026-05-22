@@ -667,6 +667,10 @@ export function renderConfig() {
     if(document.getElementById('cfg_msg_suspensa')) document.getElementById('cfg_msg_suspensa').value = config.msg_suspensa || "";
     if(document.getElementById('cfg_msg_oscilacao')) document.getElementById('cfg_msg_oscilacao').value = config.msg_oscilacao || "";
     if(document.getElementById('cfg_msg_manutencao')) document.getElementById('cfg_msg_manutencao').value = config.msg_manutencao || "";
+    
+    // Novas opções
+    if(document.getElementById('cfg_usar_spintax')) document.getElementById('cfg_usar_spintax').checked = config.usar_spintax || false;
+    if(document.getElementById('cfg_disparo_rapido')) document.getElementById('cfg_disparo_rapido').checked = config.disparo_rapido || false;
 }
 
 export function updateConfig() {
@@ -677,7 +681,11 @@ export function updateConfig() {
         msg_sucesso: document.getElementById('cfg_msg_sucesso') ? document.getElementById('cfg_msg_sucesso').value : "",
         msg_suspensa: document.getElementById('cfg_msg_suspensa') ? document.getElementById('cfg_msg_suspensa').value : "",
         msg_oscilacao: document.getElementById('cfg_msg_oscilacao') ? document.getElementById('cfg_msg_oscilacao').value : "",
-        msg_manutencao: document.getElementById('cfg_msg_manutencao') ? document.getElementById('cfg_msg_manutencao').value : ""
+        msg_manutencao: document.getElementById('cfg_msg_manutencao') ? document.getElementById('cfg_msg_manutencao').value : "",
+        
+        // Novas opções
+        usar_spintax: document.getElementById('cfg_usar_spintax') ? document.getElementById('cfg_usar_spintax').checked : false,
+        disparo_rapido: document.getElementById('cfg_disparo_rapido') ? document.getElementById('cfg_disparo_rapido').checked : false
     };
     save(); showNotify('Sucesso', 'Configurações salvas!');
 }
@@ -977,31 +985,182 @@ window.dispararAlertaGeral = async function(tipoAlerta) {
     }, 'question');
 };
 
+// ==========================================
+// NOTIFICAÇÃO EM MASSA (COM MODO EXPRESS 1-CLIQUE E SPINTAX)
+// ==========================================
 window.dispararNotificacaoEmMassa = async function() {
     window.cancelarDisparo = false;
     const selecionados = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
     if (selecionados.length === 0) return;
+
+    if (typeof Swal === 'undefined') {
+        showNotify('Erro', 'O sistema de alertas não carregou.', 'error');
+        return;
+    }
+
+    // Processador da Fila em Lote
+    const processarFilaEmLote = async (tipo, msgCustomizada) => {
+        const miniBadge = document.getElementById('badgeProgressoFlutuante');
+        if (miniBadge) miniBadge.classList.remove('hidden');
+
+        for (let i = 0; i < selecionados.length; i++) {
+            if (window.cancelarDisparo) { showNotify("Cancelado", "Envios interrompidos.", "warning"); break; }
+            
+            const cli = db.clientes.find(c => c.id == selecionados[i]);
+            if (!cli) continue;
+
+            const pct = Math.round(((i + 1) / selecionados.length) * 100);
+            document.getElementById('progresso-texto-mini').innerText = `Enviando: ${cli.nome} (${i+1}/${selecionados.length})`;
+            document.getElementById('progresso-barra-mini').style.width = `${pct}%`;
+            document.getElementById('progresso-porcentagem-mini').innerText = `${pct}%`;
+
+if (tipo === 'custom') {
+                const app = db.apps.find(a => a.id == cli.app_id) || { nome: '', url: '', host: '' };
+                const plano = db.planos.find(p => p.id == cli.plano_id) || { nome: '', valor: 0 };
+                const diasRestantes = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
+
+                let textoFinal = msgCustomizada.replace(/{cliente}/g, cli.nome || "")
+                                    .replace(/{app}/g, app.nome)
+                                    .replace(/{dns}/g, app.url || app.host || "N/A")
+                                    .replace(/{plano}/g, plano.nome)
+                                    .replace(/{vencimento}/g, cli.vencimento.split('-').reverse().join('/'))
+                                    .replace(/{usuario}/g, cli.usuario || "N/A")
+                                    .replace(/{senha}/g, cli.senha || "N/A")
+                                    .replace(/{valor}/g, plano.valor ? `R$ ${plano.valor.toFixed(2)}` : "0,00")
+                                    .replace(/{dias}/g, diasRestantes);
+                
+                // Aplica Spintax se estiver ativo nas configurações globais
+                if (db.config.usar_spintax) {
+                    textoFinal = textoFinal.replace(/\{([^{}]+)\}/g, function(match, contents) {
+                        // ADICIONADOS 'dns' e 'plano' AQUI TAMBÉM:
+                        if (['cliente', 'app', 'vencimento', 'valor', 'dias', 'usuario', 'senha', 'dns', 'plano'].includes(contents.toLowerCase().trim())) return match;
+                        const parts = contents.split('|');
+                        return parts[Math.floor(Math.random() * parts.length)];
+                    });
+                }
+                await sendCustomWA(cli.whatsapp, textoFinal, cli.nome);
+            } else {
+                await sendManualWA(cli.id, tipo);
+            }
+
+            if (i < selecionados.length - 1) {
+                const delayAntiBan = Math.floor(Math.random() * (10000 - 4000 + 1)) + 4000;
+                await new Promise(r => setTimeout(r, delayAntiBan));
+            }
+        }
+
+        if (miniBadge) miniBadge.classList.add('hidden');
+        document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = false);
+        if(window.atualizarBarraAcoes) window.atualizarBarraAcoes();
+        
+        if (!window.cancelarDisparo) showNotify("Concluído", "Todos os disparos foram realizados!");
+    };
+
+    // 🚀 MODO EXPRESS 1-CLIQUE (Ativado nas configurações)
+    if (db.config.disparo_rapido) { // Nome ajustado à estrutura local do db.config
+        window.meuConfirm("Disparo 1-Clique", `Deseja notificar imediatamente os ${selecionados.length} clientes com o aviso padrão?`, () => {
+            processarFilaEmLote('renew', '');
+        }, 'question');
+        return;
+    }
+
+    // MODO NORMAL (Abre opções de templates)
+    const optionsHtml = `
+        <div class="text-left text-sm mt-2">
+            <label class="block text-gray-400 mb-1 font-bold">Escolha o que enviar:</label>
+            <select id="swal-tipo-msg" class="w-full bg-gray-800 text-white p-3 rounded mb-3 border border-gray-600 focus:border-purple-500 outline-none">
+                <option value="renew">🔄 Cobrança de Renovação (Padrão)</option>
+                <option value="welcome">⭐ Boas Vindas</option>
+                <option value="suspended">🚫 Aviso de Suspensão</option>
+                <option value="oscilacao">⚠️ Aviso de Oscilação</option>
+                <option value="manutencao">🔧 Aviso de Manutenção</option>
+                <option value="custom">💬 Digitar Mensagem Personalizada...</option>
+            </select>
+            <div id="box-custom-msg" class="hidden">
+                <label class="block text-gray-400 mb-1 font-bold">Sua Mensagem Exclusiva:</label>
+                <textarea id="swal-custom-msg" class="w-full bg-gray-800 text-white p-3 rounded border border-gray-600 focus:border-purple-500 outline-none text-xs" rows="5" placeholder="Escreva aqui..."></textarea>
+            </div>
+        </div>
+    `;
+
+    Swal.fire({
+        title: `Disparo em Massa`,
+        html: optionsHtml,
+        showCancelButton: true,
+        confirmButtonColor: '#9333ea',
+        cancelButtonColor: '#374151',
+        confirmButtonText: 'Iniciar Disparo',
+        cancelButtonText: 'Cancelar',
+        background: '#16162d',
+        color: '#ffffff',
+        didOpen: () => {
+            const select = document.getElementById('swal-tipo-msg');
+            const boxCustom = document.getElementById('box-custom-msg');
+            select.addEventListener('change', () => {
+                if(select.value === 'custom') boxCustom.classList.remove('hidden');
+                else boxCustom.classList.add('hidden');
+            });
+        },
+        preConfirm: () => {
+            const tipo = document.getElementById('swal-tipo-msg').value;
+            const msg = document.getElementById('swal-custom-msg').value;
+            if(tipo === 'custom' && !msg.trim()) {
+                Swal.showValidationMessage('Digite a sua mensagem personalizada.');
+                return false;
+            }
+            return { tipo, msg };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            processarFilaEmLote(result.value.tipo, result.value.msg);
+        }
+    });
+};
+
+// ==========================================
+// DISPARAR ALERTA GERAL (OTIMIZADO PARA 1-CLIQUE)
+// ==========================================
+window.dispararAlertaGeral = async function(tipoAlerta) {
+    window.cancelarDisparo = false;
+    const hoje = new Date();
+    const ativos = (db.clientes || []).filter(cli => {
+        const diff = Math.ceil((new Date(cli.vencimento) - hoje) / (1000 * 60 * 60 * 24));
+        return diff >= -20;
+    });
+    if (ativos.length === 0) return;
     
-    window.meuConfirm("Cobrança em Massa", `Deseja notificar os ${selecionados.length} clientes selecionados?`, () => {
+    const executarEnvioAlerta = () => {
         const miniBadge = document.getElementById('badgeProgressoFlutuante');
         if (miniBadge) miniBadge.classList.remove('hidden');
 
         (async function() {
-            for (let i = 0; i < selecionados.length; i++) {
-                if (window.cancelarDisparo) { showNotify("Cancelado", "Cobranças interrompidas.", "warning"); break; }
-                const cli = db.clientes.find(c => c.id == selecionados[i]);
-                const pct = Math.round(((i + 1) / selecionados.length) * 100);
-                document.getElementById('progresso-texto-mini').innerText = `Enviando: ${cli.nome} (${i+1}/${selecionados.length})`;
+            for (let i = 0; i < ativos.length; i++) {
+                if (window.cancelarDisparo) { showNotify("Cancelado", "Transmissão interrompida.", "warning"); break; }
+                const pct = Math.round(((i + 1) / ativos.length) * 100);
+                document.getElementById('progresso-texto-mini').innerText = `Aviso: ${ativos[i].nome} (${i+1}/${ativos.length})`;
                 document.getElementById('progresso-barra-mini').style.width = `${pct}%`;
                 document.getElementById('progresso-porcentagem-mini').innerText = `${pct}%`;
-                sendManualWA(selecionados[i], 'renew');
-                await new Promise(r => setTimeout(r, 3000));
+                
+                await sendManualWA(ativos[i].id, tipoAlerta);
+                
+                if (i < ativos.length - 1) {
+                    const delayAntiBan = Math.floor(Math.random() * (10000 - 4000 + 1)) + 4000;
+                    await new Promise(r => setTimeout(r, delayAntiBan));
+                }
             }
             if (miniBadge) miniBadge.classList.add('hidden');
-            document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = false);
-            window.atualizarBarraAcoes();
+            if (!window.cancelarDisparo) showNotify("Concluído", "Alerta transmitido com sucesso!");
         })();
-    }, 'question');
+    };
+
+    // Se o disparo rápido estiver ativo, faz a chamada direta pulando etapas secundárias
+    if (db.config.disparo_rapid) {
+        executarEnvioAlerta();
+    } else {
+        window.meuConfirm("Transmitir Alerta Geral", `Deseja enviar este alerta para todos os ${ativos.length} clientes ativos no sistema?`, () => {
+            executarEnvioAlerta();
+        }, 'question');
+    }
 };
 
 window.switchTab = switchTab;
