@@ -1,7 +1,8 @@
 import { db } from "./database.js";
 import { auth } from "./firebase-config.js";
 
-const baseURL = "https://w3gestorapi.camdvr.org/";
+// A BARRA DO FINAL FOI REMOVIDA PARA EVITAR O ERRO // (DUPLA BARRA)
+const baseURL = "https://w3gestorapi.camdvr.org"; 
 const apiKey = "Wesley123!";
 
 let connectionCheckInterval; // Controle do loop do QR Code
