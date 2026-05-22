@@ -35,10 +35,15 @@ export async function verificarReguaDeCobranca() {
         const diffTime = vencimento - hoje;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        if (diffDays === diasRegua) {
+if (diffDays === diasRegua) {
             await sendManualWA(cli.id, 'renovacao');
             disparosRealizados++;
-            await new Promise(r => setTimeout(r, 2000));
+            
+            // 🛡️ TÉCNICA ANTI-BAN: Delay Aleatório (entre 8 a 18 segundos)
+            // Simula um humano a procurar o próximo contacto e a digitar
+            const tempoEspera = Math.floor(Math.random() * (18000 - 8000 + 1)) + 8000;
+            console.log(`Aguardando ${tempoEspera/1000}s para evitar bloqueio do WhatsApp...`);
+            await new Promise(r => setTimeout(r, tempoEspera));
         }
     }
 
@@ -308,5 +313,174 @@ export async function desconectarWhatsAppReal() {
         }
     } catch (error) {
         console.error("Erro:", error);
+    }
+}
+
+// 🔄 VERIFICAR SESSÃO AO LOGAR
+export async function carregarStatusWhatsApp() {
+    const instancia = obterNomeInstancia();
+    if (!instancia) return;
+
+    const waStatus = document.getElementById('wa-status');
+
+    try {
+        let resState = await fetch(`${baseURL}/instance/connectionState/${instancia}`, {
+            headers: { 'apikey': apiKey }
+        });
+
+        if (resState.status === 200) {
+            const dataState = await resState.json();
+            const estadoAtual = dataState?.instance?.state || dataState?.state;
+
+            if (estadoAtual === 'open') {
+                if (waStatus) {
+                    waStatus.innerText = "WHATSAPP CONECTADO!";
+                    waStatus.classList.remove("text-red-500", "text-yellow-500");
+                    waStatus.classList.add("text-green-500");
+                }
+                
+                const qrImg = document.getElementById('wa-qr-code');
+                if(qrImg) qrImg.src = ""; // Limpa a área do QR
+
+                // Cria o botão de desconectar se ele não existir
+                if (!document.getElementById('btn-desconectar-wa')) {
+                    const btnDesc = document.createElement('button');
+                    btnDesc.id = 'btn-desconectar-wa';
+                    btnDesc.innerText = "Desconectar WhatsApp";
+                    btnDesc.className = "mt-4 bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded transition duration-200 block mx-auto text-sm shadow";
+                    btnDesc.onclick = () => desconectarWhatsAppReal();
+                    if (waStatus) waStatus.after(btnDesc);
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Erro ao verificar sessão do WhatsApp:", e);
+    }
+}
+
+// 📱 CONEXÃO VIA CÓDIGO (PARA QUEM ACESSA PELO CELULAR)
+// 📱 CONEXÃO VIA CÓDIGO (CORRIGIDA E BLINDADA)
+// 📱 CONEXÃO VIA CÓDIGO (COM TIMER DE CANCELAMENTO E FILTRO DE TELA)
+export async function conectarWhatsAppPorCodigo() {
+    const instancia = obterNomeInstancia();
+    if (!instancia) return;
+
+    const inputNumero = document.getElementById('wa-numero-emparelhar');
+    let numero = inputNumero ? inputNumero.value.replace(/\D/g, '') : null;
+
+    if (!numero || numero.length < 10) {
+        if(window.showNotify) window.showNotify("Erro", "Digite o DDD e o número completo.", "warning");
+        return;
+    }
+    if (!numero.startsWith('55')) numero = '55' + numero;
+
+    const waStatus = document.getElementById('wa-status');
+    const displayCodigo = document.getElementById('wa-codigo-tela');
+    const btnGerar = document.getElementById('btn-gerar-codigo-wa');
+
+    // Desativa o botão para evitar cliques duplos que geram mais notificações
+    if (btnGerar) {
+        btnGerar.disabled = true;
+        btnGerar.innerText = "Aguarde...";
+    }
+
+    try {
+        if(window.showNotify) window.showNotify("Aguarde", "A preparar o servidor...", "info");
+        if(waStatus) waStatus.innerText = "A LIMPAR SESSÃO ANTIGA...";
+        if(displayCodigo) displayCodigo.innerText = "";
+
+        // 1. Limpa qualquer tentativa anterior que esteja presa em loop (Pára de apitar o celular)
+        await fetch(`${baseURL}/instance/delete/${instancia}`, { method: 'DELETE', headers: { 'apikey': apiKey } });
+        await new Promise(r => setTimeout(r, 2000));
+
+        if(waStatus) waStatus.innerText = "A CRIAR INSTÂNCIA MOBILE...";
+
+        // 2. Cria a instância limpa
+        await fetch(`${baseURL}/instance/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
+            body: JSON.stringify({ 
+                instanceName: instancia, 
+                integration: "WHATSAPP-BAILEYS", 
+                qrcode: false, 
+                number: numero
+            })
+        });
+
+        await fetch(`${baseURL}/settings/set/${instancia}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
+            body: JSON.stringify({ alwaysOnline: true, readMessages: true, syncFullHistory: true })
+        });
+
+        await new Promise(r => setTimeout(r, 2000));
+
+        if(waStatus) waStatus.innerText = "A GERAR CÓDIGO DE 8 DÍGITOS...";
+        
+        // 3. Pede o código de emparelhamento
+        const resConn = await fetch(`${baseURL}/instance/connect/${instancia}?number=${numero}`, {
+            method: 'GET',
+            headers: { 'apikey': apiKey }
+        });
+
+        const dataConn = await resConn.json();
+        
+        // 4. FILTRO RIGOROSO: Extrai apenas os 8 caracteres para não bugar a tela
+        let jsonString = JSON.stringify(dataConn);
+        let codigoReal = null;
+        
+        const match = jsonString.match(/"code":"([A-Z0-9]{4}-?[A-Z0-9]{4})"/i) || jsonString.match(/"pairingCode":"([A-Z0-9]{4}-?[A-Z0-9]{4})"/i);
+        
+        if (match && match[1]) {
+            codigoReal = match[1];
+        } else {
+            const possivelCodigo = dataConn?.code || dataConn?.pairingCode || dataConn?.instance?.code || dataConn?.instance?.pairingCode;
+            if (possivelCodigo && String(possivelCodigo).length <= 9) {
+                codigoReal = String(possivelCodigo);
+            }
+        }
+
+        if (codigoReal) {
+            // Formata o código separando no meio (Ex: ABCD-1234) para caber bem no layout
+            const formatado = codigoReal.replace(/-/g, '').match(/.{1,4}/g).join('-');
+            
+            if(displayCodigo) {
+                displayCodigo.innerText = formatado;
+                displayCodigo.className = "text-4xl font-mono font-black text-amber-400 tracking-[0.2em] mt-4 mb-4 block word-break break-all"; 
+            }
+            if(waStatus) waStatus.innerText = "DIGITE ESTE CÓDIGO NO SEU WHATSAPP!";
+            if(window.showNotify) window.showNotify("Código Gerado!", "Tem 45 segundos para inserir o código.", "success");
+            
+            // 5. TIMER DE CANCELAMENTO (A solução para o celular não apitar sem parar)
+            setTimeout(async () => {
+                try {
+                    let check = await fetch(`${baseURL}/instance/connectionState/${instancia}`, { headers: { 'apikey': apiKey } });
+                    let checkData = await check.json();
+                    let estado = checkData?.instance?.state || checkData?.state;
+                    
+                    // Se passou o tempo e não conectou, DELETA a instância para parar os envios do WhatsApp
+                    if (estado !== 'open') {
+                        await fetch(`${baseURL}/instance/delete/${instancia}`, { method: 'DELETE', headers: { 'apikey': apiKey } });
+                        if(waStatus) waStatus.innerText = "TEMPO ESGOTADO. GERE NOVAMENTE.";
+                        if(displayCodigo) displayCodigo.innerText = "EXPIRADO";
+                        if(window.showNotify) window.showNotify("Cancelado", "O tempo limite esgotou. A conexão foi abortada para segurança.", "warning");
+                    }
+                } catch(err) { console.log(err); }
+            }, 45000); 
+            
+            if (typeof verificarConexaoLoop === 'function') verificarConexaoLoop(instancia);
+
+        } else {
+            throw new Error("O servidor retornou lixo em vez do código de 8 dígitos.");
+        }
+    } catch (e) {
+        console.error("Erro Pairing Code:", e);
+        if(waStatus) waStatus.innerText = "FALHA AO GERAR CÓDIGO";
+        if(window.showNotify) window.showNotify("Erro", "O WhatsApp não enviou o código. Verifique o número e tente novamente.", "error");
+    } finally {
+        if (btnGerar) {
+            btnGerar.disabled = false;
+            btnGerar.innerText = "Gerar Código";
+        }
     }
 }

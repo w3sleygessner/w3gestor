@@ -1,5 +1,5 @@
 import { db, save } from "./database.js";
-import { sendManualWA, sendCustomWA } from "./api.js";
+import { sendManualWA, sendCustomWA, conectarWhatsAppPorCodigo } from "./api.js";
 
 export let isRegisterMode = false;
 let financeChart;
@@ -9,7 +9,6 @@ let planosDonutChart;
 function formatarDataBR_ISO(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-
 // ==========================================
 // FUNÇÃO DE CONFIRMAÇÃO MODERNA (SWEETALERT2)
 // ==========================================
@@ -1033,3 +1032,14 @@ window.excluirCobrancaPendente = excluirCobrancaPendente;
 window.openModalEditFatura = openModalEditFatura;
 window.confirmarEdicaoFatura = confirmarEdicaoFatura;
 window.abrirModalFiltroGrafico = abrirModalFiltroGrafico;
+
+// ==========================================
+// EVENTOS DO WHATSAPP MOBILE (PAIRING CODE)
+// ==========================================
+const btnGerarCodigoWA = document.getElementById('btn-gerar-codigo-wa');
+if (btnGerarCodigoWA) {
+    btnGerarCodigoWA.addEventListener('click', conectarWhatsAppPorCodigo);
+}
+
+// Expõe a função globalmente (seguindo o padrão do seu sistema)
+window.conectarWhatsAppPorCodigo = conectarWhatsAppPorCodigo;
