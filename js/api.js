@@ -1,7 +1,7 @@
 import { db } from "./database.js";
 import { auth } from "./firebase-config.js";
 
-const baseURL = "https://w3gestorapi.duckdns.org";
+const baseURL = "https://w3gestorapi.camdvr.org/";
 const apiKey = "Wesley123!";
 
 function obterNomeInstancia() {
