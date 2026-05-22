@@ -352,8 +352,17 @@
                         <h3 id="fatura-total-lucro" class="text-2xl font-bold text-purple-400">R$ 0,00</h3>
                     </div>
                 </div>
-                
+
+                <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-white mb-4 lg:mb-0">Gestão de Caixa</h2>
+        <button onclick="openModal('modalTemplateComprovante')" class="bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2">
+    <i class="fas fa-receipt"></i> Configurar Comprovante
+</button>
+
+        </div>
+
                 <div class="mb-8">
+                    
                     <h4 class="text-xs font-bold text-yellow-500 uppercase mb-4"><i class="fas fa-exclamation-circle mr-2"></i> Cobranças em Aberto</h4>
                     
                     <div class="hidden lg:block card rounded-2xl overflow-hidden shadow-xl border border-yellow-500/10 bg-[#16162d]">
@@ -701,60 +710,106 @@
         </div>
     </div>
 </div>
-    <div id="toast-container" class="fixed top-5 right-5 z-[200] flex flex-col gap-3 pointer-events-none max-w-sm w-full"></div>
-
+  <div id="toast-container" class="fixed top-5 right-5 z-[200] flex flex-col gap-3 pointer-events-none max-w-sm w-full"></div>
 
     <div id="modalExplicacaoTemplates" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div class="bg-[#16162d] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative animate-fadeIn text-xs text-gray-300">
-        <button onclick="closeModal('modalExplicacaoTemplates')" class="absolute top-4 right-4 text-gray-500 hover:text-white transition text-sm">
-            <i class="fas fa-times"></i>
-        </button>
-        
-        <h3 class="text-base font-black text-white uppercase tracking-tight mb-4 flex items-center gap-2">
-            <i class="fas fa-lightbulb text-amber-400"></i> Como funcionam os Templates e Variações
-        </h3>
+        <div class="bg-[#16162d] border border-white/10 rounded-2xl w-full max-w-lg p-6 shadow-2xl relative animate-fadeIn text-xs text-gray-300">
+            <button onclick="closeModal('modalExplicacaoTemplates')" class="absolute top-4 right-4 text-gray-500 hover:text-white transition text-sm">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <h3 class="text-base font-black text-white uppercase tracking-tight mb-4 flex items-center gap-2">
+                <i class="fas fa-lightbulb text-amber-400"></i> Como funcionam os Templates e Variações
+            </h3>
 
-        <div class="space-y-4">
-            <div>
-                <p class="font-bold text-purple-400 mb-1 uppercase tracking-wider text-[10px]">1. Variáveis Mágicas (Automáticas)</p>
-                <p class="mb-2">Estas palavras são substituídas instantaneamente pelos dados individuais de cada cliente no momento do envio:</p>
-                <div class="grid grid-cols-2 gap-2 font-mono text-[10px] bg-black/20 p-2 rounded-xl border border-white/5 text-gray-400">
-                    <div><strong class="text-white">{cliente}</strong> - Nome do cliente</div>
-                    <div><strong class="text-white">{app}</strong> - Nome do Aplicativo</div>
-                    <div><strong class="text-white">{vencimento}</strong> - Data de Vencimento</div>
-                    <div><strong class="text-white">{valor}</strong> - Valor do Plano</div>
-                    <div><strong class="text-white">{usuario}</strong> - Usuário de Acesso</div>
-                    <div><strong class="text-white">{senha}</strong> - Senha de Acesso</div>
-                    <div><strong class="text-white">{dias}</strong> - Dias Restantes</div>
-                    <div><strong class="text-white">{cliente}</strong> - Nome do cliente</div>
-                    <div><strong class="text-white">{app}</strong> - Nome do Aplicativo</div>
-                    <div><strong class="text-white">{dns}</strong> - URL/DNS do App</div> <div>
-                    <strong class="text-white">{plano}</strong> - Nome do Plano</div> 
-                    <div><strong class="text-white">{vencimento}</strong> - Data de Vencimento</div>
+            <div class="space-y-4">
+                <div>
+                    <p class="font-bold text-purple-400 mb-1 uppercase tracking-wider text-[10px]">1. Variáveis Mágicas (Automáticas)</p>
+                    <p class="mb-2">Estas palavras são substituídas instantaneamente pelos dados individuais de cada cliente no momento do envio:</p>
+                    <div class="grid grid-cols-2 gap-2 font-mono text-[10px] bg-black/20 p-2 rounded-xl border border-white/5 text-gray-400">
+                        <div><strong class="text-white">{cliente}</strong> - Nome do cliente</div>
+                        <div><strong class="text-white">{app}</strong> - Nome do Aplicativo</div>
+                        <div><strong class="text-white">{plano}</strong> - Nome do Plano</div>
+                        <div><strong class="text-white">{dns}</strong> - URL/DNS do App</div> 
+                        <div><strong class="text-white">{vencimento}</strong> - Data de Vencimento</div>
+                        <div><strong class="text-white">{valor}</strong> - Valor do Plano</div>
+                        <div><strong class="text-white">{usuario}</strong> - Usuário de Acesso</div>
+                        <div><strong class="text-white">{senha}</strong> - Senha de Acesso</div>
+                        <div><strong class="text-white">{dias}</strong> - Dias Restantes</div>
+                    </div>
+                </div>
+
+                <div class="border-t border-white/5 pt-3">
+                    <p class="font-bold text-purple-400 mb-1 uppercase tracking-wider text-[10px]">2. Variação de Texto Anti-Ban (Spintax)</p>
+                    <p class="mb-2">Para evitar que o WhatsApp detete padrões robóticos, use chavetas com palavras separadas por uma barra vertical <strong class="text-white">|</strong>. O sistema escolherá uma opção aleatória para cada mensagem enviado.</p>
+                    
+                    <div class="bg-gray-900/60 p-3 rounded-xl border border-purple-500/20 font-mono text-[11px] text-purple-300 mb-2">
+                        {Olá|Bom dia|Fala} {cliente}, {sua assinatura|seu acesso} do app {app} {vence|expira} dia {vencimento}.
+                    </div>
+
+                    <p class="text-[10px] text-gray-400"><strong>Resultado no Cliente 1:</strong> Olá Wesley, sua assinatura do app P2P vence dia 25/05/2026.</p>
+                    <p class="text-[10px] text-gray-400"><strong>Resultado no Cliente 2:</strong> Bom dia João, seu acesso do app P2P expira dia 25/05/2026.</p>
                 </div>
             </div>
 
-            <div class="border-t border-white/5 pt-3">
-                <p class="font-bold text-purple-400 mb-1 uppercase tracking-wider text-[10px]">2. Variação de Texto Anti-Ban (Spintax)</p>
-                <p class="mb-2">Para evitar que o WhatsApp detete padrões robóticos, use chavetas com palavras separadas por uma barra vertical <strong class="text-white">|</strong>. O sistema escolherá uma opção aleatória para cada mensagem enviado.</p>
-                
-                <div class="bg-gray-900/60 p-3 rounded-xl border border-purple-500/20 font-mono text-[11px] text-purple-300 mb-2">
-                    {Olá|Bom dia|Fala} {cliente}, {sua assinatura|seu acesso} do app {app} {vence|expira} dia {vencimento}.
+            <button onclick="closeModal('modalExplicacaoTemplates')" class="w-full mt-6 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-xl transition duration-200 uppercase tracking-wider font-black">
+                Entendi, Fechar
+            </button>
+        </div>
+    </div>
+    <div id="modalTemplateComprovante" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-[#16162d] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl relative animate-fadeIn text-xs text-gray-300">
+            <button onclick="closeModal('modalTemplateComprovante')" class="absolute top-4 right-4 text-gray-500 hover:text-white transition text-sm">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <h3 class="text-base font-black text-white uppercase tracking-tight mb-2 flex items-center gap-2">
+                <i class="fas fa-receipt text-green-400"></i> Padrão do Comprovante
+            </h3>
+            <p class="text-[10px] text-gray-400 mb-4">Este texto será usado como base para os envios automáticos ao dar baixa numa fatura. Pode usar as variáveis mágicas (Spintax suportado).</p>
+            
+            <div class="flex items-center justify-between bg-black/40 border border-white/5 p-3 rounded-xl mb-4">
+                <div>
+                    <h4 class="text-[11px] font-bold text-purple-400 uppercase tracking-wider">Temporizador Automático</h4>
+                    <p class="text-[9px] text-gray-500">Tempo que o balão aguarda antes de disparar.</p>
                 </div>
-
-                <p class="text-[10px] text-gray-400"><strong>Resultado no Cliente 1:</strong> Olá Wesley, sua assinatura do app P2P vence dia 25/05/2026.</p>
-                <p class="text-[10px] text-gray-400"><strong>Resultado no Cliente 2:</strong> Bom dia Robson, seu acesso do app P2P expira dia 25/05/2026.</p>
+                <div class="flex items-center gap-2">
+                    <input type="number" id="cfg_timer_comprovante" class="w-16 bg-gray-900 text-center text-white font-bold outline-none text-xs border border-purple-500/50 focus:border-purple-400 p-2 rounded-lg" value="30" min="5" max="120">
+                    <span class="text-[10px] text-gray-400 font-bold">segs</span>
+                </div>
+            </div>
+            
+            <textarea id="fatura-comprovante-texto" class="w-full bg-gray-900 text-purple-300 p-3 rounded-lg border border-gray-700 focus:border-purple-500 outline-none text-[11px] font-mono leading-relaxed mb-4" rows="5"></textarea>
+            
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('modalTemplateComprovante')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Cancelar</button>
+                <button onclick="salvarComprovanteFatura()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition">Salvar Padrão</button>
             </div>
         </div>
-
-        <button onclick="closeModal('modalExplicacaoTemplates')" class="w-full mt-6 bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-xl transition duration-200 uppercase tracking-wider font-black">
-            Entendi, Fechar
-        </button>
     </div>
-</div>
+
+    <div id="modalTemplateComprovante" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-[#16162d] border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl relative animate-fadeIn text-xs text-gray-300">
+            <button onclick="closeModal('modalTemplateComprovante')" class="absolute top-4 right-4 text-gray-500 hover:text-white transition text-sm">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <h3 class="text-base font-black text-white uppercase tracking-tight mb-2 flex items-center gap-2">
+                <i class="fas fa-receipt text-green-400"></i> Padrão do Comprovante
+            </h3>
+            <p class="text-[10px] text-gray-400 mb-4">Este texto será usado como base para os envios automáticos ao dar baixa numa fatura. Pode usar as variáveis mágicas (Spintax suportado).</p>
+            
+            <textarea id="fatura-comprovante-texto" class="w-full bg-gray-900 text-purple-300 p-3 rounded-lg border border-gray-700 focus:border-purple-500 outline-none text-[11px] font-mono leading-relaxed mb-4" rows="6"></textarea>
+            
+            <div class="flex justify-end gap-2">
+                <button onclick="closeModal('modalTemplateComprovante')" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-bold rounded-lg transition">Cancelar</button>
+                <button onclick="salvarComprovanteFatura()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition">Salvar Padrão</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="module" src="js/main.js"></script>
-    
 </body>
 </html>

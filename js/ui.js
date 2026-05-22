@@ -127,6 +127,7 @@ export function alternarAbasAuth(irParaCadastro) {
 }
 
 export function initApp() {
+rodarAutomacaoDiaria(); // <-- ADICIONAR ESTA LINHA AQUI
     renderPlanos(); renderApps(); renderClientes(); renderFaturas(); updateDashboard(); renderConfig();
     gerarFaturasAutomaticas();
 
@@ -591,7 +592,7 @@ export function renderFaturas() {
     
     const pendentes = (db.invoices_pending || []).sort((a,b) => new Date(a.vencimento) - new Date(b.vencimento));
 
-    // --- COBRANÇAS EM ABERTO ---
+    // --- COBRANÇAS EM ABERTO (DESKTOP) ---
     if (pBody) {
         pBody.innerHTML = pendentes.map(inv => {
             return `<tr class="border-t border-gray-800 text-xs hover:bg-white/5">
@@ -600,7 +601,7 @@ export function renderFaturas() {
                 <td class="p-3 text-gray-400 uppercase">${inv.plano}</td>
                 <td class="p-3 text-white font-bold">R$ ${(inv.valor||0).toFixed(2)}</td>
                 <td class="p-3 text-right flex justify-end gap-2 whitespace-nowrap">
-                    <button onclick="openModalRenovar(${inv.id})" title="Receber" class="px-2 py-1.5 bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-white transition border border-green-500/20 rounded font-black text-[9px]"><i class="fas fa-check mr-1"></i> PAGO</button>
+                    <button onclick="confirmarRenovacao(${inv.id})" title="Receber" class="px-2 py-1.5 bg-green-600/20 text-green-500 hover:bg-green-600 hover:text-white transition border border-green-500/20 rounded font-black text-[9px]"><i class="fas fa-check mr-1"></i> PAGO</button>
                     <button onclick="window.excluirCobrancaPendente(${inv.id})" title="Excluir" class="px-2 py-1.5 bg-red-600/20 text-red-500 hover:bg-red-600 hover:text-white transition border border-red-500/20 rounded font-black text-[9px]"><i class="fas fa-trash"></i></button>
                 </td>
             </tr>`;
@@ -615,7 +616,7 @@ export function renderFaturas() {
                     <div class="text-right"><p class="text-xs font-black text-yellow-500">${inv.vencimento.split('-').reverse().join('/')}</p><p class="text-sm font-bold">R$ ${(inv.valor||0).toFixed(2)}</p></div>
                 </div>
                 <div class="flex gap-2">
-                    <button onclick="openModalRenovar(${inv.id})" class="flex-1 py-2 bg-green-600/20 text-green-500 rounded-xl font-bold text-[10px]"><i class="fas fa-check mr-1"></i> PAGO</button>
+                    <button onclick="confirmarRenovacao(${inv.id})" class="flex-1 py-2 bg-green-600/20 text-green-500 rounded-xl font-bold text-[10px]"><i class="fas fa-check mr-1"></i> PAGO</button>
                     <button onclick="window.excluirCobrancaPendente(${inv.id})" class="px-4 py-2 bg-red-600/20 text-red-500 rounded-xl font-bold text-[10px]"><i class="fas fa-trash"></i></button>
                 </div>
             </div>`;
@@ -668,9 +669,22 @@ export function renderConfig() {
     if(document.getElementById('cfg_msg_oscilacao')) document.getElementById('cfg_msg_oscilacao').value = config.msg_oscilacao || "";
     if(document.getElementById('cfg_msg_manutencao')) document.getElementById('cfg_msg_manutencao').value = config.msg_manutencao || "";
     
-    // Novas opções
+    // Checkboxes de Automação
     if(document.getElementById('cfg_usar_spintax')) document.getElementById('cfg_usar_spintax').checked = config.usar_spintax || false;
     if(document.getElementById('cfg_disparo_rapido')) document.getElementById('cfg_disparo_rapido').checked = config.disparo_rapido || false;
+
+    // 🚀 PREENCHIMENTO AUTOMÁTICO DO COMPROVANTE
+    const textoPadraoComprovante = "{Eba!|Show!|Maravilha!|Tudo certo,} {cliente}. {Pagamento confirmado|Recebemos seu pagamento|Sua fatura foi paga} com sucesso! {Sua assinatura|Seu acesso} no {app} já está {renovado|garantido|ativo por mais um ciclo}.\n\n📅 Vencimento: {vencimento}\n🌐 DNS: {dns}\n\n{Muito obrigado|Valeu demais} pela {confiança|preferência|parceria} de sempre!";
+    
+    if(document.getElementById('fatura-comprovante-texto')) {
+        // Se já existir algo salvo no banco, ele mostra. Se não, mostra o padrão.
+        document.getElementById('fatura-comprovante-texto').value = config.msg_sucesso || textoPadraoComprovante;
+    }
+
+    if(document.getElementById('cfg_timer_comprovante')) {
+        // Carrega o tempo salvo ou usa 30 como padrão se não houver
+        document.getElementById('cfg_timer_comprovante').value = config.timer_comprovante !== undefined ? config.timer_comprovante : 30;
+    }
 }
 
 export function updateConfig() {
@@ -769,8 +783,11 @@ export function openModalRenovar(id) {
     openModal('modalRenovar');
 }
 
-export function confirmarRenovacao() {
-    const id = document.getElementById('renovar-cli-id').value;
+export function confirmarRenovacao(diretoId = null) {
+    // Se recebeu o ID por clique direto usa ele, se não busca do input legado
+    const id = diretoId || (document.getElementById('renovar-cli-id') ? document.getElementById('renovar-cli-id').value : null);
+    if (!id) return;
+
     const inv = db.invoices_pending.find(i => i.id == id);
     if (!inv) return;
 
@@ -779,6 +796,7 @@ export function confirmarRenovacao() {
     
     const cli = db.clientes[cliIdx];
     const p = db.planos.find(pl => pl.id == cli.plano_id) || { valor: inv.valor, custo: 0, dias: 30 };
+    const app = db.apps.find(a => a.id == cli.app_id) || { nome: 'N/A', url: 'N/A' };
     
     const vencimento_original_antes_de_pagar = cli.vencimento;
 
@@ -810,17 +828,48 @@ export function confirmarRenovacao() {
     
     db.invoices_pending = db.invoices_pending.filter(i => i.id != id);
 
-    save(); closeModal('modalRenovar'); renderClientes(); renderFaturas(); updateDashboard(); showNotify('Pago!', 'Vencimento atualizado.');
+    save(); 
+    closeModal('modalRenovar'); 
+    renderClientes(); 
+    renderFaturas(); 
+    updateDashboard(); 
     
-    // Pergunta de Notificação pós-pagamento com modal bonito
-    setTimeout(() => {
-        window.meuConfirm("Enviar Comprovante?", "Deseja notificar o cliente pelo WhatsApp com a nova data de vencimento, usuário e senha?", () => {
-            const numZap = cli.whatsapp.replace(/\D/g, ''); 
-            const texto = `✅ *Pagamento Confirmado!*\n\nOlá, *${cli.nome}*!\nA sua assinatura foi renovada com sucesso.\n\n📅 *Novo Vencimento:* ${novaDataFormatadaBR}\n\n👤 *Usuário:* ${cli.usuario || 'Não informado'}\n🔑 *Senha:* ${cli.senha || 'Não informada'}\n\nObrigado pela preferência! 🚀`;
-            
-           sendCustomWA(numZap, texto, cli.nome);
-        }, 'question');
-    }, 400);
+    showNotify('Baixa Concluída!', `A fatura de ${cli.nome} foi paga.`, 'success');
+    
+    // ==========================================
+    // DISPARO SILENCIOSO DO TIMER DE 30 SEGUNDOS
+    // ==========================================
+    const numZap = cli.whatsapp.replace(/\D/g, ''); 
+    const campoComprovante = document.getElementById('fatura-comprovante-texto');
+    
+    let templatePadrao = campoComprovante ? campoComprovante.value : (db.config.msg_sucesso || "✅ *Pagamento Confirmado!*\n\nOlá, *{cliente}*!\nA sua assinatura foi renovada.\n\n📅 *Vencimento:* {vencimento}");
+
+    let textoFinal = templatePadrao
+        .replace(/{cliente}/g, cli.nome)
+        .replace(/{vencimento}/g, novaDataFormatadaBR)
+        .replace(/{usuario}/g, cli.usuario || 'N/A')
+        .replace(/{senha}/g, cli.senha || 'N/A')
+        .replace(/{app}/g, app.nome)
+        .replace(/{dns}/g, app.url || app.host || 'N/A')
+        .replace(/{plano}/g, p.nome || 'N/A')
+        .replace(/{valor}/g, p.valor ? `R$ ${p.valor.toFixed(2)}` : "0,00");
+
+    if (db.config.usar_spintax) {
+        // 🎲 PROCESSADOR SPINTAX OBRIGATÓRIO (Funciona sempre que achar um |)
+    textoFinal = textoFinal.replace(/\{([^{}]+)\}/g, function(match, contents) {
+        if (contents.includes('|')) {
+            const parts = contents.split('|');
+            return parts[Math.floor(Math.random() * parts.length)];
+        }
+             return match; // Se não tiver barra (|), deixa a palavra quieta
+        });
+    }
+
+   // Puxa o tempo salvo no banco de dados, ou usa 30 segundos como segurança
+    const tempoEspera = db.config.timer_comprovante !== undefined ? db.config.timer_comprovante : 30;
+    
+    // Dispara o balão com o tempo escolhido
+    dispararToastTemporizador(numZap, textoFinal, cli.nome, tempoEspera);
 }
 
 export function deleteFatura(fid) {
@@ -1202,3 +1251,172 @@ if (btnGerarCodigoWA) {
 
 // Expõe a função globalmente (seguindo o padrão do seu sistema)
 window.conectarWhatsAppPorCodigo = conectarWhatsAppPorCodigo;
+
+// ==========================================
+// AUTOMAÇÃO DIÁRIA DE COBRANÇAS (1 VEZ POR DIA)
+// ==========================================
+export async function rodarAutomacaoDiaria() {
+    const hoje = new Date().toISOString().split('T')[0]; // Pega a data de hoje (YYYY-MM-DD)
+    if (!db.config) db.config = {};
+    
+    // Se o sistema já disparou automaticamente hoje, ele para aqui e não manda de novo.
+    if (db.config.ultimo_disparo_auto === hoje) return; 
+
+    const diasAviso = db.config.aviso_dias || 3;
+    
+    // Calcula a data exata da régua (Ex: Hoje + 3 dias)
+    const dataAlvo = new Date();
+    dataAlvo.setDate(dataAlvo.getDate() + diasAviso);
+    const dataAlvoStr = dataAlvo.toISOString().split('T')[0];
+
+    // Filtra apenas os clientes que vencem EXATAMENTE nessa data alvo
+    const clientesParaCobrar = (db.clientes || []).filter(c => c.vencimento === dataAlvoStr);
+
+    if (clientesParaCobrar.length > 0) {
+        showNotify("Automação Diária", `Iniciando cobrança automática para ${clientesParaCobrar.length} clientes na régua...`, "info");
+        
+        for (let cli of clientesParaCobrar) {
+            await sendManualWA(cli.id, 'renew'); // Dispara usando o seu Template + Spintax
+            
+            // Delay anti-ban entre os envios (5 a 12 segundos)
+            await new Promise(r => setTimeout(r, Math.floor(Math.random() * (12000 - 5000 + 1)) + 5000));
+        }
+        showNotify("Concluído", "Todas as cobranças automáticas do dia foram enviadas.");
+    }
+    
+    // Marca que a automação de hoje já foi feita para não repetir se você apertar F5
+    db.config.ultimo_disparo_auto = hoje;
+    save();
+}
+
+// ==========================================
+// TOAST FLUTUANTE DE ENVIO AGENDADO (30 SEGS)
+// ==========================================
+// ==========================================
+// TOAST FLUTUANTE (INFERIOR DIREITO E CLICÁVEL)
+// ==========================================
+window.dispararToastTemporizador = function(numero, mensagem, nomeCliente, segundos) {
+    // 1. Cria um container específico no canto inferior direito
+    let container = document.getElementById('toast-timer-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-timer-container';
+        // fixed bottom-5 right-5 garante o canto inferior direito
+        container.className = 'fixed bottom-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none';
+        document.body.appendChild(container);
+    }
+    
+    const toastId = 'toast-' + Date.now();
+    const toast = document.createElement('div');
+    toast.id = toastId;
+    
+    // pointer-events-auto OBRIGATÓRIO aqui para permitir o clique nos botões
+    toast.className = "bg-[#16162d] border border-green-500/30 p-3 rounded-xl shadow-2xl text-xs text-white transform transition-all duration-300 relative overflow-hidden flex flex-col w-72 sm:w-80 pointer-events-auto translate-y-10 opacity-0";
+    
+    toast.innerHTML = `
+        <div class="flex justify-between items-center mb-2 relative z-10">
+            <div class="flex-1 pr-2">
+                <strong class="text-green-400 block text-sm mb-0.5"><i class="fas fa-paper-plane"></i> Fila de Envio</strong>
+                <p class="text-gray-400 text-[10px]">Para <b class="text-white uppercase truncate">${nomeCliente}</b> em <span id="contagem-${toastId}" class="text-amber-400 font-bold text-sm">${segundos}</span>s</p>
+            </div>
+            <div class="flex gap-2">
+                <button id="btn-enviar-agora-${toastId}" class="bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-white p-2.5 rounded-lg font-bold transition shadow-sm" title="Enviar Imediatamente">
+                    <i class="fas fa-forward"></i>
+                </button>
+                <button id="btn-cancelar-${toastId}" class="bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white p-2.5 rounded-lg font-bold transition shadow-sm" title="Cancelar Envio">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="h-1.5 bg-gray-800 rounded-full w-full mt-1 relative z-10 overflow-hidden">
+            <div id="barra-${toastId}" class="h-full bg-green-500 transition-all duration-1000 ease-linear" style="width: 100%;"></div>
+        </div>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Animação de entrada suave
+    setTimeout(() => { toast.classList.remove('translate-y-10', 'opacity-0'); }, 10);
+    
+    let tempoRestante = segundos;
+    let finalizado = false;
+    
+    const intervalo = setInterval(() => {
+        if (finalizado) return;
+        tempoRestante--;
+        
+        const contadorEl = document.getElementById(`contagem-${toastId}`);
+        const barraEl = document.getElementById(`barra-${toastId}`);
+        
+        if (contadorEl) contadorEl.innerText = tempoRestante;
+        if (barraEl) barraEl.style.width = `${(tempoRestante / segundos) * 100}%`;
+        
+        if (tempoRestante <= 0) {
+            finalizarEnvio();
+        }
+    }, 1000);
+
+    function finalizarEnvio() {
+        clearInterval(intervalo);
+        finalizado = true;
+        sendCustomWA(numero, mensagem, nomeCliente); // Dispara a mensagem
+        
+        toast.innerHTML = `<strong class="text-blue-400 block p-2 text-center"><i class="fas fa-check mr-2"></i> Enviado com sucesso!</strong>`;
+        toast.className = "bg-[#16162d] border border-blue-500/30 p-2 rounded-xl shadow-2xl text-xs transform transition-all duration-300 w-72 sm:w-80 pointer-events-auto";
+        
+        setTimeout(() => { 
+            toast.classList.add('opacity-0', 'translate-x-full'); 
+            setTimeout(() => toast.remove(), 300); 
+        }, 2500);
+    }
+    
+    // 2. Os listeners de clique 100% isolados e garantidos
+    document.getElementById(`btn-enviar-agora-${toastId}`).addEventListener('click', (e) => {
+        e.preventDefault();
+        if(!finalizado) finalizarEnvio();
+    });
+
+    document.getElementById(`btn-cancelar-${toastId}`).addEventListener('click', (e) => {
+        e.preventDefault();
+        if (finalizado) return;
+        clearInterval(intervalo);
+        finalizado = true;
+        
+        // Some com a notificação
+        toast.classList.add('opacity-0', 'translate-x-full');
+        setTimeout(() => toast.remove(), 300);
+        showNotify('Cancelado', `Envio para ${nomeCliente} abortado.`, 'warning');
+    });
+};
+
+export function salvarComprovanteFatura() {
+    const texto = document.getElementById('fatura-comprovante-texto').value;
+    const timerInput = document.getElementById('cfg_timer_comprovante');
+    const timer = timerInput ? parseInt(timerInput.value) : 30;
+    
+    if (!db.config) db.config = {};
+    
+    db.config.msg_sucesso = texto;
+    // Garante que o usuário não coloque um tempo zerado ou negativo
+    db.config.timer_comprovante = timer >= 5 ? timer : 30; 
+    
+    save();
+    closeModal('modalTemplateComprovante'); 
+    showNotify('Salvo', 'Template e tempo de envio atualizados!');
+}
+window.salvarComprovanteFatura = salvarComprovanteFatura;
+
+// Exposição global obrigatória para os botões do HTML funcionarem
+window.openModal = openModal;
+window.closeModal = closeModal;
+window.confirmarRenovacao = confirmarRenovacao;
+
+
+window.abrirModalComprovante = function() {
+    const modal = document.getElementById('modalTemplateComprovante');
+    if (modal) {
+        modal.classList.remove('hidden');
+    } else {
+        showNotify('Erro', 'O código HTML do modal não foi encontrado.', 'error');
+    }
+};
