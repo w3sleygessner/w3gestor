@@ -424,39 +424,41 @@
                     <button onclick="openModal('modalChangePassword')" class="w-full sm:w-auto bg-gray-800 hover:bg-gray-700 text-white px-4 py-2.5 rounded-xl font-bold text-[10px] uppercase shadow-lg border border-white/10 transition-all text-center active:scale-95 duration-100"><i class="fas fa-lock mr-1"></i> Alterar Senha</button>
                 </div>
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start w-full">
-                 <div class="bg-white p-6 rounded-lg shadow-md mb-6 border border-gray-200">
-    <h3 class="text-xl font-bold mb-4 text-gray-800 border-b pb-2">📱 Conexão WhatsApp</h3>
-    <div class="flex flex-col items-center">
-        <div id="wa-display-container" class="bg-gray-50 p-2 rounded-lg border border-gray-200 shadow-sm mb-4 flex items-center justify-center w-64 h-64">
-            <img id="wa-qr-code" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='250' viewBox='0 0 250 250'><rect width='250' height='250' fill='%23f3f4f6'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-family='sans-serif' font-size='14'>Verificando status...</text></svg>" alt="Status Conexão" class="w-full h-full object-contain rounded-lg">
-        </div>
-        
-        <p class="font-bold text-lg mb-4 text-gray-700">
-            Status: <span id="wa-status" class="text-yellow-500 uppercase tracking-wide">VERIFICANDO...</span>
-        </p>
-        
-        <div id="wa-actions-container" class="w-full flex flex-col items-center gap-4">
-            <button id="btn-conectar-wa" onclick="conectarWhatsAppReal()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 w-full sm:w-auto hidden">
-                Gerar QR Code / Conectar
-            </button>
-            
-            <div id="wa-disconnect-container" class="hidden w-full flex flex-col items-center border-t border-gray-200 pt-6 mt-2">
-                <button onclick="desconectarWhatsAppReal()" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded shadow transition duration-200 w-full sm:w-auto">
-                    Desconectar Sessão da API
-                </button>
-                
-                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mt-4 rounded text-sm text-blue-800 w-full max-w-md">
-                    <p class="font-bold mb-2">💡 Como desconectar pelo Celular:</p>
-                    <ol class="list-decimal ml-5 space-y-1">
-                        <li>Abra o WhatsApp no celular.</li>
-                        <li>Vá em <b>Aparelhos Conectados</b>.</li>
-                        <li>Toque na sessão ativa e escolha <b>"Desconectar"</b>.</li>
-                    </ol>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+                    <div class="card p-6 rounded-2xl shadow-xl border border-white/5 bg-[#16162d] w-full">
+                        <h3 class="text-sm font-bold mb-4 text-purple-400 border-b border-white/5 pb-3 uppercase tracking-widest flex items-center">
+                            <i class="fab fa-whatsapp mr-2 text-green-400 text-lg"></i> Conexão WhatsApp
+                        </h3>
+                        <div class="flex flex-col items-center">
+                            <div id="wa-display-container" class="bg-white p-2 rounded-xl shadow-lg mb-4 flex items-center justify-center w-64 h-64 hidden transition-all duration-300 border-4 border-purple-500/20">
+                                <img id="wa-qr-code" src="" alt="QR Code" class="w-full h-full object-contain rounded-lg">
+                            </div>
+                            
+                            <p class="font-bold text-[10px] mb-4 text-gray-400 uppercase tracking-widest">
+                                Status: <span id="wa-status" class="text-yellow-500 text-xs">VERIFICANDO...</span>
+                            </p>
+                            
+                            <div id="wa-actions-container" class="w-full flex flex-col items-center gap-4">
+                                <button id="btn-conectar-wa" onclick="conectarWhatsAppReal()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg shadow-purple-500/20 transition-all active:scale-95 duration-100 w-full sm:w-auto uppercase tracking-wider text-[11px] hidden flex items-center justify-center gap-2">
+                                    <i class="fas fa-qrcode"></i> Gerar QR Code
+                                </button>
+                                
+                                <div id="wa-disconnect-container" class="hidden w-full flex flex-col items-center border-t border-white/5 pt-6 mt-2">
+                                    <button onclick="desconectarWhatsAppReal()" class="bg-red-600/10 text-red-500 border border-red-500/20 hover:bg-red-600 hover:text-white font-bold py-3 px-6 rounded-xl shadow transition duration-200 w-full sm:w-auto uppercase tracking-wider text-[10px] flex items-center justify-center gap-2">
+                                        <i class="fas fa-sign-out-alt"></i> Desconectar Sessão da API
+                                    </button>
+                                    
+                                    <div class="bg-blue-900/10 border border-blue-500/20 p-4 mt-4 rounded-xl text-xs text-blue-300 w-full max-w-md shadow-inner">
+                                        <p class="font-bold mb-2 text-blue-400 uppercase tracking-widest text-[10px]"><i class="fas fa-lightbulb text-yellow-500 mr-1"></i> Como desconectar pelo Celular:</p>
+                                        <ol class="list-decimal ml-5 space-y-1 text-[11px] text-gray-400">
+                                            <li>Abra o WhatsApp no celular.</li>
+                                            <li>Vá em <b class="text-white">Aparelhos Conectados</b>.</li>
+                                            <li>Toque na sessão ativa e escolha <b class="text-white">"Desconectar"</b>.</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="flex flex-col gap-2 h-full w-full">
                         <div class="card p-5 rounded-2xl shadow-xl border border-white/5 bg-[#16162d] w-full">
                                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

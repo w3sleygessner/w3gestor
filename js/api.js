@@ -1,8 +1,10 @@
 import { db } from "./database.js";
 import { auth } from "./firebase-config.js";
 
-const baseURL = "https://w3gestorapi.duckdns.org";
+const baseURL = "https://w3gestorapi.camdvr.org/";
 const apiKey = "Wesley123!";
+
+let connectionCheckInterval; // Controle do loop do QR Code
 
 function obterNomeInstancia() {
     const usuarioLogado = auth.currentUser;
@@ -58,6 +60,8 @@ export async function sendManualWA(cliId, type) {
     if (type === 'welcome') template = db.config.msg_boas_vindas || "Olá {cliente}, seja bem-vindo(a) ao {app}!";
     if (type === 'success') template = db.config.msg_sucesso || "Olá {cliente}, pagamento confirmado!";
     if (type === 'suspended') template = db.config.msg_suspensa || "⚠️ Seu acesso ao {app} foi suspenso.";
+    if (type === 'oscilacao') template = db.config.msg_oscilacao || "⚠️ Aviso de Oscilação no {app}.";
+    if (type === 'manutencao') template = db.config.msg_manutencao || "🔧 Aviso de Manutenção no {app}.";
     
     let msg = template || "";
     msg = msg.replace(/{cliente}/g, cli.nome || "");
@@ -112,12 +116,12 @@ export async function checarStatusWhatsAppSilencioso() {
     const instancia = obterNomeInstancia();
     if (!instancia) return;
 
-    const qrImg = document.getElementById('wa-qr-code');
+    const displayContainer = document.getElementById('wa-display-container');
     const statusTxt = document.getElementById('wa-status');
     const btnConectar = document.getElementById('btn-conectar-wa');
     const descContainer = document.getElementById('wa-disconnect-container');
 
-    if (!statusTxt || !qrImg) return;
+    if (!statusTxt) return;
 
     try {
         let resState = await fetch(`${baseURL}/instance/connectionState/${instancia}`, {
@@ -129,26 +133,35 @@ export async function checarStatusWhatsAppSilencioso() {
             const estadoAtual = dataState?.instance?.state || dataState?.state;
 
             if (estadoAtual === 'open') {
-                statusTxt.innerText = "WHATSAPP CONECTADO!";
-                statusTxt.className = "text-emerald-400 font-bold uppercase tracking-wider";
-                qrImg.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='250' viewBox='0 0 250 250'><rect width='250' height='250' fill='%23f3f4f6'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-family='sans-serif' font-size='14'>Sem Sessão Ativa</text></svg>";
-                qrImg.classList.add("p-6");
+                statusTxt.innerText = "CONECTADO!";
+                statusTxt.className = "text-green-500 font-bold uppercase tracking-wider";
+                
+                // ESCONDER QR CODE POIS JÁ ESTÁ CONECTADO
+                if (displayContainer) displayContainer.classList.add('hidden');
+                
+                // ESCONDER BOTÃO DE GERAR QR CODE
                 if (btnConectar) btnConectar.classList.add('hidden');
+                
+                // MOSTRAR BOTÃO DE DESCONECTAR
                 if (descContainer) descContainer.classList.remove('hidden');
                 return;
             }
         }
 
-        // Se não retornar status 200 ou não estiver aberto, monta o estado inicial padrão
+        // Se não retornar status 200 ou não estiver aberto, monta o estado inicial padrão (Desconectado)
         statusTxt.innerText = "DESCONECTADO";
-        statusTxt.className = "text-rose-500 font-bold uppercase tracking-wider";
-        qrImg.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='250' viewBox='0 0 250 250'><rect width='250' height='250' fill='%230f172a'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2364748b' font-family='sans-serif' font-size='14'>Sem Sessão Ativa</text></svg>";
-        qrImg.classList.remove("p-6");
+        statusTxt.className = "text-red-500 font-bold uppercase tracking-wider";
+        if (displayContainer) displayContainer.classList.add('hidden');
         if (btnConectar) btnConectar.classList.remove('hidden');
         if (descContainer) descContainer.classList.add('hidden');
 
     } catch (e) {
         console.error("Erro na verificação silenciosa:", e);
+        statusTxt.innerText = "ERRO DE CONEXÃO";
+        statusTxt.className = "text-red-500 font-bold uppercase tracking-wider";
+        if (displayContainer) displayContainer.classList.add('hidden');
+        if (btnConectar) btnConectar.classList.remove('hidden');
+        if (descContainer) descContainer.classList.add('hidden');
     }
 }
 
@@ -158,12 +171,15 @@ export async function conectarWhatsAppReal() {
     if (!instancia) return;
 
     const qrImg = document.getElementById('wa-qr-code');
+    const displayContainer = document.getElementById('wa-display-container');
     const statusTxt = document.getElementById('wa-status');
     const btnConectar = document.getElementById('btn-conectar-wa');
     const descContainer = document.getElementById('wa-disconnect-container');
 
     try {
-        if(window.showNotify) window.showNotify("Verificando", "A consultar o servidor...", "info");
+        if(window.showNotify) window.showNotify("Aguarde", "A comunicar com o servidor da API...", "info");
+        btnConectar.disabled = true;
+        btnConectar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Gerando...';
 
         let resState = await fetch(`${baseURL}/instance/connectionState/${instancia}`, {
             headers: { 'apikey': apiKey }
@@ -172,55 +188,91 @@ export async function conectarWhatsAppReal() {
         let qrCodeBase64 = null;
 
         if (resState.status === 404 || resState.status === 400) {
-            if(window.showNotify) window.showNotify("Instância", "A preparar o motor do WhatsApp...", "info");
-            await fetch(`${baseURL}/instance/create`, {
+            // A instância não existe, criar e conectar
+            let resCreate = await fetch(`${baseURL}/instance/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
                 body: JSON.stringify({ instanceName: instancia, integration: "WHATSAPP-BAILEYS", qrcode: true })
             });
-            await new Promise(r => setTimeout(r, 3000));
+            let dataCreate = await resCreate.json();
+            qrCodeBase64 = dataCreate?.qrcode?.base64 || dataCreate?.base64;
             
-            const resConn = await fetch(`${baseURL}/instance/connect/${instancia}`, { headers: { 'apikey': apiKey } });
-            const dataConn = await resConn.json();
-            qrCodeBase64 = dataConn?.qrcode?.base64 || dataConn?.base64;
+            if(!qrCodeBase64) {
+                 await new Promise(r => setTimeout(r, 2000));
+                 const resConn = await fetch(`${baseURL}/instance/connect/${instancia}`, { headers: { 'apikey': apiKey } });
+                 const dataConn = await resConn.json();
+                 // Coleta o Base64 com suporte as novas versões da Evolution
+                 qrCodeBase64 = dataConn?.qrcode?.base64 || dataConn?.base64 || dataConn?.instance?.qrcode?.base64;
+            }
             
         } else {
             const dataState = await resState.json();
             const estadoAtual = dataState?.instance?.state || dataState?.state;
 
             if (estadoAtual === 'open') {
-                statusTxt.innerText = "WHATSAPP CONECTADO!";
-                statusTxt.className = "text-emerald-400 font-bold uppercase tracking-wider";
-                qrImg.src = "https://cdn-icons-png.flaticon.com/512/134/134937.png"; 
-                qrImg.classList.add("p-6");
-                if (btnConectar) btnConectar.classList.add('hidden');
-                if (descContainer) descContainer.classList.remove('hidden');
-                if(window.showNotify) window.showNotify("Conectado", "O link com o WhatsApp está ativo.", "success");
+                checarStatusWhatsAppSilencioso();
+                if(window.showNotify) window.showNotify("Conectado", "O WhatsApp já está ativo.", "success");
                 return;
             }
             
-            if(window.showNotify) window.showNotify("QR Code", "Gerando código de pareamento...", "info");
+            // Está fechada, conecta de novo
             const resConn = await fetch(`${baseURL}/instance/connect/${instancia}`, { headers: { 'apikey': apiKey } });
             const dataConn = await resConn.json();
-            qrCodeBase64 = dataConn?.qrcode?.base64 || dataConn?.base64;
+            qrCodeBase64 = dataConn?.qrcode?.base64 || dataConn?.base64 || dataConn?.instance?.qrcode?.base64;
         }
 
         if (qrCodeBase64 && qrCodeBase64.includes("base64")) {
             qrImg.src = qrCodeBase64;
-            qrImg.classList.remove("p-6");
+            if (displayContainer) displayContainer.classList.remove('hidden'); // Mostra a caixa do QR Code
             statusTxt.innerText = "ESCANEAR AGORA!";
             statusTxt.className = "text-amber-400 font-bold uppercase tracking-wider";
-            if (btnConectar) btnConectar.classList.remove('hidden');
+            if (btnConectar) btnConectar.classList.add('hidden');
             if (descContainer) descContainer.classList.add('hidden');
+            
+            // Iniciar o vigilante para ver se o usuário já bipou o celular
+            verificarConexaoLoop(instancia);
+        } else {
+            throw new Error("Base64 não retornado pela API");
         }
 
     } catch (e) { 
         console.error("Erro API WA:", e); 
-        if(window.showNotify) window.showNotify("Erro", "O Servidor está offline.", "error");
+        if(window.showNotify) window.showNotify("Erro", "O Servidor recusou a criação ou está offline.", "error");
+        checarStatusWhatsAppSilencioso();
+    } finally {
+        if (btnConectar) {
+            btnConectar.disabled = false;
+            btnConectar.innerHTML = '<i class="fas fa-qrcode"></i> Gerar QR Code';
+        }
     }
 }
 
-// 🔌 LOGOUT: Encerra a sessão e devolve a interface gráfica ao estado inicial
+// ♻️ LOOP PARA VERIFICAR SE O USUÁRIO JÁ LEU O QR CODE
+async function verificarConexaoLoop(instancia) {
+    if(connectionCheckInterval) clearInterval(connectionCheckInterval);
+    
+    connectionCheckInterval = setInterval(async () => {
+        try {
+            let resState = await fetch(`${baseURL}/instance/connectionState/${instancia}`, {
+                headers: { 'apikey': apiKey }
+            });
+            if (resState.status === 200) {
+                const dataState = await resState.json();
+                const estadoAtual = dataState?.instance?.state || dataState?.state;
+
+                if (estadoAtual === 'open') {
+                    clearInterval(connectionCheckInterval); // Para de verificar
+                    checarStatusWhatsAppSilencioso(); // Atualiza a tela
+                    if(window.showNotify) window.showNotify("Sucesso", "WhatsApp autenticado e conectado!", "success");
+                }
+            }
+        } catch(e) {
+            console.error("Erro no polling de conexão", e);
+        }
+    }, 4000); // Verifica a cada 4 segundos
+}
+
+// 🔌 LOGOUT: Encerra a sessão
 export async function desconectarWhatsAppReal() {
     const instancia = obterNomeInstancia();
     if (!instancia) return;
@@ -237,14 +289,7 @@ export async function desconectarWhatsAppReal() {
 
         if (response.ok || response.status === 404) {
             if (window.showNotify) window.showNotify("Desconectado", "Sessão encerrada com sucesso.", "success");
-            
-            document.getElementById('wa-status').innerText = "DESCONECTADO";
-            document.getElementById('wa-status').className = "text-rose-500 font-bold uppercase tracking-wider";
-            document.getElementById('wa-qr-code').src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='250' height='250' viewBox='0 0 250 250'><rect width='250' height='250' fill='%23f3f4f6'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%236b7280' font-family='sans-serif' font-size='14'>Sem Sessão Ativa</text></svg>"; 
-            document.getElementById('wa-qr-code').classList.remove("p-6");
-
-            document.getElementById('wa-disconnect-container').classList.add('hidden');
-            document.getElementById('btn-conectar-wa').classList.remove('hidden');
+            checarStatusWhatsAppSilencioso(); // Recarrega a tela para modo Desconectado
         } else {
             if (window.showNotify) window.showNotify("Erro", "Falha ao encerrar a sessão na API.", "error");
         }
