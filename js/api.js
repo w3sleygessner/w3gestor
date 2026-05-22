@@ -85,9 +85,13 @@ export async function sendManualWA(cliId, type) {
 // ==========================================
 // O ENVIO BRUTO CORRIGIDO (EVOLUTION V2)
 // ==========================================
+// ==========================================
+// O ENVIO BRUTO CORRIGIDO (EVOLUTION V2)
+// ==========================================
 export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     if (!msg || msg.trim() === "") return;
 
+    // Limpa a formatação e garante o 55 no início
     let fone = telefone.replace(/\D/g, '');
     if (!fone.startsWith('55')) fone = '55' + fone; 
 
@@ -97,7 +101,7 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     try {
         if(window.showNotify) window.showNotify("Enviando...", `A disparar para ${nomeCliente}`, "info");
 
-        // Formato exato e limpo que a versão latest exige
+        // Formato DEFINITIVO e exato para Evolution API v2 (latest)
         const response = await fetch(`${baseURL}/message/sendText/${instancia}`, {
             method: 'POST',
             headers: { 
@@ -107,10 +111,7 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
             body: JSON.stringify({
                 number: fone,
                 text: msg,
-                options: {
-                    delay: 1200,
-                    presence: "composing"
-                }
+                delay: 1200 // O delay fica direto aqui na raiz, sem a palavra 'options'
             })
         });
 
