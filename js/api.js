@@ -82,6 +82,9 @@ export async function sendManualWA(cliId, type) {
 // ==========================================
 // A MÁGICA DO ENVIO CORRIGIDA AQUI
 // ==========================================
+// ==========================================
+// O ENVIO BRUTO CORRIGIDO (EVOLUTION V2)
+// ==========================================
 export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     if (!msg || msg.trim() === "") return;
 
@@ -94,33 +97,27 @@ export async function sendCustomWA(telefone, msg, nomeCliente = "Cliente") {
     try {
         if(window.showNotify) window.showNotify("Enviando...", `A disparar para ${nomeCliente}`, "info");
 
-        // Payload "Blindado" que atende as novas exigências da Evolution API
-        const payload = {
-            number: fone,
-            text: msg, // Formato exigido nas versões +2.x
-            textMessage: { // Algumas versões exigem encapsulamento
-                text: msg
-            },
-            options: {
-                delay: 1200, // Dá tempo para a API preparar a sessão e não ignorar o envio
-                presence: "composing", // Simula "escrevendo..."
-                linkPreview: false // Evita bloqueio do WhatsApp tentando carregar imagens de links
-            }
-        };
-
+        // Formato exato e limpo que a versão latest exige
         const response = await fetch(`${baseURL}/message/sendText/${instancia}`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json', 
                 'apikey': apiKey
             },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({
+                number: fone,
+                text: msg,
+                options: {
+                    delay: 1200,
+                    presence: "composing"
+                }
+            })
         });
 
         if (response.ok) {
             if(window.showNotify) window.showNotify("Sucesso!", `Mensagem entregue.`, "success");
         } else {
-            console.error("A API da Evolution recusou o envio. Possível erro de sessão ou número inválido.");
+            console.error("A API da Evolution recusou o envio. Status:", response.status);
             if(window.showNotify) window.showNotify("Erro", "O WhatsApp recusou o envio.", "error");
         }
     } catch (error) {
