@@ -570,10 +570,9 @@ export function renderClientes() {
 // ==========================================
 // BUSCA INTELIGENTE (DEBOUNCE)
 // ==========================================
-let tempoBusca;
 window.debounceBuscaClientes = function() {
-    clearTimeout(tempoBusca);
-    tempoBusca = setTimeout(() => {
+    clearTimeout(window.tempoBuscaGlobal);
+    window.tempoBuscaGlobal = setTimeout(() => {
         renderClientes();
     }, 300);
 };
