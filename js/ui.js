@@ -86,6 +86,9 @@ export function switchTab(tab) {
     if (sidebar && !sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) {
         sidebar.classList.add('-translate-x-full');
     }
+
+    // 🚀 LINHA ADICIONADA: Salva a aba atual na memória do navegador
+    localStorage.setItem('w3gestor_aba_ativa', tab);
 }
 
 export function toggleAuthMode() { 
@@ -128,6 +131,8 @@ export function alternarAbasAuth(irParaCadastro) {
 
 export function initApp() {
 rodarAutomacaoDiaria(); // <-- ADICIONAR ESTA LINHA AQUI
+    const abaSalva = localStorage.getItem('w3gestor_aba_ativa') || 'dashboard';
+    switchTab(abaSalva);
     renderPlanos(); renderApps(); renderClientes(); renderFaturas(); updateDashboard(); renderConfig();
     gerarFaturasAutomaticas();
 
@@ -138,6 +143,7 @@ rodarAutomacaoDiaria(); // <-- ADICIONAR ESTA LINHA AQUI
             e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
         });
     }
+
 }
 
 export function gerarFaturasAutomaticas() {
