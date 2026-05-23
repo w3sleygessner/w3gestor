@@ -183,33 +183,128 @@ export function gerarFaturasAutomaticas() {
     }
 }
 
+// export function updateDashboard() {
+//     const faturas = db.faturas || [];
+//     const clientes = db.clientes || [];
+//     const config = db.config || { aviso_dias: 3 };
+
+//     const b = faturas.reduce((acc, f) => acc + (f.valor || 0), 0);
+//     const l = faturas.reduce((acc, f) => acc + (f.lucro || 0), 0);
+//     const hoje = new Date().toISOString().split('T')[0];
+//     const otr = clientes.filter(c => c.vencimento <= hoje).length;
+
+//     const previsaoLucroLiquido = clientes.reduce((acc, cli) => {
+//         const diffDias = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
+//         if (diffDias < -20) return acc;
+//         const plano = db.planos.find(p => p.id == cli.plano_id) || { valor: 0, custo: 0 };
+//         return acc + ((plano.valor || 0) - (plano.custo || 0));
+//     }, 0);
+
+//     if (document.getElementById('stat-total')) document.getElementById('stat-total').innerText = clientes.length;
+//     if (document.getElementById('stat-bruto')) document.getElementById('stat-bruto').innerText = `R$ ${b.toFixed(2)}`;
+//     if (document.getElementById('stat-lucro')) document.getElementById('stat-lucro').innerText = `R$ ${l.toFixed(2)}`;
+//     if (document.getElementById('stat-previsao')) document.getElementById('stat-previsao').innerText = `R$ ${previsaoLucroLiquido.toFixed(2)}`;
+//     if (document.getElementById('stat-atrasados')) document.getElementById('stat-atrasados').innerText = otr;
+
+//     const list = document.getElementById('alerts-list');
+//     if (list) {
+//         list.innerHTML = '';
+//         clientes.sort((a,b) => new Date(a.vencimento) - new Date(b.vencimento)).forEach(cli => {
+//             const diff = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
+//             if (diff <= config.aviso_dias && diff >= -20) {
+//                 list.innerHTML += `
+//                 <div class="flex items-center justify-between p-3 bg-white/[0.02] border border-white/5 shadow-inner rounded-xl mb-2">
+//                     <div class="min-w-0 pr-2">
+//                         <p class="text-[11px] text-white font-black uppercase tracking-tight truncate">${cli.nome}</p>
+//                         <div class="flex items-center gap-1.5 mt-1">
+//                             <span class="text-[9px] text-gray-400 font-mono">${cli.vencimento.split('-').reverse().join('/')}</span>
+//                             <span class="${diff <= 0 ? 'text-red-400 bg-red-500/10' : 'text-yellow-500 bg-yellow-500/10'} rounded text-[8px] font-black px-1.5 py-0.5 uppercase">${diff <= 0 ? 'Atrasado' : 'Em ' + diff + ' d'}</span>
+//                         </div>
+//                     </div>
+//                     <div class="flex gap-1 shrink-0">
+//                         <button onclick="gerarFaturaManual(${cli.id})" title="Gerar Fatura" class="w-7 h-7 flex items-center justify-center bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-lg text-xs hover:bg-yellow-500 hover:text-black transition"><i class="fas fa-file-invoice-dollar"></i></button>
+//                         <button onclick="sendManualWA(${cli.id}, 'renew')" class="w-7 h-7 flex items-center justify-center bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg text-xs hover:bg-purple-500 hover:text-white transition"><i class="fab fa-whatsapp"></i></button>
+//                     </div>
+//                 </div>`;
+//             }
+//         });
+//         if (list.innerHTML === '') {
+//             list.innerHTML = `<div class="p-2 text-center text-gray-500 text-xs italic w-full">Nenhum vencimento crítico.</div>`;
+//         }
+//         renderChartEvolucao();
+//         renderChartAppsDonut();
+//         renderChartPlanosDonut();
+//     }
+// }
+
 export function updateDashboard() {
-    const faturas = db.faturas || [];
-    const clientes = db.clientes || [];
+    if (!db.clientes) db.clientes = [];
+    if (!db.faturas) db.faturas = [];
     const config = db.config || { aviso_dias: 3 };
+    
+    // ==========================================
+    // 1. MOTOR DE FILTROS DE DATA (Para Bruto e Lucro)
+    // ==========================================
+    const periodo = window.filtroDashboardAtual || 'tudo';
+    const dataHoje = new Date();
+    dataHoje.setHours(0,0,0,0);
 
-    const b = faturas.reduce((acc, f) => acc + (f.valor || 0), 0);
-    const l = faturas.reduce((acc, f) => acc + (f.lucro || 0), 0);
-    const hoje = new Date().toISOString().split('T')[0];
-    const otr = clientes.filter(c => c.vencimento <= hoje).length;
+    const faturasFiltradas = db.faturas.filter(f => {
+        if (periodo === 'tudo') return true;
+        
+        const partes = f.data_pgto.split('/');
+        if(partes.length !== 3) return true; 
+        
+        const dataFatura = new Date(partes[2], partes[1] - 1, partes[0]);
+        dataFatura.setHours(0,0,0,0);
 
-    const previsaoLucroLiquido = clientes.reduce((acc, cli) => {
+        if (periodo === 'hoje') {
+            return dataFatura.getTime() === dataHoje.getTime();
+        } else if (periodo === '7dias') {
+            const seteDiasAtras = new Date(dataHoje);
+            seteDiasAtras.setDate(dataHoje.getDate() - 7);
+            return dataFatura >= seteDiasAtras && dataFatura <= dataHoje;
+        } else if (periodo === 'mes') {
+            return dataFatura.getMonth() === dataHoje.getMonth() && dataFatura.getFullYear() === dataHoje.getFullYear();
+        }
+        return true;
+    });
+
+    let bruto = 0, lucro = 0;
+    faturasFiltradas.forEach(f => {
+        bruto += (f.valor || 0);
+        lucro += (f.lucro || 0);
+    });
+
+    // ==========================================
+    // 2. CÁLCULOS ORIGINAIS (Previsão e Atrasos)
+    // ==========================================
+    const hojeIso = new Date().toISOString().split('T')[0];
+    const atrasadosCount = db.clientes.filter(c => c.vencimento <= hojeIso).length;
+
+    const previsaoLucroLiquido = db.clientes.reduce((acc, cli) => {
         const diffDias = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
         if (diffDias < -20) return acc;
         const plano = db.planos.find(p => p.id == cli.plano_id) || { valor: 0, custo: 0 };
         return acc + ((plano.valor || 0) - (plano.custo || 0));
     }, 0);
 
-    if (document.getElementById('stat-total')) document.getElementById('stat-total').innerText = clientes.length;
-    if (document.getElementById('stat-bruto')) document.getElementById('stat-bruto').innerText = `R$ ${b.toFixed(2)}`;
-    if (document.getElementById('stat-lucro')) document.getElementById('stat-lucro').innerText = `R$ ${l.toFixed(2)}`;
+    // ==========================================
+    // 3. ATUALIZA OS CARTÕES SUPERIORES
+    // ==========================================
+    if (document.getElementById('stat-total')) document.getElementById('stat-total').innerText = db.clientes.length;
+    if (document.getElementById('stat-bruto')) document.getElementById('stat-bruto').innerText = `R$ ${bruto.toFixed(2)}`;
+    if (document.getElementById('stat-lucro')) document.getElementById('stat-lucro').innerText = `R$ ${lucro.toFixed(2)}`;
     if (document.getElementById('stat-previsao')) document.getElementById('stat-previsao').innerText = `R$ ${previsaoLucroLiquido.toFixed(2)}`;
-    if (document.getElementById('stat-atrasados')) document.getElementById('stat-atrasados').innerText = otr;
+    if (document.getElementById('stat-atrasados')) document.getElementById('stat-atrasados').innerText = atrasadosCount;
 
+    // ==========================================
+    // 4. RESTAURA A LISTA DE VENCIMENTOS E OS GRÁFICOS
+    // ==========================================
     const list = document.getElementById('alerts-list');
     if (list) {
         list.innerHTML = '';
-        clientes.sort((a,b) => new Date(a.vencimento) - new Date(b.vencimento)).forEach(cli => {
+        db.clientes.sort((a,b) => new Date(a.vencimento) - new Date(b.vencimento)).forEach(cli => {
             const diff = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
             if (diff <= config.aviso_dias && diff >= -20) {
                 list.innerHTML += `
@@ -228,15 +323,17 @@ export function updateDashboard() {
                 </div>`;
             }
         });
+        
         if (list.innerHTML === '') {
             list.innerHTML = `<div class="p-2 text-center text-gray-500 text-xs italic w-full">Nenhum vencimento crítico.</div>`;
         }
-        renderChartEvolucao();
-        renderChartAppsDonut();
-        renderChartPlanosDonut();
+        
+        // Chamando as funções dos seus gráficos novamente!
+        if (typeof renderChartEvolucao === 'function') renderChartEvolucao();
+        if (typeof renderChartAppsDonut === 'function') renderChartAppsDonut();
+        if (typeof renderChartPlanosDonut === 'function') renderChartPlanosDonut();
     }
 }
-
 export function renderChartEvolucao() {
     const el = document.querySelector("#chart-financeiro");
     if (!el || !window.ApexCharts) return;
@@ -1425,4 +1522,95 @@ window.abrirModalComprovante = function() {
     } else {
         showNotify('Erro', 'O código HTML do modal não foi encontrado.', 'error');
     }
+};
+
+// ==========================================
+// BUSCA INTELIGENTE (DEBOUNCE)
+// ==========================================
+let tempoBusca;
+window.debounceBuscaClientes = function() {
+    // Cancela a busca anterior se você ainda estiver digitando
+    clearTimeout(tempoBusca);
+    
+    // Inicia um novo cronômetro de 300 milissegundos
+    tempoBusca = setTimeout(() => {
+        renderClientes();
+    }, 300);
+};
+
+// ==========================================
+// PREVIEW DO WHATSAPP EM TEMPO REAL
+// ==========================================
+window.atualizarPreviewWA = function(campoId, displayId = 'wa-preview-text') {
+    const campo = document.getElementById(campoId);
+    const display = document.getElementById(displayId);
+    if (!campo || !display) return;
+
+    let texto = campo.value;
+
+    if (!texto.trim()) {
+        display.innerHTML = "<i class='text-gray-400'>A mensagem está vazia. Escreva algo para visualizar.</i>";
+        return;
+    }
+
+    // 1. Processa o Spintax (Sorteia as palavras em tempo real)
+    texto = texto.replace(/\{([^{}]+)\}/g, function(match, contents) {
+        if (['cliente', 'app', 'vencimento', 'valor', 'dias', 'usuario', 'senha', 'dns', 'plano'].includes(contents.toLowerCase().trim())) return match;
+        if (contents.includes('|')) {
+            const parts = contents.split('|');
+            return `<span class="bg-yellow-500/20 text-yellow-300 px-1 rounded" title="Spintax Ativo">${parts[Math.floor(Math.random() * parts.length)]}</span>`;
+        }
+        return match;
+    });
+
+    // 2. Substitui as Variáveis Mágicas por dados de mentira (Destacados em azul)
+    const mockData = {
+        '{cliente}': 'Wesley',
+        '{app}': 'Mega TV',
+        '{plano}': 'VIP Premium',
+        '{vencimento}': '25/05/2026',
+        '{valor}': 'R$ 35,00',
+        '{dias}': '3',
+        '{usuario}': 'wesley_123',
+        '{senha}': 'senhaforte',
+        '{dns}': 'http://painel.dns.com'
+    };
+
+    for (const [key, value] of Object.entries(mockData)) {
+        // Regex global com ignorar case para pegar {Cliente}, {CLIENTE}, etc
+        const regex = new RegExp(key, 'gi'); 
+        texto = texto.replace(regex, `<span class="bg-blue-500/20 text-blue-300 font-bold px-1 rounded" title="Variável ${key}">${value}</span>`);
+    }
+
+    // 3. Renderiza no balão preservando quebras de linha e aplicando formatação do WhatsApp
+    // Transforma *texto* em Negrito
+    texto = texto.replace(/\*(.*?)\*/g, "<strong>$1</strong>");
+    
+    // Transforma _texto_ em Itálico
+    texto = texto.replace(/_(.*?)_/g, "<em>$1</em>");
+
+    display.innerHTML = texto;
+};
+
+// ==========================================
+// FILTRO INTELIGENTE DE DASHBOARD
+// ==========================================
+window.filtroDashboardAtual = 'tudo'; // Padrão: mostra tudo
+
+window.filtrarDashboard = function(periodo) {
+    window.filtroDashboardAtual = periodo;
+    
+    // Atualiza a cor visual dos botões
+    ['hoje', '7dias', 'mes', 'tudo'].forEach(p => {
+        const btn = document.getElementById(`btn-dash-${p}`);
+        if (!btn) return;
+        if (p === periodo) {
+            btn.className = "px-4 py-1.5 rounded-full text-[10px] font-bold bg-purple-600 border border-purple-500 text-white transition-all whitespace-nowrap uppercase tracking-wider shadow-lg shadow-purple-500/20";
+        } else {
+            btn.className = "px-4 py-1.5 rounded-full text-[10px] font-bold border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all whitespace-nowrap uppercase tracking-wider";
+        }
+    });
+
+    // Recarrega os gráficos e os números
+    if(typeof updateDashboard === 'function') updateDashboard();
 };
