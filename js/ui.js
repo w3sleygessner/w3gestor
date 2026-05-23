@@ -19,8 +19,8 @@ window.meuConfirm = function(titulo, mensagem, acaoSim, icone = 'warning') {
             text: mensagem,
             icon: icone,
             showCancelButton: true,
-            confirmButtonColor: '#9333ea', // Roxo (Purple-600)
-            cancelButtonColor: '#374151',  // Cinza (Gray-700)
+            confirmButtonColor: '#9333ea', 
+            cancelButtonColor: '#374151',  
             confirmButtonText: 'Confirmar',
             cancelButtonText: 'Cancelar',
             background: '#16162d',
@@ -31,7 +31,6 @@ window.meuConfirm = function(titulo, mensagem, acaoSim, icone = 'warning') {
             }
         });
     } else {
-        // Fallback caso o SweetAlert falhe
         if (confirm(titulo + "\n\n" + mensagem)) {
             if (typeof acaoSim === 'function') acaoSim();
         }
@@ -87,7 +86,6 @@ export function switchTab(tab) {
         sidebar.classList.add('-translate-x-full');
     }
 
-    // 🚀 LINHA ADICIONADA: Salva a aba atual na memória do navegador
     localStorage.setItem('w3gestor_aba_ativa', tab);
 }
 
@@ -129,11 +127,40 @@ export function alternarAbasAuth(irParaCadastro) {
     }
 }
 
+// ==========================================
+// EXPOSIÇÃO GLOBAL DOS FILTROS DO DASHBOARD
+// ==========================================
+window.filtroDashboardAtual = 'mes'; 
+
+window.filtrarDashboard = function(periodo) {
+    window.filtroDashboardAtual = periodo;
+    
+    // Atualiza as cores dos botões
+    ['hoje', '7dias', 'mes', 'tudo'].forEach(p => {
+        const btn = document.getElementById(`btn-dash-${p}`);
+        if (!btn) return;
+        
+        if (p === periodo) {
+            btn.className = "px-4 py-1.5 rounded-full text-[10px] font-bold bg-purple-600 border border-purple-500 text-white transition-all whitespace-nowrap uppercase tracking-wider shadow-lg shadow-purple-500/20";
+        } else {
+            btn.className = "px-4 py-1.5 rounded-full text-[10px] font-bold border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all whitespace-nowrap uppercase tracking-wider";
+        }
+    });
+
+    if (typeof updateDashboard === 'function') {
+        updateDashboard();
+    }
+};
+
 export function initApp() {
-rodarAutomacaoDiaria(); // <-- ADICIONAR ESTA LINHA AQUI
+    rodarAutomacaoDiaria(); 
     const abaSalva = localStorage.getItem('w3gestor_aba_ativa') || 'dashboard';
     switchTab(abaSalva);
-    renderPlanos(); renderApps(); renderClientes(); renderFaturas(); updateDashboard(); renderConfig();
+
+    // Força o filtro do mês ao iniciar o app para mostrar os botões corretos
+    if(window.filtrarDashboard) window.filtrarDashboard('mes');
+    
+    renderPlanos(); renderApps(); renderClientes(); renderFaturas(); renderConfig();
     gerarFaturasAutomaticas();
 
     const inputWhatsapp = document.getElementById('cli_whatsapp');
@@ -143,7 +170,6 @@ rodarAutomacaoDiaria(); // <-- ADICIONAR ESTA LINHA AQUI
             e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
         });
     }
-
 }
 
 export function gerarFaturasAutomaticas() {
@@ -184,32 +210,92 @@ export function gerarFaturasAutomaticas() {
 }
 
 export function updateDashboard() {
-    const faturas = db.faturas || [];
-    const clientes = db.clientes || [];
+    if (!db.clientes) db.clientes = [];
+    if (!db.faturas) db.faturas = [];
     const config = db.config || { aviso_dias: 3 };
+    
+    // ==========================================
+    // 1. MOTOR DE FILTROS DE DATA (Para Bruto e Lucro)
+    // ==========================================
+    const periodo = window.filtroDashboardAtual || 'mes';
+    const dataHoje = new Date();
+    dataHoje.setHours(0,0,0,0);
 
-    const b = faturas.reduce((acc, f) => acc + (f.valor || 0), 0);
-    const l = faturas.reduce((acc, f) => acc + (f.lucro || 0), 0);
-    const hoje = new Date().toISOString().split('T')[0];
-    const otr = clientes.filter(c => c.vencimento <= hoje).length;
+    const faturasFiltradas = db.faturas.filter(f => {
+        if (periodo === 'tudo') return true;
+        
+        const partes = f.data_pgto.split('/');
+        if(partes.length !== 3) return true; 
+        
+        const dataFatura = new Date(partes[2], partes[1] - 1, partes[0]);
+        dataFatura.setHours(0,0,0,0);
 
-    const previsaoLucroLiquido = clientes.reduce((acc, cli) => {
+        if (periodo === 'hoje') {
+            return dataFatura.getTime() === dataHoje.getTime();
+        } else if (periodo === '7dias') {
+            const seteDiasAtras = new Date(dataHoje);
+            seteDiasAtras.setDate(dataHoje.getDate() - 7);
+            return dataFatura >= seteDiasAtras && dataFatura <= dataHoje;
+        } else if (periodo === 'mes') {
+            return dataFatura.getMonth() === dataHoje.getMonth() && dataFatura.getFullYear() === dataHoje.getFullYear();
+        }
+        return true;
+    });
+
+    let bruto = 0, lucro = 0;
+    faturasFiltradas.forEach(f => {
+        bruto += (f.valor || 0);
+        lucro += (f.lucro || 0);
+    });
+
+    // ==========================================
+    // 2. CÁLCULO DA ESTIMATIVA LÍQUIDA (MÊS ATUAL)
+    // ==========================================
+    let lucroRealizadoNesteMes = 0;
+    db.faturas.forEach(f => {
+        const partes = f.data_pgto.split('/');
+        if(partes.length === 3) {
+            const dataFatura = new Date(partes[2], partes[1] - 1, partes[0]);
+            if (dataFatura.getMonth() === dataHoje.getMonth() && dataFatura.getFullYear() === dataHoje.getFullYear()) {
+                lucroRealizadoNesteMes += (f.lucro || 0);
+            }
+        }
+    });
+
+    let lucroPendenteNesteMes = 0;
+    const hojeIso = new Date().toISOString().split('T')[0];
+    const anoAtual = dataHoje.getFullYear();
+    const mesAtual = dataHoje.getMonth();
+    const ultimoDiaDoMesIso = new Date(anoAtual, mesAtual + 1, 0).toISOString().split('T')[0];
+
+    const atrasadosCount = db.clientes.filter(c => c.vencimento <= hojeIso).length;
+
+    db.clientes.forEach(cli => {
         const diffDias = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
-        if (diffDias < -20) return acc;
-        const plano = db.planos.find(p => p.id == cli.plano_id) || { valor: 0, custo: 0 };
-        return acc + ((plano.valor || 0) - (plano.custo || 0));
-    }, 0);
+        if (cli.vencimento <= ultimoDiaDoMesIso && diffDias >= -20) {
+            const plano = (db.planos || []).find(p => p.id == cli.plano_id) || { valor: 0, custo: 0 };
+            lucroPendenteNesteMes += ((plano.valor || 0) - (plano.custo || 0));
+        }
+    });
 
-    if (document.getElementById('stat-total')) document.getElementById('stat-total').innerText = clientes.length;
-    if (document.getElementById('stat-bruto')) document.getElementById('stat-bruto').innerText = `R$ ${b.toFixed(2)}`;
-    if (document.getElementById('stat-lucro')) document.getElementById('stat-lucro').innerText = `R$ ${l.toFixed(2)}`;
+    const previsaoLucroLiquido = lucroRealizadoNesteMes + lucroPendenteNesteMes;
+
+    // ==========================================
+    // 3. ATUALIZA OS CARTÕES SUPERIORES
+    // ==========================================
+    if (document.getElementById('stat-total')) document.getElementById('stat-total').innerText = db.clientes.length;
+    if (document.getElementById('stat-bruto')) document.getElementById('stat-bruto').innerText = `R$ ${bruto.toFixed(2)}`;
+    if (document.getElementById('stat-lucro')) document.getElementById('stat-lucro').innerText = `R$ ${lucro.toFixed(2)}`;
     if (document.getElementById('stat-previsao')) document.getElementById('stat-previsao').innerText = `R$ ${previsaoLucroLiquido.toFixed(2)}`;
-    if (document.getElementById('stat-atrasados')) document.getElementById('stat-atrasados').innerText = otr;
+    if (document.getElementById('stat-atrasados')) document.getElementById('stat-atrasados').innerText = atrasadosCount;
 
+    // ==========================================
+    // 4. RESTAURA A LISTA DE VENCIMENTOS E OS GRÁFICOS
+    // ==========================================
     const list = document.getElementById('alerts-list');
     if (list) {
         list.innerHTML = '';
-        clientes.sort((a,b) => new Date(a.vencimento) - new Date(b.vencimento)).forEach(cli => {
+        db.clientes.sort((a,b) => new Date(a.vencimento) - new Date(b.vencimento)).forEach(cli => {
             const diff = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
             if (diff <= config.aviso_dias && diff >= -20) {
                 list.innerHTML += `
@@ -228,9 +314,11 @@ export function updateDashboard() {
                 </div>`;
             }
         });
+        
         if (list.innerHTML === '') {
             list.innerHTML = `<div class="p-2 text-center text-gray-500 text-xs italic w-full">Nenhum vencimento crítico.</div>`;
         }
+        
         renderChartEvolucao();
         renderChartAppsDonut();
         renderChartPlanosDonut();
@@ -483,6 +571,17 @@ export function renderClientes() {
     });
 }
 
+// ==========================================
+// BUSCA INTELIGENTE (DEBOUNCE)
+// ==========================================
+let tempoBusca;
+window.debounceBuscaClientes = function() {
+    clearTimeout(tempoBusca);
+    tempoBusca = setTimeout(() => {
+        renderClientes();
+    }, 300);
+};
+
 export function openModalHistory(id) {
     const cli = db.clientes.find(c => c.id == id);
     if (!cli) return;
@@ -683,12 +782,10 @@ export function renderConfig() {
     const textoPadraoComprovante = "{Eba!|Show!|Maravilha!|Tudo certo,} {cliente}. {Pagamento confirmado|Recebemos seu pagamento|Sua fatura foi paga} com sucesso! {Sua assinatura|Seu acesso} no {app} já está {renovado|garantido|ativo por mais um ciclo}.\n\n📅 Vencimento: {vencimento}\n🌐 DNS: {dns}\n\n{Muito obrigado|Valeu demais} pela {confiança|preferência|parceria} de sempre!";
     
     if(document.getElementById('fatura-comprovante-texto')) {
-        // Se já existir algo salvo no banco, ele mostra. Se não, mostra o padrão.
         document.getElementById('fatura-comprovante-texto').value = config.msg_sucesso || textoPadraoComprovante;
     }
 
     if(document.getElementById('cfg_timer_comprovante')) {
-        // Carrega o tempo salvo ou usa 30 como padrão se não houver
         document.getElementById('cfg_timer_comprovante').value = config.timer_comprovante !== undefined ? config.timer_comprovante : 30;
     }
 }
@@ -703,9 +800,9 @@ export function updateConfig() {
         msg_oscilacao: document.getElementById('cfg_msg_oscilacao') ? document.getElementById('cfg_msg_oscilacao').value : "",
         msg_manutencao: document.getElementById('cfg_msg_manutencao') ? document.getElementById('cfg_msg_manutencao').value : "",
         
-        // Novas opções
         usar_spintax: document.getElementById('cfg_usar_spintax') ? document.getElementById('cfg_usar_spintax').checked : false,
-        disparo_rapido: document.getElementById('cfg_disparo_rapido') ? document.getElementById('cfg_disparo_rapido').checked : false
+        disparo_rapido: document.getElementById('cfg_disparo_rapido') ? document.getElementById('cfg_disparo_rapido').checked : false,
+        timer_comprovante: document.getElementById('cfg_timer_comprovante') ? parseInt(document.getElementById('cfg_timer_comprovante').value) : 30
     };
     save(); showNotify('Sucesso', 'Configurações salvas!');
 }
@@ -790,7 +887,6 @@ export function openModalRenovar(id) {
 }
 
 export function confirmarRenovacao(diretoId = null) {
-    // Se recebeu o ID por clique direto usa ele, se não busca do input legado
     const id = diretoId || (document.getElementById('renovar-cli-id') ? document.getElementById('renovar-cli-id').value : null);
     if (!id) return;
 
@@ -842,9 +938,6 @@ export function confirmarRenovacao(diretoId = null) {
     
     showNotify('Baixa Concluída!', `A fatura de ${cli.nome} foi paga.`, 'success');
     
-    // ==========================================
-    // DISPARO SILENCIOSO DO TIMER DE 30 SEGUNDOS
-    // ==========================================
     const numZap = cli.whatsapp.replace(/\D/g, ''); 
     const campoComprovante = document.getElementById('fatura-comprovante-texto');
     
@@ -860,21 +953,15 @@ export function confirmarRenovacao(diretoId = null) {
         .replace(/{plano}/g, p.nome || 'N/A')
         .replace(/{valor}/g, p.valor ? `R$ ${p.valor.toFixed(2)}` : "0,00");
 
-    if (db.config.usar_spintax) {
-        // 🎲 PROCESSADOR SPINTAX OBRIGATÓRIO (Funciona sempre que achar um |)
     textoFinal = textoFinal.replace(/\{([^{}]+)\}/g, function(match, contents) {
         if (contents.includes('|')) {
             const parts = contents.split('|');
             return parts[Math.floor(Math.random() * parts.length)];
         }
-             return match; // Se não tiver barra (|), deixa a palavra quieta
-        });
-    }
+        return match; 
+    });
 
-   // Puxa o tempo salvo no banco de dados, ou usa 30 segundos como segurança
     const tempoEspera = db.config.timer_comprovante !== undefined ? db.config.timer_comprovante : 30;
-    
-    // Dispara o balão com o tempo escolhido
     dispararToastTemporizador(numZap, textoFinal, cli.nome, tempoEspera);
 }
 
@@ -1011,38 +1098,6 @@ export function showNotify(titulo, message, tipo = 'success') {
 window.cancelarDisparo = false;
 window.cancelarEnvioMassa = function() { window.cancelarDisparo = true; };
 
-window.dispararAlertaGeral = async function(tipoAlerta) {
-    window.cancelarDisparo = false;
-    const hoje = new Date();
-    const ativos = (db.clientes || []).filter(cli => {
-        const diff = Math.ceil((new Date(cli.vencimento) - hoje) / (1000 * 60 * 60 * 24));
-        return diff >= -20;
-    });
-    if (ativos.length === 0) return;
-    
-    window.meuConfirm("Alerta Geral", `Transmitir alerta para ${ativos.length} clientes ativos?`, () => {
-        const miniBadge = document.getElementById('badgeProgressoFlutuante');
-        if (miniBadge) miniBadge.classList.remove('hidden');
-
-        (async function() {
-            for (let i = 0; i < ativos.length; i++) {
-                if (window.cancelarDisparo) { showNotify("Cancelado", "Transmissão interrompida.", "warning"); break; }
-                const pct = Math.round(((i + 1) / ativos.length) * 100);
-                document.getElementById('progresso-texto-mini').innerText = `Aviso: ${ativos[i].nome} (${i+1}/${ativos.length})`;
-                document.getElementById('progresso-barra-mini').style.width = `${pct}%`;
-                document.getElementById('progresso-porcentagem-mini').innerText = `${pct}%`;
-                sendManualWA(ativos[i].id, tipoAlerta);
-                await new Promise(r => setTimeout(r, 3000));
-            }
-            if (miniBadge) miniBadge.classList.add('hidden');
-            if (!window.cancelarDisparo) showNotify("Concluído", "Alerta transmitido!");
-        })();
-    }, 'question');
-};
-
-// ==========================================
-// NOTIFICAÇÃO EM MASSA (COM MODO EXPRESS 1-CLIQUE E SPINTAX)
-// ==========================================
 window.dispararNotificacaoEmMassa = async function() {
     window.cancelarDisparo = false;
     const selecionados = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
@@ -1053,7 +1108,6 @@ window.dispararNotificacaoEmMassa = async function() {
         return;
     }
 
-    // Processador da Fila em Lote
     const processarFilaEmLote = async (tipo, msgCustomizada) => {
         const miniBadge = document.getElementById('badgeProgressoFlutuante');
         if (miniBadge) miniBadge.classList.remove('hidden');
@@ -1069,7 +1123,7 @@ window.dispararNotificacaoEmMassa = async function() {
             document.getElementById('progresso-barra-mini').style.width = `${pct}%`;
             document.getElementById('progresso-porcentagem-mini').innerText = `${pct}%`;
 
-if (tipo === 'custom') {
+            if (tipo === 'custom') {
                 const app = db.apps.find(a => a.id == cli.app_id) || { nome: '', url: '', host: '' };
                 const plano = db.planos.find(p => p.id == cli.plano_id) || { nome: '', valor: 0 };
                 const diasRestantes = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
@@ -1084,10 +1138,8 @@ if (tipo === 'custom') {
                                     .replace(/{valor}/g, plano.valor ? `R$ ${plano.valor.toFixed(2)}` : "0,00")
                                     .replace(/{dias}/g, diasRestantes);
                 
-                // Aplica Spintax se estiver ativo nas configurações globais
                 if (db.config.usar_spintax) {
                     textoFinal = textoFinal.replace(/\{([^{}]+)\}/g, function(match, contents) {
-                        // ADICIONADOS 'dns' e 'plano' AQUI TAMBÉM:
                         if (['cliente', 'app', 'vencimento', 'valor', 'dias', 'usuario', 'senha', 'dns', 'plano'].includes(contents.toLowerCase().trim())) return match;
                         const parts = contents.split('|');
                         return parts[Math.floor(Math.random() * parts.length)];
@@ -1111,15 +1163,13 @@ if (tipo === 'custom') {
         if (!window.cancelarDisparo) showNotify("Concluído", "Todos os disparos foram realizados!");
     };
 
-    // 🚀 MODO EXPRESS 1-CLIQUE (Ativado nas configurações)
-    if (db.config.disparo_rapido) { // Nome ajustado à estrutura local do db.config
+    if (db.config.disparo_rapido) {
         window.meuConfirm("Disparo 1-Clique", `Deseja notificar imediatamente os ${selecionados.length} clientes com o aviso padrão?`, () => {
             processarFilaEmLote('renew', '');
         }, 'question');
         return;
     }
 
-    // MODO NORMAL (Abre opções de templates)
     const optionsHtml = `
         <div class="text-left text-sm mt-2">
             <label class="block text-gray-400 mb-1 font-bold">Escolha o que enviar:</label>
@@ -1172,9 +1222,6 @@ if (tipo === 'custom') {
     });
 };
 
-// ==========================================
-// DISPARAR ALERTA GERAL (OTIMIZADO PARA 1-CLIQUE)
-// ==========================================
 window.dispararAlertaGeral = async function(tipoAlerta) {
     window.cancelarDisparo = false;
     const hoje = new Date();
@@ -1208,14 +1255,60 @@ window.dispararAlertaGeral = async function(tipoAlerta) {
         })();
     };
 
-    // Se o disparo rápido estiver ativo, faz a chamada direta pulando etapas secundárias
-    if (db.config.disparo_rapid) {
+    if (db.config.disparo_rapido) {
         executarEnvioAlerta();
     } else {
         window.meuConfirm("Transmitir Alerta Geral", `Deseja enviar este alerta para todos os ${ativos.length} clientes ativos no sistema?`, () => {
             executarEnvioAlerta();
         }, 'question');
     }
+};
+
+// ==========================================
+// PREVIEW DO WHATSAPP EM TEMPO REAL
+// ==========================================
+window.atualizarPreviewWA = function(campoId, displayId = 'wa-preview-text') {
+    const campo = document.getElementById(campoId);
+    const display = document.getElementById(displayId);
+    if (!campo || !display) return;
+
+    let texto = campo.value;
+
+    if (!texto.trim()) {
+        display.innerHTML = "<i class='text-gray-400'>A mensagem está vazia. Escreva algo para visualizar.</i>";
+        return;
+    }
+
+    texto = texto.replace(/\{([^{}]+)\}/g, function(match, contents) {
+        if (['cliente', 'app', 'vencimento', 'valor', 'dias', 'usuario', 'senha', 'dns', 'plano'].includes(contents.toLowerCase().trim())) return match;
+        if (contents.includes('|')) {
+            const parts = contents.split('|');
+            return `<span class="bg-yellow-500/20 text-yellow-300 px-1 rounded" title="Spintax Ativo">${parts[Math.floor(Math.random() * parts.length)]}</span>`;
+        }
+        return match;
+    });
+
+    const mockData = {
+        '{cliente}': 'Wesley',
+        '{app}': 'Mega TV',
+        '{plano}': 'VIP Premium',
+        '{vencimento}': '25/05/2026',
+        '{valor}': 'R$ 35,00',
+        '{dias}': '3',
+        '{usuario}': 'wesley_123',
+        '{senha}': 'senhaforte',
+        '{dns}': 'http://painel.dns.com'
+    };
+
+    for (const [key, value] of Object.entries(mockData)) {
+        const regex = new RegExp(key, 'gi'); 
+        texto = texto.replace(regex, `<span class="bg-blue-500/20 text-blue-300 font-bold px-1 rounded" title="Variável ${key}">${value}</span>`);
+    }
+
+    texto = texto.replace(/\*(.*?)\*/g, "<strong>$1</strong>");
+    texto = texto.replace(/_(.*?)_/g, "<em>$1</em>");
+
+    display.innerHTML = texto;
 };
 
 window.switchTab = switchTab;
@@ -1247,67 +1340,43 @@ window.openModalEditFatura = openModalEditFatura;
 window.confirmarEdicaoFatura = confirmarEdicaoFatura;
 window.abrirModalFiltroGrafico = abrirModalFiltroGrafico;
 
-// ==========================================
-// EVENTOS DO WHATSAPP MOBILE (PAIRING CODE)
-// ==========================================
 const btnGerarCodigoWA = document.getElementById('btn-gerar-codigo-wa');
 if (btnGerarCodigoWA) {
     btnGerarCodigoWA.addEventListener('click', conectarWhatsAppPorCodigo);
 }
 
-// Expõe a função globalmente (seguindo o padrão do seu sistema)
 window.conectarWhatsAppPorCodigo = conectarWhatsAppPorCodigo;
 
-// ==========================================
-// AUTOMAÇÃO DIÁRIA DE COBRANÇAS (1 VEZ POR DIA)
-// ==========================================
 export async function rodarAutomacaoDiaria() {
-    const hoje = new Date().toISOString().split('T')[0]; // Pega a data de hoje (YYYY-MM-DD)
+    const hoje = new Date().toISOString().split('T')[0]; 
     if (!db.config) db.config = {};
-    
-    // Se o sistema já disparou automaticamente hoje, ele para aqui e não manda de novo.
     if (db.config.ultimo_disparo_auto === hoje) return; 
 
     const diasAviso = db.config.aviso_dias || 3;
-    
-    // Calcula a data exata da régua (Ex: Hoje + 3 dias)
     const dataAlvo = new Date();
     dataAlvo.setDate(dataAlvo.getDate() + diasAviso);
     const dataAlvoStr = dataAlvo.toISOString().split('T')[0];
 
-    // Filtra apenas os clientes que vencem EXATAMENTE nessa data alvo
     const clientesParaCobrar = (db.clientes || []).filter(c => c.vencimento === dataAlvoStr);
 
     if (clientesParaCobrar.length > 0) {
         showNotify("Automação Diária", `Iniciando cobrança automática para ${clientesParaCobrar.length} clientes na régua...`, "info");
-        
         for (let cli of clientesParaCobrar) {
-            await sendManualWA(cli.id, 'renew'); // Dispara usando o seu Template + Spintax
-            
-            // Delay anti-ban entre os envios (5 a 12 segundos)
+            await sendManualWA(cli.id, 'renew'); 
             await new Promise(r => setTimeout(r, Math.floor(Math.random() * (12000 - 5000 + 1)) + 5000));
         }
         showNotify("Concluído", "Todas as cobranças automáticas do dia foram enviadas.");
     }
     
-    // Marca que a automação de hoje já foi feita para não repetir se você apertar F5
     db.config.ultimo_disparo_auto = hoje;
     save();
 }
 
-// ==========================================
-// TOAST FLUTUANTE DE ENVIO AGENDADO (30 SEGS)
-// ==========================================
-// ==========================================
-// TOAST FLUTUANTE (INFERIOR DIREITO E CLICÁVEL)
-// ==========================================
 window.dispararToastTemporizador = function(numero, mensagem, nomeCliente, segundos) {
-    // 1. Cria um container específico no canto inferior direito
     let container = document.getElementById('toast-timer-container');
     if (!container) {
         container = document.createElement('div');
         container.id = 'toast-timer-container';
-        // fixed bottom-5 right-5 garante o canto inferior direito
         container.className = 'fixed bottom-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none';
         document.body.appendChild(container);
     }
@@ -1315,8 +1384,6 @@ window.dispararToastTemporizador = function(numero, mensagem, nomeCliente, segun
     const toastId = 'toast-' + Date.now();
     const toast = document.createElement('div');
     toast.id = toastId;
-    
-    // pointer-events-auto OBRIGATÓRIO aqui para permitir o clique nos botões
     toast.className = "bg-[#16162d] border border-green-500/30 p-3 rounded-xl shadow-2xl text-xs text-white transform transition-all duration-300 relative overflow-hidden flex flex-col w-72 sm:w-80 pointer-events-auto translate-y-10 opacity-0";
     
     toast.innerHTML = `
@@ -1341,7 +1408,6 @@ window.dispararToastTemporizador = function(numero, mensagem, nomeCliente, segun
     
     container.appendChild(toast);
     
-    // Animação de entrada suave
     setTimeout(() => { toast.classList.remove('translate-y-10', 'opacity-0'); }, 10);
     
     let tempoRestante = segundos;
@@ -1365,7 +1431,7 @@ window.dispararToastTemporizador = function(numero, mensagem, nomeCliente, segun
     function finalizarEnvio() {
         clearInterval(intervalo);
         finalizado = true;
-        sendCustomWA(numero, mensagem, nomeCliente); // Dispara a mensagem
+        sendCustomWA(numero, mensagem, nomeCliente); 
         
         toast.innerHTML = `<strong class="text-blue-400 block p-2 text-center"><i class="fas fa-check mr-2"></i> Enviado com sucesso!</strong>`;
         toast.className = "bg-[#16162d] border border-blue-500/30 p-2 rounded-xl shadow-2xl text-xs transform transition-all duration-300 w-72 sm:w-80 pointer-events-auto";
@@ -1376,7 +1442,6 @@ window.dispararToastTemporizador = function(numero, mensagem, nomeCliente, segun
         }, 2500);
     }
     
-    // 2. Os listeners de clique 100% isolados e garantidos
     document.getElementById(`btn-enviar-agora-${toastId}`).addEventListener('click', (e) => {
         e.preventDefault();
         if(!finalizado) finalizarEnvio();
@@ -1387,8 +1452,6 @@ window.dispararToastTemporizador = function(numero, mensagem, nomeCliente, segun
         if (finalizado) return;
         clearInterval(intervalo);
         finalizado = true;
-        
-        // Some com a notificação
         toast.classList.add('opacity-0', 'translate-x-full');
         setTimeout(() => toast.remove(), 300);
         showNotify('Cancelado', `Envio para ${nomeCliente} abortado.`, 'warning');
@@ -1403,7 +1466,6 @@ export function salvarComprovanteFatura() {
     if (!db.config) db.config = {};
     
     db.config.msg_sucesso = texto;
-    // Garante que o usuário não coloque um tempo zerado ou negativo
     db.config.timer_comprovante = timer >= 5 ? timer : 30; 
     
     save();
@@ -1411,12 +1473,6 @@ export function salvarComprovanteFatura() {
     showNotify('Salvo', 'Template e tempo de envio atualizados!');
 }
 window.salvarComprovanteFatura = salvarComprovanteFatura;
-
-// Exposição global obrigatória para os botões do HTML funcionarem
-window.openModal = openModal;
-window.closeModal = closeModal;
-window.confirmarRenovacao = confirmarRenovacao;
-
 
 window.abrirModalComprovante = function() {
     const modal = document.getElementById('modalTemplateComprovante');
