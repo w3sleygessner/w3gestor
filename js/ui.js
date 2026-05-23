@@ -267,13 +267,64 @@ export function updateDashboard() {
     if (!db.clientes) db.clientes = [];
     if (!db.faturas) db.faturas = [];
     const config = db.config || { aviso_dias: 3 };
+    
+    // ==========================================
+    // 1. MOTOR DE FILTROS DE DATA (Para Bruto e Lucro)
+    // ==========================================
+    const periodo = window.filtroDashboardAtual || 'mes';
+    const dataHoje = new Date();
+    dataHoje.setHours(0,0,0,0);
 
-    const b = faturas.reduce((acc, f) => acc + (f.valor || 0), 0);
-    const l = faturas.reduce((acc, f) => acc + (f.lucro || 0), 0);
-    const hoje = new Date().toISOString().split('T')[0];
-    const otr = clientes.filter(c => c.vencimento <= hoje).length;
+    const faturasFiltradas = db.faturas.filter(f => {
+        if (periodo === 'tudo') return true;
+        
+        const partes = f.data_pgto.split('/');
+        if(partes.length !== 3) return true; 
+        
+        const dataFatura = new Date(partes[2], partes[1] - 1, partes[0]);
+        dataFatura.setHours(0,0,0,0);
 
-    const previsaoLucroLiquido = clientes.reduce((acc, cli) => {
+        if (periodo === 'hoje') {
+            return dataFatura.getTime() === dataHoje.getTime();
+        } else if (periodo === '7dias') {
+            const seteDiasAtras = new Date(dataHoje);
+            seteDiasAtras.setDate(dataHoje.getDate() - 7);
+            return dataFatura >= seteDiasAtras && dataFatura <= dataHoje;
+        } else if (periodo === 'mes') {
+            return dataFatura.getMonth() === dataHoje.getMonth() && dataFatura.getFullYear() === dataHoje.getFullYear();
+        }
+        return true;
+    });
+
+    let bruto = 0, lucro = 0;
+    faturasFiltradas.forEach(f => {
+        bruto += (f.valor || 0);
+        lucro += (f.lucro || 0);
+    });
+
+    // ==========================================
+    // 2. CÁLCULO DA ESTIMATIVA LÍQUIDA (MÊS ATUAL)
+    // ==========================================
+    let lucroRealizadoNesteMes = 0;
+    db.faturas.forEach(f => {
+        const partes = f.data_pgto.split('/');
+        if(partes.length === 3) {
+            const dataFatura = new Date(partes[2], partes[1] - 1, partes[0]);
+            if (dataFatura.getMonth() === dataHoje.getMonth() && dataFatura.getFullYear() === dataHoje.getFullYear()) {
+                lucroRealizadoNesteMes += (f.lucro || 0);
+            }
+        }
+    });
+
+    let lucroPendenteNesteMes = 0;
+    const hojeIso = new Date().toISOString().split('T')[0];
+    const anoAtual = dataHoje.getFullYear();
+    const mesAtual = dataHoje.getMonth();
+    const ultimoDiaDoMesIso = new Date(anoAtual, mesAtual + 1, 0).toISOString().split('T')[0];
+
+    const atrasadosCount = db.clientes.filter(c => c.vencimento <= hojeIso).length;
+
+    db.clientes.forEach(cli => {
         const diffDias = Math.ceil((new Date(cli.vencimento) - new Date()) / (1000 * 60 * 60 * 24));
         if (cli.vencimento <= ultimoDiaDoMesIso && diffDias >= -20) {
             const plano = (db.planos || []).find(p => p.id == cli.plano_id) || { valor: 0, custo: 0 };
@@ -281,9 +332,14 @@ export function updateDashboard() {
         }
     });
 
-    if (document.getElementById('stat-total')) document.getElementById('stat-total').innerText = clientes.length;
-    if (document.getElementById('stat-bruto')) document.getElementById('stat-bruto').innerText = `R$ ${b.toFixed(2)}`;
-    if (document.getElementById('stat-lucro')) document.getElementById('stat-lucro').innerText = `R$ ${l.toFixed(2)}`;
+    const previsaoLucroLiquido = lucroRealizadoNesteMes + lucroPendenteNesteMes;
+
+    // ==========================================
+    // 3. ATUALIZA OS CARTÕES SUPERIORES
+    // ==========================================
+    if (document.getElementById('stat-total')) document.getElementById('stat-total').innerText = db.clientes.length;
+    if (document.getElementById('stat-bruto')) document.getElementById('stat-bruto').innerText = `R$ ${bruto.toFixed(2)}`;
+    if (document.getElementById('stat-lucro')) document.getElementById('stat-lucro').innerText = `R$ ${lucro.toFixed(2)}`;
     if (document.getElementById('stat-previsao')) document.getElementById('stat-previsao').innerText = `R$ ${previsaoLucroLiquido.toFixed(2)}`;
     if (document.getElementById('stat-atrasados')) document.getElementById('stat-atrasados').innerText = atrasadosCount;
 
@@ -316,9 +372,10 @@ export function updateDashboard() {
         if (list.innerHTML === '') {
             list.innerHTML = `<div class="p-2 text-center text-gray-500 text-xs italic w-full">Nenhum vencimento crítico.</div>`;
         }
-        renderChartEvolucao();
-        renderChartAppsDonut();
-        renderChartPlanosDonut();
+        
+        if (typeof renderChartEvolucao === 'function') renderChartEvolucao();
+        if (typeof renderChartAppsDonut === 'function') renderChartAppsDonut();
+        if (typeof renderChartPlanosDonut === 'function') renderChartPlanosDonut();
     }
 }
 export function renderChartEvolucao() {
