@@ -9,7 +9,6 @@ import * as ADMIN from "./admin.js";
 Object.assign(window, UI);
 Object.assign(window, API);
 Object.assign(window, ADMIN);
-window.carregarAssinantes = ADMIN.carregarAssinantes;
 window.db = db;
 window.save = save;
 
@@ -64,10 +63,14 @@ onAuthStateChanged(auth, (currentUser) => {
 
                 const freeBanner = document.getElementById('free-plan-banner');
                 if (freeBanner) {
-                    if (accountInfo.type !== 'vip' && currentUser.email !== MEU_EMAIL_ADMIN) {
-                        freeBanner.classList.remove('hidden');
-                    } else {
+                    if (
+                        accountInfo.type === 'vip' ||
+                        accountInfo.type === 'revenda' ||
+                        currentUser.email === MEU_EMAIL_ADMIN
+                    ){
                         freeBanner.classList.add('hidden');
+                    } else {
+                        freeBanner.classList.remove('hidden');
                     }
                 }
 
@@ -102,7 +105,8 @@ onAuthStateChanged(auth, (currentUser) => {
                     faturas: data.faturas || [],
                     apps: data.apps && data.apps.length > 0 ? data.apps : appsPadrao,
                     config: data.config && data.config.msg_boas_vindas ? data.config : configPadrao,
-                    account: accountInfo
+                    account: accountInfo,
+                    creditos: data.creditos || 0
                 });
 
                 if (precisaPersistirPadroes) {
@@ -112,7 +116,6 @@ onAuthStateChanged(auth, (currentUser) => {
                 UI.initApp();
                 esconderSplashScreen();
 
-                // 🤖 VERIFICAÇÃO AUTOMÁTICA EM SEGUNDO PLANO AO FAZER LOGIN
                 setTimeout(() => {
                     if (typeof API.verificarReguaDeCobranca === 'function') {
                         API.verificarReguaDeCobranca();
@@ -208,7 +211,7 @@ document.getElementById('formCliente').onsubmit = function (e) {
     e.preventDefault();
     const editId = document.getElementById('cli_edit_id').value;
     
-    if (db.account.type !== 'vip' && !editId && db.clientes.length >= 3) {
+    if (db.account.type !== 'vip' && db.account.type !== 'revenda' && !editId && db.clientes.length >= 3) {
         UI.openModal('modalLimiteClientes');
         return;
     }
