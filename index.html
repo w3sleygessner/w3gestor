@@ -20,9 +20,10 @@
 
 <meta name="apple-mobile-web-app-title" content="w3Gestor">
 
-<link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#0f172a">
-<link rel="apple-touch-icon" href="/icon.png">
+
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon.png">
 
 <style>
         #splash-screen {
@@ -1470,7 +1471,7 @@
     </div>
 
     <script>
-       <script>
+
         window.selecionarPacote = function(qtd, el) {
             document.getElementById('revenda_selected_creditos').value = qtd;
             document.querySelectorAll('.pacote-revenda').forEach(div => {
@@ -1484,7 +1485,7 @@
         // 1. Registar o Service Worker para PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js');
+              navigator.serviceWorker.register('./sw.js');
             });
         }
 
