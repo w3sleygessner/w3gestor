@@ -8,13 +8,13 @@
   "theme_color": "#0f0f1e",
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "https://raw.githubusercontent.com/w3sleygessner/w3gestor/refs/heads/main/icon.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icon.png",
+      "src": "https://raw.githubusercontent.com/w3sleygessner/w3gestor/refs/heads/main/icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
