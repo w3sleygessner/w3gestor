@@ -1,11 +1,14 @@
 {
-  "id": "/",
   "name": "w3Gestor",
   "short_name": "w3Gestor",
+  "description": "Sistema inteligente de gestão IPTV",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f0f1e",
-  "theme_color": "#0f0f1e",
+  "background_color": "#0b0b17",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait",
+  "scope": "/",
+  "lang": "pt-BR",
   "icons": [
     {
       "src": "/icon.png",
