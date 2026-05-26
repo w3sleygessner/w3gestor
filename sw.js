@@ -1,13 +1,46 @@
-const CACHE_NAME = 'w3gestor-cache-v1';
+const CACHE_NAME = "w3gestor-v1";
 
-self.addEventListener('install', (event) => {
-  self.skipWaiting();
+const urlsToCache = [
+    "/",
+    "/index.html",
+    "/style.css",
+    "/main.js",
+    "/icon.png"
+];
+
+self.addEventListener("install", (event) => {
+
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => {
+            return cache.addAll(urlsToCache);
+        })
+    );
+
+    self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+self.addEventListener("activate", (event) => {
+
+    event.waitUntil(
+        caches.keys().then((keys) => {
+            return Promise.all(
+                keys.map((key) => {
+                    if (key !== CACHE_NAME) {
+                        return caches.delete(key);
+                    }
+                })
+            );
+        })
+    );
+
+    self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
-  event.respondWith(fetch(event.request).catch(() => new Response('Offline.')));
+self.addEventListener("fetch", (event) => {
+
+    event.respondWith(
+        caches.match(event.request).then((response) => {
+            return response || fetch(event.request);
+        })
+    );
 });
