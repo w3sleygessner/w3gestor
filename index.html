@@ -1483,11 +1483,15 @@
         };
 
         // 1. Registar o Service Worker para PWA
+
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-              navigator.serviceWorker.register('./sw.js');
-            });
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('SW OK', reg))
+            .catch(err => console.log('SW erro', err));
+        });
         }
+
 
         // 2. Fazer o Botão de Instalar aparecer e funcionar
         let deferredPrompt;
