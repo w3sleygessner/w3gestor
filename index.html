@@ -1463,6 +1463,18 @@
             el.className = "pacote-revenda cursor-pointer border-2 border-blue-500 bg-blue-500/20 rounded-xl p-3 text-center transition-all";
             el.querySelector('span').className = "text-[9px] text-blue-400 block font-bold mb-1";
         }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                .then(registration => {
+                    console.log('Service Worker registado com sucesso no escopo:', registration.scope);
+                })
+                .catch(error => {
+                    console.error('Falha ao registar o Service Worker:', error);
+                });
+            });
+        }
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
