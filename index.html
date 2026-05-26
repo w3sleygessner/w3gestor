@@ -1458,6 +1458,7 @@
     </div>
 
     <script>
+       <script>
         window.selecionarPacote = function(qtd, el) {
             document.getElementById('revenda_selected_creditos').value = qtd;
             document.querySelectorAll('.pacote-revenda').forEach(div => {
@@ -1466,22 +1467,9 @@
             });
             el.className = "pacote-revenda cursor-pointer border-2 border-blue-500 bg-blue-500/20 rounded-xl p-3 text-center transition-all";
             el.querySelector('span').className = "text-[9px] text-blue-400 block font-bold mb-1";
-        }
+        };
 
-        // if ('serviceWorker' in navigator) {
-        //     window.addEventListener('load', () => {
-        //         navigator.serviceWorker.register('/sw.js')
-        //         .then(registration => {
-        //             console.log('Service Worker registado com sucesso no escopo:', registration.scope);
-        //         })
-        //         .catch(error => {
-        //             console.error('Falha ao registar o Service Worker:', error);
-        //         });
-        //     });
-        // }
-
-        <script>
-        // 1. Registar o Service Worker
+        // 1. Registar o Service Worker para PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js');
@@ -1493,11 +1481,11 @@
         const installBtn = document.getElementById('btn-install-app');
 
         window.addEventListener('beforeinstallprompt', (e) => {
-            // Impede o Chrome de mostrar o mini-aviso padrão
+            // Impede o Chrome de mostrar o mini-aviso padrão sozinho
             e.preventDefault();
             // Guarda o evento para ser ativado pelo nosso botão
             deferredPrompt = e;
-            // Mostra o nosso botão verde de instalar
+            // Mostra o nosso botão verde de instalar na tela de login
             if(installBtn) installBtn.classList.remove('hidden');
         });
 
@@ -1506,7 +1494,7 @@
                 if (deferredPrompt) {
                     // Mostra a janela nativa de instalação do Android
                     deferredPrompt.prompt();
-                    // Aguarda o usuário aceitar ou recusar
+                    // Aguarda a resposta do utilizador
                     const { outcome } = await deferredPrompt.userChoice;
                     if (outcome === 'accepted') {
                         installBtn.classList.add('hidden'); // Esconde o botão após instalar
@@ -1515,9 +1503,6 @@
                 }
             });
         }
-    </script>
-</body>
-</html>
     </script>
 
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
