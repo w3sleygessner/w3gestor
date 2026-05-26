@@ -338,10 +338,31 @@ window.excluirEmMassa = function() {
     });
 };
 
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(err => {
-            console.log('Service Worker falhou:', err);
-        });
+// ==========================================
+// PWA
+// ==========================================
+if ("serviceWorker" in navigator) {
+
+    window.addEventListener("load", async () => {
+
+        try {
+
+            const reg =
+                await navigator.serviceWorker.register(
+                    "/service-worker.js"
+                );
+
+            console.log(
+                "✅ Service Worker registrado:",
+                reg.scope
+            );
+
+        } catch (err) {
+
+            console.error(
+                "❌ Erro Service Worker:",
+                err
+            );
+        }
     });
 }
