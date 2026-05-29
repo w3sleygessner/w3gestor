@@ -375,6 +375,9 @@ export function renderClientes() {
     const fimSemanaS = fimSemana.toISOString().split('T')[0];
     const mesAtual = hoje.getMonth(); const anoAtual = hoje.getFullYear();
 
+    // Referência para saber o mês atual e verificar o check azul
+    const mesAnoAtual = `${anoAtual}-${String(mesAtual + 1).padStart(2, '0')}`;
+
     db.clientes.sort((a, b) => new Date(a.vencimento) - new Date(b.vencimento)).forEach(cli => {
         const p = db.planos.find(x => x.id == cli.plano_id) || { nome: 'N/A' };
         const app = db.apps.find(x => x.id == cli.app_id) || { nome: 'N/A' };
@@ -398,13 +401,17 @@ export function renderClientes() {
             if (parseInt(dateParts[1]) !== (mesAtual + 1) || parseInt(dateParts[0]) !== anoAtual) return;
         }
 
+        // NOVO: Verifica se já foi cobrado neste mês e gera a tag
+        const jaCobrado = cli.ultimo_aviso_mes === mesAnoAtual;
+        const badgeCobrado = jaCobrado ? `<i class="fas fa-check-double text-blue-500 ml-1" title="Aviso já enviado este mês"></i>` : '';
+
         let rCls = isInadimplente ? 'row-inadimplente' : (isOverdue ? 'row-overdue' : (isWarning ? 'row-warning' : ''));
 
         tableBody.innerHTML += `<tr class="border-t border-gray-800/50 text-xs hover:bg-white/5 ${rCls}">
             <td class="p-2.5 text-center w-10"><input type="checkbox" class="client-checkbox" value="${cli.id}" onchange="window.atualizarBarraAcoes()"></td>
             <td class="p-2.5 font-bold text-white uppercase">${cli.nome}</td>
             <td class="p-2.5 uppercase text-[10px] text-gray-400">${p.nome}<br><span class="text-purple-400 font-bold">${app.nome}</span></td>
-            <td class="p-2.5 text-center font-bold ${isOverdue ? 'text-red-500' : (isWarning ? 'text-yellow-500' : 'text-green-500')}">${cli.vencimento.split('-').reverse().join('/')}</td>
+            <td class="p-2.5 text-center font-bold ${isOverdue ? 'text-red-500' : (isWarning ? 'text-yellow-500' : 'text-green-500')}">${cli.vencimento.split('-').reverse().join('/')} ${badgeCobrado}</td>
             <td class="p-2.5 text-center font-mono text-gray-400">${cli.whatsapp}</td>
             <td class="p-2.5 text-center">
                 <div class="flex items-center justify-center gap-3">
@@ -430,7 +437,7 @@ export function renderClientes() {
         <div class="card p-3 rounded-xl border ${cardBorder} mb-2 text-xs">
             <div class="flex justify-between items-start mb-2">
                 <h4 class="font-black text-white uppercase truncate max-w-[150px]">${cli.nome}</h4>
-                <span class="font-mono text-[11px] text-gray-400">${cli.vencimento.split('-').reverse().join('/')} ${statusBadge}</span>
+                <span class="font-mono text-[11px] text-gray-400">${cli.vencimento.split('-').reverse().join('/')} ${badgeCobrado} ${statusBadge}</span>
             </div>
             <div class="flex gap-2 items-center text-[10px] text-gray-400 mb-2 font-mono"><i class="fab fa-whatsapp"></i> ${cli.whatsapp}</div>
             
@@ -657,15 +664,14 @@ export function updateConfig() {
 
 export function openModalAdd() { 
     const isRevendaDOM = document.getElementById('saldo-revenda-container') && !document.getElementById('saldo-revenda-container').classList.contains('hidden');
-    const isAdmin = db.account && (db.account.email === "w3sleygessner@gmail.com" || db.account.type === 'admin');
 
     if (isRevendaDOM) {
         const saldoEl = document.getElementById('saldo-revenda-valor');
         const saldoAtual = saldoEl ? parseInt(saldoEl.innerText) : 0;
         if (saldoAtual < 0) {
-             showNotify("Erro", "Sua conta está bloqueada por saldo negativo.", "error"); return;
+             showNotify("Erro", "A sua conta está bloqueada por saldo negativo.", "error"); return;
         }
-    } else if (!isAdmin && db.account && db.account.type !== 'vip' && db.clientes.length >= 3) {
+    } else if (!window.ehVip && db.clientes.length >= 3) {
          openModal('modalLimiteClientes'); return; 
     }
 
@@ -779,7 +785,7 @@ export function confirmarRenovacao(diretoId = null) {
     });
     
     db.invoices_pending = db.invoices_pending.filter(i => i.id != id);
-    save(); closeModal('modalRenovar'); renderClientes(); renderFaturas(); updateDashboard(); 
+    save(); window.closeModal('modalRenovar'); renderClientes(); renderFaturas(); updateDashboard(); 
     showNotify('Baixa Concluída!', `A fatura de ${cli.nome} foi paga.`, 'success');
     
     const numZap = cli.whatsapp.replace(/\D/g, ''); 
@@ -872,7 +878,7 @@ window.confirmarEdicaoFatura = function() {
     if(f) {
         let part = nvData.split('-');
         f.data_pgto = `${part[2]}/${part[1]}/${part[0]}`;
-        save(); renderFaturas(); closeModal('modalEditFatura');
+        save(); renderFaturas(); window.closeModal('modalEditFatura');
         showNotify('Sucesso', 'Data atualizada no histórico.');
     }
 };
@@ -1188,6 +1194,17 @@ if (btnGerarCodigoWA) {
 window.conectarWhatsAppPorCodigo = conectarWhatsAppPorCodigo;
 
 export async function rodarAutomacaoDiaria() {
+    // Aguarda 5 segundos após entrar no painel para que a API do WhatsApp 
+    // tenha tempo de validar a sessão e mostrar se está realmente conectado.
+    await new Promise(resolve => setTimeout(resolve, 5000));
+    
+    // Verificação de Segurança 1: Olhamos para o status do painel
+    const waStatus = document.getElementById('wa-status');
+    if (!waStatus || !waStatus.innerText.toUpperCase().includes('CONECTADO')) {
+        console.warn("Automação Diária: WhatsApp não conectado. Abortando disparos automáticos.");
+        return; 
+    }
+
     const dataHojeObj = new Date();
     const hojeStr = dataHojeObj.toISOString().split('T')[0];
     
@@ -1201,11 +1218,10 @@ export async function rodarAutomacaoDiaria() {
     dataAlvo.setDate(dataAlvo.getDate() + diasAviso);
     const dataAlvoStr = dataAlvo.toISOString().split('T')[0];
 
-    // Filtra os clientes que vencem no dia alvo E que ainda não foram cobrados NESTE MÊS
+    // Filtra os clientes que vencem no dia alvo E que AINDA NÃO FORAM COBRADOS NESTE MÊS
     const clientesParaCobrar = (db.clientes || []).filter(c => {
         const venceNoDiaAlvo = c.vencimento === dataAlvoStr;
         const jaFoiCobradoNesteMes = c.ultimo_aviso_mes === mesAnoAtual;
-        
         return venceNoDiaAlvo && !jaFoiCobradoNesteMes;
     });
 
@@ -1215,25 +1231,27 @@ export async function rodarAutomacaoDiaria() {
         for (let i = 0; i < clientesParaCobrar.length; i++) {
             let cli = clientesParaCobrar[i];
             
-            // Dispara a mensagem
+            // Dispara a mensagem via WhatsApp
             await sendManualWA(cli.id, 'renew'); 
             
-            // Marca imediatamente este cliente como cobrado neste mês
+            // Marca imediatamente este cliente como cobrado neste mês e salva
             const idx = db.clientes.findIndex(x => x.id === cli.id);
             if (idx !== -1) {
                 db.clientes[idx].ultimo_aviso_mes = mesAnoAtual;
-                save(); // Salva cliente a cliente para garantir que o outro dispositivo saiba imediatamente
+                save();
             }
 
-            // Pausa aleatória para evitar bloqueio no WhatsApp
             if (i < clientesParaCobrar.length - 1) {
                 await new Promise(r => setTimeout(r, Math.floor(Math.random() * (12000 - 5000 + 1)) + 5000));
             }
         }
         showNotify("Concluído", "Todas as cobranças automáticas do ciclo foram enviadas.");
+        
+        // Atualiza a tela imediatamente para que os novos ícones azuis apareçam!
+        renderClientes(); 
     }
     
-    // Mantemos a data global apenas como histórico
+    // Mantemos a data global salva também por via das dúvidas
     db.config.ultimo_disparo_auto = hojeStr;
     save();
 }
