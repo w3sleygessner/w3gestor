@@ -210,7 +210,7 @@ export async function conectarWhatsAppReal() {
         let qrCodeBase64 = null;
 
         if (resState.status === 404 || resState.status === 400) {
-            // AQUI É O SEGREDO: Criar a instância com as permissões de sincronizar contatos e histórico
+            // CRIAR INSTÂNCIA COM READ MESSAGES DESATIVADO
             let resCreate = await fetch(`${baseURL}/instance/create`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
@@ -219,9 +219,9 @@ export async function conectarWhatsAppReal() {
                     integration: "WHATSAPP-BAILEYS", 
                     qrcode: true,
                     alwaysOnline: true,
-                    readMessages: true,
+                    readMessages: false, // Alterado para false
                     readStatus: true,
-                    syncFullHistory: true // ESTA FLAG É A QUE FAZ OS CONTATOS APARECEREM NO MANAGER E O ENVIO FUNCIONAR
+                    syncFullHistory: true 
                 })
             });
             let dataCreate = await resCreate.json();
@@ -307,7 +307,6 @@ export async function desconectarWhatsAppReal() {
     try {
         if (window.showNotify) window.showNotify("Aguarde", "A desconectar e limpar dados...", "info");
 
-        // NOVO: Excluir a instância definitivamente para garantir que ela perca os "vícios" da criação antiga
         const response = await fetch(`${baseURL}/instance/delete/${instancia}`, {
             method: 'DELETE',
             headers: { 'apikey': apiKey }
@@ -317,7 +316,6 @@ export async function desconectarWhatsAppReal() {
             if (window.showNotify) window.showNotify("Desconectado", "Instância limpa com sucesso. Gere um novo QR Code.", "success");
             checarStatusWhatsAppSilencioso(); 
         } else {
-            // Tenta dar logout como fallback
             await fetch(`${baseURL}/instance/logout/${instancia}`, {
                 method: 'DELETE',
                 headers: { 'apikey': apiKey }
@@ -329,7 +327,6 @@ export async function desconectarWhatsAppReal() {
     }
 }
 
-// 🔄 VERIFICAR SESSÃO AO LOGAR
 export async function carregarStatusWhatsApp() {
     const instancia = obterNomeInstancia();
     if (!instancia) return;
@@ -353,9 +350,8 @@ export async function carregarStatusWhatsApp() {
                 }
                 
                 const qrImg = document.getElementById('wa-qr-code');
-                if(qrImg) qrImg.src = ""; // Limpa a área do QR
+                if(qrImg) qrImg.src = ""; 
 
-                // Cria o botão de desconectar se ele não existir
                 if (!document.getElementById('btn-desconectar-wa')) {
                     const btnDesc = document.createElement('button');
                     btnDesc.id = 'btn-desconectar-wa';
@@ -371,9 +367,6 @@ export async function carregarStatusWhatsApp() {
     }
 }
 
-// 📱 CONEXÃO VIA CÓDIGO (PARA QUEM ACESSA PELO CELULAR)
-// 📱 CONEXÃO VIA CÓDIGO (CORRIGIDA E BLINDADA)
-// 📱 CONEXÃO VIA CÓDIGO (COM TIMER DE CANCELAMENTO E FILTRO DE TELA)
 export async function conectarWhatsAppPorCodigo() {
     const instancia = obterNomeInstancia();
     if (!instancia) return;
@@ -391,7 +384,6 @@ export async function conectarWhatsAppPorCodigo() {
     const displayCodigo = document.getElementById('wa-codigo-tela');
     const btnGerar = document.getElementById('btn-gerar-codigo-wa');
 
-    // Desativa o botão para evitar cliques duplos que geram mais notificações
     if (btnGerar) {
         btnGerar.disabled = true;
         btnGerar.innerText = "Aguarde...";
@@ -402,13 +394,11 @@ export async function conectarWhatsAppPorCodigo() {
         if(waStatus) waStatus.innerText = "A LIMPAR SESSÃO ANTIGA...";
         if(displayCodigo) displayCodigo.innerText = "";
 
-        // 1. Limpa qualquer tentativa anterior que esteja presa em loop (Pára de apitar o celular)
         await fetch(`${baseURL}/instance/delete/${instancia}`, { method: 'DELETE', headers: { 'apikey': apiKey } });
         await new Promise(r => setTimeout(r, 2000));
 
         if(waStatus) waStatus.innerText = "A CRIAR INSTÂNCIA MOBILE...";
 
-        // 2. Cria a instância limpa
         await fetch(`${baseURL}/instance/create`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
@@ -420,17 +410,17 @@ export async function conectarWhatsAppPorCodigo() {
             })
         });
 
+        // SETAR CONFIGURAÇÕES COM READ MESSAGES DESATIVADO
         await fetch(`${baseURL}/settings/set/${instancia}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
-            body: JSON.stringify({ alwaysOnline: true, readMessages: true, syncFullHistory: true })
+            body: JSON.stringify({ alwaysOnline: true, readMessages: false, syncFullHistory: true }) // Alterado para false
         });
 
         await new Promise(r => setTimeout(r, 2000));
 
         if(waStatus) waStatus.innerText = "A GERAR CÓDIGO DE 8 DÍGITOS...";
         
-        // 3. Pede o código de emparelhamento
         const resConn = await fetch(`${baseURL}/instance/connect/${instancia}?number=${numero}`, {
             method: 'GET',
             headers: { 'apikey': apiKey }
@@ -438,7 +428,6 @@ export async function conectarWhatsAppPorCodigo() {
 
         const dataConn = await resConn.json();
         
-        // 4. FILTRO RIGOROSO: Extrai apenas os 8 caracteres para não bugar a tela
         let jsonString = JSON.stringify(dataConn);
         let codigoReal = null;
         
@@ -454,7 +443,6 @@ export async function conectarWhatsAppPorCodigo() {
         }
 
         if (codigoReal) {
-            // Formata o código separando no meio (Ex: ABCD-1234) para caber bem no layout
             const formatado = codigoReal.replace(/-/g, '').match(/.{1,4}/g).join('-');
             
             if(displayCodigo) {
@@ -464,14 +452,12 @@ export async function conectarWhatsAppPorCodigo() {
             if(waStatus) waStatus.innerText = "DIGITE ESTE CÓDIGO NO SEU WHATSAPP!";
             if(window.showNotify) window.showNotify("Código Gerado!", "Tem 45 segundos para inserir o código.", "success");
             
-            // 5. TIMER DE CANCELAMENTO (A solução para o celular não apitar sem parar)
             setTimeout(async () => {
                 try {
                     let check = await fetch(`${baseURL}/instance/connectionState/${instancia}`, { headers: { 'apikey': apiKey } });
                     let checkData = await check.json();
                     let estado = checkData?.instance?.state || checkData?.state;
                     
-                    // Se passou o tempo e não conectou, DELETA a instância para parar os envios do WhatsApp
                     if (estado !== 'open') {
                         await fetch(`${baseURL}/instance/delete/${instancia}`, { method: 'DELETE', headers: { 'apikey': apiKey } });
                         if(waStatus) waStatus.innerText = "TEMPO ESGOTADO. GERE NOVAMENTE.";
