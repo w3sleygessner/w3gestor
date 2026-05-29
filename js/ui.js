@@ -222,7 +222,7 @@ export function updateDashboard() {
                     </div>
                     <div class="flex gap-1 shrink-0">
                         <button onclick="window.gerarFaturaManual(${cli.id})" title="Gerar Fatura" class="w-7 h-7 flex items-center justify-center bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 rounded-lg text-xs hover:bg-yellow-500 hover:text-black transition"><i class="fas fa-file-invoice-dollar"></i></button>
-                        <button onclick="window.sendManualWA(${cli.id}, 'renew')" class="w-7 h-7 flex items-center justify-center bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg text-xs hover:bg-purple-500 hover:text-white transition"><i class="fab fa-whatsapp"></i></button>
+                        <button onclick="window.cobrarClienteManual(${cli.id})" class="w-7 h-7 flex items-center justify-center bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg text-xs hover:bg-purple-500 hover:text-white transition"><i class="fab fa-whatsapp"></i></button>
                     </div>
                 </div>`;
             }
@@ -401,7 +401,7 @@ export function renderClientes() {
             if (parseInt(dateParts[1]) !== (mesAtual + 1) || parseInt(dateParts[0]) !== anoAtual) return;
         }
 
-        // NOVO: Verifica se já foi cobrado neste mês e gera a tag
+        // Verifica se já foi cobrado neste mês e gera a tag
         const jaCobrado = cli.ultimo_aviso_mes === mesAnoAtual;
         const badgeCobrado = jaCobrado ? `<i class="fas fa-check-double text-blue-500 ml-1" title="Aviso já enviado este mês"></i>` : '';
 
@@ -415,7 +415,7 @@ export function renderClientes() {
             <td class="p-2.5 text-center font-mono text-gray-400">${cli.whatsapp}</td>
             <td class="p-2.5 text-center">
                 <div class="flex items-center justify-center gap-3">
-                    <button onclick="window.sendManualWA(${cli.id}, 'renew')" class="text-purple-400 hover:scale-110 transition" title="Cobrar"><i class="fas fa-redo"></i></button>
+                    <button onclick="window.cobrarClienteManual(${cli.id})" class="text-purple-400 hover:scale-110 transition" title="Cobrar"><i class="fas fa-redo"></i></button>
                     <button onclick="window.sendManualWA(${cli.id}, 'welcome')" class="text-green-500 hover:scale-110 transition" title="Boas Vindas"><i class="fas fa-star"></i></button>
                     <button onclick="window.sendManualWA(${cli.id}, 'suspended')" class="text-red-500 hover:scale-110 transition" title="Suspensão"><i class="fas fa-ban"></i></button>
                 </div>
@@ -444,7 +444,7 @@ export function renderClientes() {
             <div class="flex justify-between items-center mt-1 pt-2 border-t border-white/5">
                 <span class="text-[10px] text-purple-400 uppercase font-bold truncate max-w-[60px]">${p.nome}</span>
                 <div class="flex gap-1 flex-wrap justify-end">
-                    <button onclick="window.sendManualWA(${cli.id}, 'renew')" class="text-purple-400 hover:bg-purple-500/20 bg-white/5 p-1.5 rounded transition" title="Cobrar"><i class="fas fa-redo"></i></button>
+                    <button onclick="window.cobrarClienteManual(${cli.id})" class="text-purple-400 hover:bg-purple-500/20 bg-white/5 p-1.5 rounded transition" title="Cobrar"><i class="fas fa-redo"></i></button>
                     <button onclick="window.sendManualWA(${cli.id}, 'welcome')" class="text-green-500 hover:bg-green-500/20 bg-white/5 p-1.5 rounded transition" title="Boas Vindas"><i class="fas fa-star"></i></button>
                     <button onclick="window.sendManualWA(${cli.id}, 'suspended')" class="text-red-500 hover:bg-red-500/20 bg-white/5 p-1.5 rounded transition" title="Bloqueio"><i class="fas fa-ban"></i></button>
                     
@@ -460,6 +460,21 @@ export function renderClientes() {
 window.debounceBuscaClientes = function() {
     clearTimeout(window.tempoBuscaGlobal);
     window.tempoBuscaGlobal = setTimeout(() => { renderClientes(); }, 300);
+};
+
+// NOVO: Função para disparar manualmente e gravar que já foi cobrado
+window.cobrarClienteManual = async function(id) {
+    if(typeof sendManualWA === 'function') {
+        await sendManualWA(id, 'renew');
+    }
+    const dataHojeObj = new Date();
+    const mesAnoAtual = `${dataHojeObj.getFullYear()}-${String(dataHojeObj.getMonth() + 1).padStart(2, '0')}`;
+    const idx = db.clientes.findIndex(x => x.id == id);
+    if (idx !== -1) {
+        db.clientes[idx].ultimo_aviso_mes = mesAnoAtual;
+        save();
+        renderClientes(); // Recarrega a tabela imediatamente para exibir o ícone azul
+    }
 };
 
 export function openModalHistory(id) {
