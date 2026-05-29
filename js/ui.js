@@ -1188,27 +1188,53 @@ if (btnGerarCodigoWA) {
 window.conectarWhatsAppPorCodigo = conectarWhatsAppPorCodigo;
 
 export async function rodarAutomacaoDiaria() {
-    const hoje = new Date().toISOString().split('T')[0]; 
+    const dataHojeObj = new Date();
+    const hojeStr = dataHojeObj.toISOString().split('T')[0];
+    
+    // Cria uma chave única para o mês/ano atual (Ex: "2026-05")
+    const mesAnoAtual = `${dataHojeObj.getFullYear()}-${String(dataHojeObj.getMonth() + 1).padStart(2, '0')}`;
+
     if (!db.config) db.config = {};
-    if (db.config.ultimo_disparo_auto === hoje) return; 
 
     const diasAviso = db.config.aviso_dias || 3;
     const dataAlvo = new Date();
     dataAlvo.setDate(dataAlvo.getDate() + diasAviso);
     const dataAlvoStr = dataAlvo.toISOString().split('T')[0];
 
-    const clientesParaCobrar = (db.clientes || []).filter(c => c.vencimento === dataAlvoStr);
+    // Filtra os clientes que vencem no dia alvo E que ainda não foram cobrados NESTE MÊS
+    const clientesParaCobrar = (db.clientes || []).filter(c => {
+        const venceNoDiaAlvo = c.vencimento === dataAlvoStr;
+        const jaFoiCobradoNesteMes = c.ultimo_aviso_mes === mesAnoAtual;
+        
+        return venceNoDiaAlvo && !jaFoiCobradoNesteMes;
+    });
 
     if (clientesParaCobrar.length > 0) {
-        showNotify("Automação Diária", `Iniciando cobrança automática para ${clientesParaCobrar.length} clientes na régua...`, "info");
-        for (let cli of clientesParaCobrar) {
+        showNotify("Automação Diária", `Iniciando cobrança automática para ${clientesParaCobrar.length} clientes...`, "info");
+        
+        for (let i = 0; i < clientesParaCobrar.length; i++) {
+            let cli = clientesParaCobrar[i];
+            
+            // Dispara a mensagem
             await sendManualWA(cli.id, 'renew'); 
-            await new Promise(r => setTimeout(r, Math.floor(Math.random() * (12000 - 5000 + 1)) + 5000));
+            
+            // Marca imediatamente este cliente como cobrado neste mês
+            const idx = db.clientes.findIndex(x => x.id === cli.id);
+            if (idx !== -1) {
+                db.clientes[idx].ultimo_aviso_mes = mesAnoAtual;
+                save(); // Salva cliente a cliente para garantir que o outro dispositivo saiba imediatamente
+            }
+
+            // Pausa aleatória para evitar bloqueio no WhatsApp
+            if (i < clientesParaCobrar.length - 1) {
+                await new Promise(r => setTimeout(r, Math.floor(Math.random() * (12000 - 5000 + 1)) + 5000));
+            }
         }
-        showNotify("Concluído", "Todas as cobranças automáticas do dia foram enviadas.");
+        showNotify("Concluído", "Todas as cobranças automáticas do ciclo foram enviadas.");
     }
     
-    db.config.ultimo_disparo_auto = hoje;
+    // Mantemos a data global apenas como histórico
+    db.config.ultimo_disparo_auto = hojeStr;
     save();
 }
 
